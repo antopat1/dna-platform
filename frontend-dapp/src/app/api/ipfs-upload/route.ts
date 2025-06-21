@@ -1,67 +1,82 @@
 // frontend-dapp/src/app/api/ipfs-upload/route.ts
-import { NextResponse } from 'next/server';
-import { create } from 'ipfs-http-client'; // Useremo ipfs-http-client qui sul backend
-import { Readable } from 'stream'; // Per convertire il file in ReadableStream
-import { Buffer } from 'buffer'; // Per la gestione dei buffer
+import { NextRequest, NextResponse } from 'next/server';
+import FormData from 'form-data';
+import { Readable } from 'stream';
+import axios from 'axios';
+// Rimuovi: import jwt from 'jsonwebtoken';
 
-// Re-importa questi tipi per assicurare la compatibilità con le versioni di Node.js e TypeScript
-// Le versioni recenti di Node.js supportano Buffer e Readable globalmente,
-// ma a volte TS richiede import espliciti o polyfills per il browser.
-// Dato che questa è una API Route (Node.js environment), sono ok.
+// Rimuovi: const PINATA_API_KEY = process.env.PINATA_API_KEY;
+// Rimuovi: const PINATA_SECRET_API_KEY = process.env.PINATA_SECRET_API_KEY;
+const PINATA_JWT = process.env.PINATA_JWT; // <-- La tua nuova variabile d'ambiente
 
-// Configura IPFS con le credenziali Pinata dalle variabili d'ambiente
-const PINATA_API_KEY = process.env.PINATA_API_KEY;
-const PINATA_SECRET_API_KEY = process.env.PINATA_SECRET_API_KEY;
+// Rimuovi: function generatePinataJWT() { ... }
 
-if (!PINATA_API_KEY || !PINATA_SECRET_API_KEY) {
-  throw new Error('PINATA_API_KEY and PINATA_SECRET_API_KEY must be defined in .env.local');
+async function* webStreamToNodeStream(webStream: ReadableStream<Uint8Array>) {
+    const reader = webStream.getReader();
+    try {
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            yield value;
+        }
+    } finally {
+        reader.releaseLock();
+    }
 }
 
-// Configura l'autenticazione per Pinata
-const auth = 'Basic ' + Buffer.from(`${PINATA_API_KEY}:${PINATA_SECRET_API_KEY}`).toString('base64');
-
-// Crea l'istanza IPFS client
-const ipfs = create({
-  host: 'ipfs.pinata.cloud', // Host specifico per Pinata
-  port: 5001, // Pinata usa 5001 per il client IPFS (se non è un gateway HTTP)
-  protocol: 'https',
-  headers: {
-    authorization: auth,
-  },
-});
-
-export async function POST(req: Request) {
-  try {
-    // Next.js 13+ gestisce i form data con req.formData()
-    const formData = await req.formData();
-    const file = formData.get('file') as File; // 'file' è il nome del campo nel form
-
-    if (!file) {
-      return NextResponse.json({ success: false, message: 'No file uploaded.' }, { status: 400 });
+export async function POST(request: NextRequest) {
+    // Controlla solo la presenza del JWT
+    if (!PINATA_JWT) {
+        console.error('Pinata JWT is not set in environment variables.');
+        return NextResponse.json({ success: false, message: 'Server configuration error: Pinata JWT missing.' }, { status: 500 });
     }
 
-    // Converti il file in un ReadableStream
-    const fileStream = new Readable();
-    fileStream.push(Buffer.from(await file.arrayBuffer()));
-    fileStream.push(null); // Segnala la fine dello stream
+    try {
+        // Non c'è bisogno di generare il JWT, lo usi direttamente
+        // Rimuovi: const pinataJWT = generatePinataJWT();
 
-    // Aggiungi il file a IPFS
-    const result = await ipfs.add(fileStream, {
-      pin: true, // Chiedi a Pinata di pinnare il contenuto
-      wrapWithDirectory: false, // Non incapsulare in una directory extra
-    });
+        const formData = await request.formData();
+        const file = formData.get('file') as File;
 
-    return NextResponse.json({ success: true, cid: result.cid.toString(), path: result.path });
+        if (!file) {
+            return NextResponse.json({ success: false, message: 'No file uploaded.' }, { status: 400 });
+        }
 
-  } catch (error: any) {
-    console.error('Error uploading to IPFS:', error);
-    return NextResponse.json({ success: false, message: error.message || 'Failed to upload to IPFS.' }, { status: 500 });
-  }
+        const pinataFormData = new FormData();
+        const nodeStream = Readable.from(webStreamToNodeStream(file.stream()));
+
+        pinataFormData.append('file', nodeStream, {
+            filepath: file.name,
+            contentType: file.type
+        });
+
+        const axiosConfig = {
+            method: 'post',
+            url: 'https://api.pinata.cloud/pinning/pinFileToIPFS',
+            headers: {
+                'Authorization': `Bearer ${PINATA_JWT}`, // <-- Usa il JWT pre-generato qui!
+                ...pinataFormData.getHeaders()
+            },
+            data: pinataFormData
+        };
+
+        const response = await axios(axiosConfig);
+
+        if (response.status === 200) {
+            return NextResponse.json({ success: true, cid: response.data.IpfsHash });
+        } else {
+            console.error('Pinata API error:', response.data);
+            return NextResponse.json({ success: false, message: `Pinata upload failed: ${response.data.error || 'Unknown error'}` }, { status: response.status });
+        }
+
+    } catch (error: any) {
+        console.error('IPFS upload error:', error);
+        return NextResponse.json({ success: false, message: `IPFS upload failed: ${error.message || 'Unknown error'}` }, { status: 500 });
+    }
 }
 
-// Necessario per permettere a Next.js di parsare il body come form-data
 export const config = {
   api: {
-    bodyParser: false, // Disabilita il body parser di Next.js per gestire il form-data manualmente
+    bodyParser: false,
   },
 };

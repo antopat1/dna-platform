@@ -1,570 +1,727 @@
 // frontend-dapp/src/app/admin/register-content/page.tsx
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
-import { toast, Toaster } from 'react-hot-toast';
+import React, { useState, useEffect } from "react";
+import { Toaster } from "react-hot-toast";
+import { useRegisterContent } from "@/hooks/useRegisterContent";
+import { useIsMounted } from "@/hooks/useIsMounted";
+import { useRouter } from 'next/navigation';
 import {
-  SCIENTIFIC_CONTENT_REGISTRY_ADDRESS,
-  SCIENTIFIC_CONTENT_REGISTRY_ABI,
   SCIENTIFIC_CONTENT_NFT_ADDRESS,
-  SCIENTIFIC_CONTENT_NFT_ABI,
   ARBITRUM_SEPOLIA_CHAIN_ID,
-} from '@/lib/constants';
-import { parseEther, isAddress, Abi } from 'viem';
+} from "@/lib/constants";
+import { CheckCircleIcon, XCircleIcon, InformationCircleIcon, DocumentDuplicateIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 
-// Interfaccia per il modello NftTemplate (assicurati che sia consistente con il tuo schema MongoDB)
-interface NftTemplate {
-  _id: string;
-  name: string;
-  description: string;
-  metadataSchema: any;
-  royaltyPercentage: number;
-  saleOptions: 'fixed_price' | 'auction' | 'both';
-  maxCopies: number;
-}
+console.log("Componente RegisterContentPage caricato.");
 
 export default function RegisterContentPage() {
-  const [mounted, setMounted] = useState(false); // Nuovo stato per l'idratazione
+  const mounted = useIsMounted();
+  const router = useRouter();
 
-  // Questo useEffect si esegue solo sul client, dopo il montaggio
+  console.log("RegisterContentPage: Inizio del render.");
+
+  const {
+    isConnected,
+    chainId,
+    address,
+    templates,
+    selectedTemplateId,
+    setSelectedTemplateId,
+    contentTitle,
+    setContentTitle,
+    contentDescription,
+    setDescriptionContent,
+    maxCopies,
+    setMaxCopies,
+    previewImage,
+    setPreviewImage,
+    mainDocument,
+    setMainDocument,
+    metadataInputs,
+    setMetadataInputs,
+    ipfsPreviewImageCid,
+    ipfsMainDocumentCid,
+    ipfsMetadataCid,
+    error,
+    isProcessing,
+    registryContentId,
+    mintedTokenId,
+    isMintingFulfilled,
+    mintingFulfillmentTxHash,
+    mintedNftImageUrl,
+    originalMetadata,
+    mintingRevertReason,
+    nftContractAddressInRegistry,
+    isRegisteringPending,
+    isRegistering,
+    isRegistrySuccess,
+    registryHash,
+    isRequestMintPending,
+    isRequestingMint,
+    isRequestMintSuccess,
+    requestMintHash,
+    isSettingNftContract,
+    isSetNftContractPending,
+    handleFileUpload,
+    handleSetNftContract,
+    handleRegisterContent,
+    handleRequestMintNFT,
+    resetForm,
+    MINT_PRICE_ETH,
+  } = useRegisterContent();
+
+  const [showOptionalMetadata, setShowOptionalMetadata] = useState(false);
+  const [currentMintedCount, setCurrentMintedCount] = useState(0);
+
+  console.log("RegisterContentPage: Stati attuali:", {
+    isConnected,
+    chainId,
+    address,
+    isProcessing,
+    registryContentId: registryContentId?.toString(),
+    mintedTokenId: mintedTokenId?.toString(),
+    isMintingFulfilled,
+    mintingFulfillmentTxHash,
+    error,
+    mintingRevertReason,
+    currentMintedCount,
+    maxCopies
+  });
+
+
+  const PINATA_GATEWAY_SUBDOMAIN = process.env.NEXT_PUBLIC_PINATA_GATEWAY_SUBDOMAIN || 'your-default-subdomain';
+
   useEffect(() => {
-    setMounted(true); // Imposta mounted a true una volta che il componente è sul client
-  }, []);
+    console.log("RegisterContentPage: useEffect - Mounted status:", mounted);
+  }, [mounted]);
 
-  const { address, isConnected, chainId } = useAccount();
-  const [templates, setTemplates] = useState<NftTemplate[]>([]);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
-  const [contentTitle, setContentTitle] = useState<string>('');
-  const [contentDescription, setContentDescription] = useState<string>('');
-  const [maxCopies, setMaxCopies] = useState<number>(1);
-  const [mainFile, setMainFile] = useState<File | null>(null);
-  const [metadataInputs, setMetadataInputs] = useState<Record<string, any>>({});
-  const [ipfsMainFileCid, setIpfsMainFileCid] = useState<string | null>(null);
-  const [ipfsMetadataCid, setIpfsMetadataCid] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [registryContentId, setRegistryContentId] = useState<bigint | null>(null);
-
-  // Wagmi hook per registrare contenuto nel ScientificContentRegistry
-  const { data: registryHash, writeContract: registerContentContract } = useWriteContract();
-  const { isLoading: isRegistering, isSuccess: isRegistrySuccess, isError: isRegistryError } = useWaitForTransactionReceipt({ hash: registryHash });
-
-  // Wagmi hook per mintare NFT dal ScientificContentNFT
-  const { data: mintHash, writeContract: mintNFTContract } = useWriteContract();
-  const { isLoading: isMinting, isSuccess: isMintSuccess, isError: isMintError } = useWaitForTransactionReceipt({ hash: mintHash });
-
-  // Per ottenere lo stato del ScientificContentRegistry e verificare che il NFT Contract sia impostato
-  const { data: nftContractAddressInRegistry } = useReadContract({
-      abi: SCIENTIFIC_CONTENT_REGISTRY_ABI as Abi,
-      address: SCIENTIFIC_CONTENT_REGISTRY_ADDRESS,
-      functionName: 'nftContract',
-      chainId: ARBITRUM_SEPOLIA_CHAIN_ID,
-      query: {
-          enabled: mounted && isConnected && chainId === ARBITRUM_SEPOLIA_CHAIN_ID, // Abilita solo se mounted
-      },
-  }) as { data: `0x${string}` | undefined };
-
-  // Per un Admin, può voler impostare l'indirizzo del NFT contract nel Registry
-  const { data: setNftContractHash, writeContract: setNftContractInRegistry } = useWriteContract();
-  const { isLoading: isSettingNftContract, isSuccess: isSetNftContractSuccess } = useWaitForTransactionReceipt({ hash: setNftContractHash });
-
-  // Fetch templates
+  // Effetto per aggiornare il conteggio dei mint quando un mint è completato con successo
   useEffect(() => {
-    // Solo se mounted e c'è una connessione (se necessario)
-    if (!mounted) return;
-
-    const fetchTemplates = async () => {
-      try {
-        const res = await fetch('/api/admin/templates');
-        const data = await res.json();
-        if (data.success) {
-          setTemplates(data.data);
-          if (data.data.length > 0 && !selectedTemplateId) {
-            setSelectedTemplateId(data.data[0]._id);
-            setMaxCopies(data.data[0].maxCopies || 1);
-          }
-        } else {
-          toast.error(data.message || 'Failed to fetch templates.');
-        }
-      } catch (err: any) {
-        toast.error(err.message || 'Network error fetching templates.');
-      }
-    };
-    fetchTemplates();
-  }, [mounted]); // Aggiunto mounted come dipendenza
-
-  // Quando un template è selezionato, inizializza i campi dei metadati e maxCopies
-  useEffect(() => {
-    const template = templates.find(t => t._id === selectedTemplateId);
-    if (template) {
-      if (template.metadataSchema && template.metadataSchema.properties) {
-        const initialMetadata: Record<string, any> = {};
-        for (const key in template.metadataSchema.properties) {
-          initialMetadata[key] = '';
-        }
-        setMetadataInputs(initialMetadata);
-      } else {
-        setMetadataInputs({});
-      }
-      setMaxCopies(template.maxCopies || 1);
-    } else {
-      setMetadataInputs({});
-      setMaxCopies(1);
+    console.log("RegisterContentPage: useEffect - Checking isMintingFulfilled and mintedTokenId for count update.");
+    if (isMintingFulfilled && mintedTokenId) {
+      console.log(`RegisterContentPage: Minting Fulfilled! Token ID: ${mintedTokenId.toString()}. Aggiornamento conteggio.`);
+      setCurrentMintedCount(prev => prev + 1);
+      console.log(`RegisterContentPage: Nuovo conteggio mintati: ${currentMintedCount + 1}`);
     }
-  }, [selectedTemplateId, templates]);
+  }, [isMintingFulfilled, mintedTokenId]); // Dipende solo dallo stato dell'ultimo mint
 
-  // Handle file upload to IPFS via API Route
-  const handleFileUpload = async (file: File) => {
-    setError(null);
-    setIsProcessing(true);
-    toast('Uploading file to IPFS...', { icon: '⏳' });
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
+  const isNftContractSetCorrectly =
+    nftContractAddressInRegistry?.toLowerCase() ===
+    SCIENTIFIC_CONTENT_NFT_ADDRESS.toLowerCase();
 
-      const res = await fetch('/api/ipfs-upload', {
-        method: 'POST',
-        body: formData,
-      });
+  const isFormReadyForRegistration =
+    ipfsMainDocumentCid &&
+    ipfsPreviewImageCid &&
+    contentTitle &&
+    contentDescription &&
+    selectedTemplateId &&
+    maxCopies >= 1 &&
+    maxCopies <= 5 &&
+    isNftContractSetCorrectly;
 
-      const data = await res.json();
+  const isReadyForMinting =
+    registryContentId &&
+    ipfsMainDocumentCid &&
+    ipfsPreviewImageCid &&
+    isRegistrySuccess &&
+    currentMintedCount < maxCopies;
 
-      if (data.success) {
-        setIpfsMainFileCid(data.cid);
-        toast.success(`File uploaded to IPFS: ${data.cid}`);
-      } else {
-        throw new Error(data.message || 'Failed to upload file to IPFS.');
-      }
-    } catch (err: any) {
-      console.error('IPFS upload error:', err);
-      setError(`Failed to upload file to IPFS: ${err.message}`);
-      toast.error(`Failed to upload file to IPFS: ${err.message}`);
-    } finally {
-      setIsProcessing(false);
+  const buildIpfsUrl = (cid: string | undefined | null) => {
+    if (!cid) return '';
+    if (cid.startsWith('http://') || cid.startsWith('https://') || cid.startsWith('ipfs://')) {
+        return cid;
     }
+    return `https://${PINATA_GATEWAY_SUBDOMAIN}.mypinata.cloud/ipfs/${cid}`;
   };
 
-  // Handle metadata upload to IPFS via API Route
-  const handleMetadataUpload = async () => {
-    setError(null);
-    setIsProcessing(true);
-    toast('Uploading metadata to IPFS...', { icon: '⏳' });
-    try {
-      const template = templates.find(t => t._id === selectedTemplateId);
-      if (!template) {
-        throw new Error("No template selected.");
-      }
-
-      const fullMetadata = {
-        name: contentTitle,
-        description: contentDescription,
-        authorAddress: address,
-        authorName: 'Admin DnA',
-        contentRegistryId: registryContentId ? registryContentId.toString() : 'N/A',
-        ipfsMainFileCid: ipfsMainFileCid,
-        templateId: selectedTemplateId,
-        templateName: template.name,
-        royaltyPercentage: template.royaltyPercentage,
-        saleOptions: template.saleOptions,
-        maxCopies: template.maxCopies,
-        ...metadataInputs,
-      };
-
-      const formData = new FormData();
-      const metadataBlob = new Blob([JSON.stringify(fullMetadata)], { type: 'application/json' });
-      formData.append('file', metadataBlob, 'metadata.json');
-
-      const res = await fetch('/api/ipfs-upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await res.json();
-
-      if (data.success) {
-        setIpfsMetadataCid(data.cid);
-        toast.success(`Metadata uploaded to IPFS: ${data.cid}`);
-        return data.cid;
-      } else {
-        throw new Error(data.message || 'Failed to upload metadata to IPFS.');
-      }
-    } catch (err: any) {
-      console.error('IPFS metadata upload error:', err);
-      setError(`Failed to upload metadata to IPFS: ${err.message}`);
-      toast.error(`Failed to upload metadata to IPFS: ${err.message}`);
-      return null;
-    } finally {
-      setIsProcessing(false);
-    }
+  const handleFullReset = () => {
+    console.log("RegisterContentPage: handleFullReset chiamato. Resetto form e contatore.");
+    resetForm();
+    setCurrentMintedCount(0);
   };
 
-  // Funzione per impostare l'indirizzo del ScientificContentNFT nel ScientificContentRegistry
-  const handleSetNftContract = async () => {
-      if (!isConnected || chainId !== ARBITRUM_SEPOLIA_CHAIN_ID || !address) {
-          toast.error("Connect to Arbitrum Sepolia with an admin account.");
-          return;
-      }
-      if (nftContractAddressInRegistry && nftContractAddressInRegistry.toLowerCase() === SCIENTIFIC_CONTENT_NFT_ADDRESS.toLowerCase()) {
-          toast.success("NFT Contract is already correctly set in Registry.");
-          return;
-      }
-      if (nftContractAddressInRegistry && nftContractAddressInRegistry !== '0x0000000000000000000000000000000000000000') {
-         toast.error("NFT Contract already set to a different address. Manual action needed if incorrect.");
-         return;
-      }
-
-      try {
-          toast('Setting NFT contract in Registry...', { icon: '⏳' });
-          setNftContractInRegistry({
-              abi: SCIENTIFIC_CONTENT_REGISTRY_ABI as Abi,
-              address: SCIENTIFIC_CONTENT_REGISTRY_ADDRESS,
-              functionName: 'setNFTContract',
-              args: [SCIENTIFIC_CONTENT_NFT_ADDRESS],
-          });
-      } catch (err: any) {
-          console.error("Error setting NFT contract in Registry:", err);
-          toast.error(`Error: ${err.message}`);
-      }
-  };
-
-  useEffect(() => {
-      if (isSetNftContractSuccess) {
-          toast.success('NFT Contract address set in ScientificContentRegistry successfully!');
-      }
-      if (setNftContractHash && isSetNftContractSuccess) {
-          toast(`Transaction Hash: ${setNftContractHash}`, { icon: '✅' });
-      }
-  }, [isSetNftContractSuccess, setNftContractHash]);
-
-  // Passaggio 1: Registra il contenuto nel Registry
-  const handleRegisterContent = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
-    if (!isConnected || chainId !== ARBITRUM_SEPOLIA_CHAIN_ID || !address) {
-      toast.error("Connect to Arbitrum Sepolia with an admin account.");
-      return;
-    }
-    if (!ipfsMainFileCid) {
-      setError("Please upload the main content file to IPFS first.");
-      toast.error("Please upload the main content file to IPFS first.");
-      return;
-    }
-    if (!nftContractAddressInRegistry || nftContractAddressInRegistry.toLowerCase() !== SCIENTIFIC_CONTENT_NFT_ADDRESS.toLowerCase()) {
-        setError("NFT Contract address not correctly set in Registry. Please set it first.");
-        toast.error("NFT Contract address not correctly set in Registry. Please set it first.");
-        return;
-    }
-
-    setIsProcessing(true);
-    toast('Registering content on-chain...', { icon: '⏳' });
-
-    try {
-      registerContentContract({
-        abi: SCIENTIFIC_CONTENT_REGISTRY_ABI as Abi,
-        address: SCIENTIFIC_CONTENT_REGISTRY_ADDRESS,
-        functionName: 'registerContent',
-        args: [contentTitle, contentDescription, BigInt(maxCopies)],
-      });
-    } catch (err: any) {
-      console.error("Error initiating registerContent:", err);
-      setError(`Error initiating content registration: ${err.message}`);
-      toast.error(`Error initiating content registration: ${err.message}`);
-      setIsProcessing(false);
-    }
-  };
-
-  // Monitora la transazione di registrazione del contenuto
-  useEffect(() => {
-    if (isRegistrySuccess && registryHash) {
-      toast.success('Content registration transaction confirmed!');
-      toast(`Tx Hash: ${registryHash}`, { icon: '🔗' });
-      const getLatestContentId = async () => {
-          try {
-              const receipt = await (window as any).wagmiConfig.getClient().getPublicClient().getTransactionReceipt({ hash: registryHash });
-              const contentRegisteredEvent = receipt.logs.find((log: { address: string; topics: string[]; data: string; }) =>
-                  log.address.toLowerCase() === SCIENTIFIC_CONTENT_REGISTRY_ADDRESS.toLowerCase() &&
-                  log.topics[0] === '0x995392576b51c1c11090333246738b8167f516a2c222df07b9a2444317f22ddb'
-              );
-              if (contentRegisteredEvent) {
-                  const decodedLog = (window as any).wagmiConfig.getClient().getPublicClient().decodeEventLog({
-                      abi: SCIENTIFIC_CONTENT_REGISTRY_ABI as Abi,
-                      eventName: 'ContentRegistered',
-                      topics: contentRegisteredEvent.topics,
-                      data: contentRegisteredEvent.data
-                  });
-                  setRegistryContentId(decodedLog.args.contentId);
-                  toast.success(`Content registered with ID: ${decodedLog.args.contentId.toString()}`);
-                  setIsProcessing(false);
-              } else {
-                  console.warn("Could not find ContentRegistered event in transaction receipt. Please find content ID manually if needed.");
-                  setError("Could not find ContentRegistered event. Manual check for content ID needed.");
-                  toast.error("Content ID not found programmatically.");
-                  setIsProcessing(false);
-              }
-          } catch (err: any) {
-              console.error("Error fetching transaction receipt or decoding event:", err);
-              setError(`Error fetching receipt/decoding event: ${err.message}`);
-              toast.error(`Error fetching receipt/decoding event: ${err.message}`);
-              setIsProcessing(false);
-          }
-      }
-      getLatestContentId();
-    }
-
-    if (isRegistryError) {
-      setError("Error registering content on-chain.");
-      toast.error("Error registering content on-chain.");
-      setIsProcessing(false);
-    }
-  }, [isRegistrySuccess, isRegistryError, registryHash]);
-
-  // Passaggio 2: Mint dell'NFT (dopo aver registrato il contenuto)
-  const handleMintNFT = async () => {
-    setError(null);
-    if (!registryContentId) {
-      setError("Content not yet registered or ID not retrieved.");
-      toast.error("Content not yet registered or ID not retrieved.");
-      return;
-    }
-    if (!ipfsMainFileCid) {
-        setError("Main content file not uploaded to IPFS.");
-        toast.error("Main content file not uploaded to IPFS.");
-        return;
-    }
-
-    setIsProcessing(true);
-    toast('Minting NFT...', { icon: '⏳' });
-
-    try {
-      const metadataCid = await handleMetadataUpload();
-      if (!metadataCid) {
-        setIsProcessing(false);
-        return;
-      }
-      setIpfsMetadataCid(metadataCid);
-
-      mintNFTContract({
-        abi: SCIENTIFIC_CONTENT_NFT_ABI as Abi,
-        address: SCIENTIFIC_CONTENT_NFT_ADDRESS,
-        functionName: 'mintNFT',
-        args: [registryContentId],
-        value: parseEther('0.05'),
-      });
-
-    } catch (err: any) {
-      console.error("Error initiating mintNFT:", err);
-      setError(`Error initiating NFT mint: ${err.message}`);
-      toast.error(`Error initiating NFT mint: ${err.message}`);
-      setIsProcessing(false);
-    }
-  };
-
-  // Monitora la transazione di minting dell'NFT
-  useEffect(() => {
-    if (isMintSuccess && mintHash) {
-      toast.success('NFT Minting transaction confirmed!');
-      toast(`Tx Hash: ${mintHash}`, { icon: '🔗' });
-      setIsProcessing(false);
-    }
-
-    if (isMintError) {
-      setError("Error minting NFT.");
-      toast.error("Error minting NFT.");
-      setIsProcessing(false);
-    }
-  }, [isMintSuccess, isMintError, mintHash]);
-
-  // Helper per rendere i campi del form dinamici basati sullo schema del template
   const renderMetadataFields = () => {
-    const template = templates.find(t => t._id === selectedTemplateId);
-    if (!template || !template.metadataSchema || !template.metadataSchema.properties) return null;
+    const template = templates.find((t) => t._id === selectedTemplateId);
+    if (!template || !template.metadataSchema || !template.metadataSchema.properties) {
+      console.log("RegisterContentPage: Nessun template selezionato o schema metadati non valido.");
+      return null;
+    }
+    console.log("RegisterContentPage: Rendering campi metadati per template:", template.name);
 
-    return Object.entries(template.metadataSchema.properties).map(([key, value]: [string, any]) => (
-      <div key={key}>
-        <label htmlFor={`metadata-${key}`} className="block text-sm font-medium text-gray-700">
-          {key.charAt(0).toUpperCase() + key.slice(1)} ({value.type})
-        </label>
-        <input
-          type={value.type === 'number' ? 'number' : 'text'}
-          id={`metadata-${key}`}
-          value={metadataInputs[key] || ''}
-          onChange={(e) => setMetadataInputs({ ...metadataInputs, [key]: value.type === 'number' ? parseFloat(e.target.value) : e.target.value })}
-          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-          required={value.required}
-        />
-      </div>
-    ));
-  };
+    const properties = template.metadataSchema.properties;
+    const requiredFields = template.metadataSchema.required || [];
 
-  // Se il componente non è ancora montato sul client, non renderizzare il contenuto dinamico.
-  // Questo previene l'errore di idratazione iniziale.
-  if (!mounted) {
+    const fieldsToRender = Object.entries(properties).filter(([key]) => {
+      const isRequired = requiredFields.includes(key);
+      return isRequired || showOptionalMetadata;
+    });
+
+    if (fieldsToRender.length === 0 && !showOptionalMetadata) {
+      return (
+        <p className="text-gray-500 italic text-sm">
+          Nessun campo metadato specifico richiesto per questo template, o i campi opzionali sono nascosti.
+        </p>
+      );
+    }
+
     return (
-      <div className="text-center p-8 bg-white rounded shadow-md">
-        <p className="text-gray-700">Caricamento delle funzionalità di amministrazione...</p>
-      </div>
-    );
-  }
-
-  // Controllo preliminare per la connessione e la rete (solo dopo mounted)
-  if (!isConnected || chainId !== ARBITRUM_SEPOLIA_CHAIN_ID) {
-    return (
-      <div className="text-center p-8 bg-white rounded shadow-md">
-        <h2 className="text-2xl font-bold text-red-600 mb-4">Wallet Non Connesso o Rete Errata</h2>
-        <p className="text-gray-700">Connetti il tuo wallet MetaMask e assicurati che sia sulla testnet Arbitrum Sepolia per accedere alle funzioni di amministrazione.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <h1 className="text-3xl font-bold mb-6 text-gray-800">Registra Contenuto e Minta NFT</h1>
-
-      {error && <p className="text-red-500 mb-4">{error}</p>}
-
-      {/* Sezione per impostare l'indirizzo del NFT Contract nel Registry */}
-      <div className="bg-white p-6 rounded shadow-md mb-8">
-            <h2 className="text-2xl font-semibold mb-4">Setup NFT Contract in ScientificContentRegistry (Solo Admin)</h2>
-            <p className="mb-4">
-                Contratto NFT Corrente nel Registry: <strong className={nftContractAddressInRegistry && nftContractAddressInRegistry !== '0x0000000000000000000000000000000000000000' ? 'text-green-600' : 'text-red-600'}>
-                    {nftContractAddressInRegistry || 'Non Impostato'}
-                </strong>
-            </p>
-            {/* Solo se l'indirizzo non è ancora impostato correttamente */}
-            {(!nftContractAddressInRegistry || nftContractAddressInRegistry.toLowerCase() !== SCIENTIFIC_CONTENT_NFT_ADDRESS.toLowerCase()) && (
-                <button
-                    onClick={handleSetNftContract}
-                    disabled={isSettingNftContract || !isConnected || chainId !== ARBITRUM_SEPOLIA_CHAIN_ID}
-                    className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-                >
-                    {isSettingNftContract ? 'Impostando...' : 'Imposta Indirizzo ScientificContentNFT nel Registry'}
-                </button>
+      <div className="space-y-4">
+        {fieldsToRender.map(([key, value]: [string, any]) => (
+          <div key={key}>
+            <label
+              htmlFor={`metadata-${key}`}
+              className="block text-sm font-semibold text-gray-700 mb-1"
+            >
+              {value.title || key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, " $1").trim()}
+              {requiredFields.includes(key) && <span className="text-red-500 ml-1">*</span>}
+            </label>
+            <p className="text-sm text-gray-500 mb-2">{value.description}</p>
+            {key === 'image' && (
+                <p className="text-xs text-blue-600 mb-2 bg-blue-50 p-2 rounded-md border border-blue-200">
+                    **Importante:** Inserisci solo il **CID** dell'immagine IPFS. Il link completo verrà generato automaticamente.
+                    (es. per `https://bafkreiglnzp25a5vvqnwldex7x77kvowdxwhnhhemrleoq4rsce77xkfiq.ipfs.dweb.link/` inserisci solo `bafkreiglnzp25a5vvqnwldex7x77kvowdxwhnhhemrleoq4rsce77xkfiq`)
+                </p>
             )}
-            {isSettingNftContract && <p className="mt-2 text-blue-500">Transazione in corso: {setNftContractHash}</p>}
-            {isSetNftContractSuccess && <p className="mt-2 text-green-500">Contratto NFT impostato con successo!</p>}
-            {/* Avviso se l'indirizzo è diverso da quello previsto ma non null */}
-            {(nftContractAddressInRegistry && nftContractAddressInRegistry !== '0x0000000000000000000000000000000000000000' && nftContractAddressInRegistry.toLowerCase() !== SCIENTIFIC_CONTENT_NFT_ADDRESS.toLowerCase()) && (
-                <p className="mt-2 text-red-500">Avviso: Il Contratto NFT è impostato su un indirizzo diverso. Potrebbe essere necessaria una correzione manuale tramite chiamata al contratto se questo è errato.</p>
+            {value.type === "string" && (
+              <input
+                type="text"
+                id={`metadata-${key}`}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                value={metadataInputs[key] || ""}
+                onChange={(e) =>
+                  setMetadataInputs({ ...metadataInputs, [key]: e.target.value })
+                }
+                required={requiredFields.includes(key)}
+                disabled={isProcessing || isRegistrySuccess}
+              />
             )}
-      </div>
-
-
-      <div className="bg-white p-6 rounded shadow-md mb-8">
-        <h2 className="text-2xl font-semibold mb-4">Dettagli Contenuto e Minting NFT</h2>
-        <form onSubmit={handleRegisterContent} className="space-y-4">
-          <div>
-            <label htmlFor="contentTitle" className="block text-sm font-medium text-gray-700">Titolo Contenuto</label>
-            <input
-              type="text"
-              id="contentTitle"
-              value={contentTitle}
-              onChange={(e) => setContentTitle(e.target.value)}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-              required
-            />
-          </div>
-          <div>
-            <label htmlFor="contentDescription" className="block text-sm font-medium text-gray-700">Descrizione Contenuto</label>
-            <textarea
-              id="contentDescription"
-              value={contentDescription}
-              onChange={(e) => setContentDescription(e.target.value)}
-              rows={3}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-              required
-            ></textarea>
-          </div>
-
-          {/* Il campo Max Copies ora viene popolato dal template, ma se non c'è template lo mostriamo comunque */}
-          {(!selectedTemplateId) && ( // Mostra solo se nessun template selezionato
-            <div>
-              <label htmlFor="maxCopies" className="block text-sm font-medium text-gray-700">Copie Massime (NFTs)</label>
+            {value.type === "number" && (
               <input
                 type="number"
-                id="maxCopies"
-                value={maxCopies}
-                onChange={(e) => setMaxCopies(parseInt(e.target.value, 10))}
-                min="1"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                required
+                id={`metadata-${key}`}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                value={metadataInputs[key] || ""}
+                onChange={(e) =>
+                  setMetadataInputs({ ...metadataInputs, [key]: parseFloat(e.target.value) || "" })
+                }
+                required={requiredFields.includes(key)}
+                disabled={isProcessing || isRegistrySuccess}
               />
-            </div>
-          )}
-
-
-          {/* File Upload to IPFS */}
-          <div>
-            <label htmlFor="mainFile" className="block text-sm font-medium text-gray-700">File Principale Contenuto (es. PDF, Ricerca)</label>
-            <input
-              type="file"
-              id="mainFile"
-              onChange={(e) => setMainFile(e.target.files ? e.target.files[0] : null)}
-              className="mt-1 block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none"
-            />
-            {mainFile && (
-              <button
-                type="button"
-                onClick={() => mainFile && handleFileUpload(mainFile)}
-                disabled={isProcessing || !mainFile}
-                className="mt-2 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
-              >
-                {isProcessing ? 'Caricando...' : 'Carica File su IPFS'}
-              </button>
             )}
-            {ipfsMainFileCid && <p className="mt-2 text-sm text-green-600">CID File: {ipfsMainFileCid}</p>}
           </div>
-
-          {/* Template Selection and Dynamic Metadata Fields */}
-          <div>
-            <label htmlFor="template" className="block text-sm font-medium text-gray-700">Seleziona Template NFT</label>
-            <select
-              id="template"
-              value={selectedTemplateId}
-              onChange={(e) => setSelectedTemplateId(e.target.value)}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-              required
-            >
-              <option value="">-- Seleziona un Template --</option>
-              {templates.map((template) => (
-                <option key={template._id} value={template._id}>{template.name} (Copie Max: {template.maxCopies}, Vendita: {template.saleOptions.replace('_', ' ')})</option>
-              ))}
-            </select>
-          </div>
-          {selectedTemplateId && (
-            <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-              <h3 className="text-lg font-medium text-gray-800 mb-3">Metadati Specifici del Template</h3>
-              {renderMetadataFields()}
-            </div>
-          )}
-
+        ))}
+        {Object.entries(properties).some(([key]) => !requiredFields.includes(key)) && (
           <button
-            type="submit"
-            disabled={isProcessing || isRegistering || !ipfsMainFileCid || !selectedTemplateId || !nftContractAddressInRegistry || nftContractAddressInRegistry.toLowerCase() !== SCIENTIFIC_CONTENT_NFT_ADDRESS.toLowerCase()}
-            className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50"
+            type="button"
+            onClick={() => {
+                setShowOptionalMetadata(!showOptionalMetadata);
+                console.log(`RegisterContentPage: Toggling optional metadata. Now: ${!showOptionalMetadata}`);
+            }}
+            className="text-blue-600 hover:underline text-sm mt-4 flex items-center"
+            disabled={isProcessing || isRegistrySuccess}
           >
-            {isRegistering ? 'Registrando Contenuto...' : 'Registra Contenuto On-Chain'}
+            {showOptionalMetadata ? "Nascondi campi opzionali" : "Mostra campi opzionali"}
+            <InformationCircleIcon className="w-4 h-4 ml-1" />
           </button>
-          {isRegistering && <p className="mt-2 text-blue-500">Transazione in corso: {registryHash}</p>}
-        </form>
-
-        {/* Mint NFT Button (appears after content registration) */}
-        {registryContentId && !isProcessing && (
-          <div className="mt-8 pt-8 border-t border-gray-200">
-            <h2 className="text-2xl font-semibold mb-4">Minta NFT per Contenuto Registrato (ID: {registryContentId.toString()})</h2>
-            <button
-              onClick={handleMintNFT}
-              disabled={isProcessing || isMinting || !registryContentId || !ipfsMainFileCid}
-              className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-            >
-              {isMinting ? 'Minting NFT...' : 'Minta NFT (0.05 ETH)'}
-            </button>
-            {isMinting && <p className="mt-2 text-blue-500">Transazione in corso: {mintHash}</p>}
-          </div>
         )}
       </div>
-      <Toaster />
+    );
+  };
+
+  const currentChainIsArbitrumSepolia = chainId === ARBITRUM_SEPOLIA_CHAIN_ID;
+  console.log(`RegisterContentPage: Chain ID: ${chainId}, Is Arbitrum Sepolia: ${currentChainIsArbitrumSepolia}`);
+
+  console.log("RegisterContentPage: Fine del render.");
+
+  return (
+    <div className="min-h-screen bg-gray-100 p-8">
+      <Toaster position="bottom-right" reverseOrder={false} />
+
+      <h1 className="text-4xl font-extrabold text-gray-900 mb-8 text-center">
+        Registra Contenuto & Minting NFT
+      </h1>
+
+      {/* Pulsanti Globali di Navigazione */}
+      <div className="flex justify-center space-x-4 mb-8">
+        <button
+          onClick={() => {
+            router.push('/admin/registered-content');
+            console.log("RegisterContentPage: Cliccato 'Accedi ai Contenuti Registrati'.");
+          }}
+          className="px-6 py-2 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 transition-all duration-300"
+        >
+          Accedi ai Contenuti Registrati
+        </button>
+        <button
+          onClick={handleFullReset}
+          className="px-6 py-2 bg-gray-200 text-gray-800 font-semibold rounded-lg shadow-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition-all duration-300"
+        >
+          Inizia Nuova Registrazione
+        </button>
+      </div>
+
+
+      {!mounted && (
+        <div className="bg-white p-6 rounded-xl shadow-lg text-center text-lg text-gray-600">
+          Caricamento...
+        </div>
+      )}
+
+      {mounted && (
+        <>
+          {!isConnected && (
+            <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl shadow-md text-center">
+              <p className="font-semibold text-lg mb-2">Wallet non Connesso</p>
+              <p>Per favore, connetti il tuo wallet per accedere a questa funzionalità.</p>
+            </div>
+          )}
+
+          {isConnected && !currentChainIsArbitrumSepolia && (
+            <div className="bg-orange-50 border border-orange-200 text-orange-700 p-4 rounded-xl shadow-md text-center">
+              <p className="font-semibold text-lg mb-2">Rete Sbagliata</p>
+              <p>Connettiti alla rete Arbitrum Sepolia per procedere.</p>
+            </div>
+          )}
+
+          {isConnected && currentChainIsArbitrumSepolia && (
+            <div className="max-w-4xl mx-auto space-y-8">
+              {/* NFT Contract Registry Status */}
+              <div className="bg-white p-8 rounded-xl shadow-2xl border border-blue-100 relative">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                  <span className="bg-blue-500 text-white rounded-full p-2 mr-3 shadow-md">
+                    <InformationCircleIcon className="w-6 h-6" />
+                  </span>
+                  Stato del Contratto NFT nel Registry
+                </h2>
+                <div className="flex items-center justify-between bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  <p className="text-md text-gray-700 font-medium flex items-center">
+                    Indirizzo NFT nel Registry:
+                    <span className="ml-2 font-mono bg-gray-200 px-3 py-1 rounded-md text-sm text-gray-800 break-all">
+                      {nftContractAddressInRegistry || "Non impostato"}
+                    </span>
+                    <button
+                        onClick={() => {
+                            navigator.clipboard.writeText(nftContractAddressInRegistry || "");
+                            console.log("RegisterContentPage: Copia indirizzo NFT Registry.");
+                        }}
+                        className="ml-2 p-1 rounded-full text-gray-500 hover:bg-gray-200 transition"
+                        title="Copia Indirizzo"
+                        disabled={!nftContractAddressInRegistry}
+                    >
+                        <DocumentDuplicateIcon className="w-5 h-5" />
+                    </button>
+                  </p>
+                  <div className="flex items-center space-x-2">
+                    {isNftContractSetCorrectly ? (
+                      <span className="text-green-600 flex items-center">
+                        <CheckCircleIcon className="w-6 h-6 mr-1" /> Corretto
+                      </span>
+                    ) : (
+                      <span className="text-red-600 flex items-center">
+                        <XCircleIcon className="w-6 h-6 mr-1" /> Non Corretto / Non impostato
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {!isNftContractSetCorrectly && (
+                  <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between">
+                    <p className="text-yellow-800 text-sm">
+                      L'indirizzo del contratto NFT non è impostato correttamente nel Registry.
+                      È necessario impostarlo per poter registrare contenuti.
+                    </p>
+                    <button
+                      onClick={() => {
+                          handleSetNftContract();
+                          console.log("RegisterContentPage: Cliccato 'Imposta NFT Contract'.");
+                      }}
+                      disabled={isSetNftContractPending || isSettingNftContract}
+                      className="ml-4 px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                    >
+                      {isSetNftContractPending || isSettingNftContract ? (
+                        <>
+                          <ArrowPathIcon className="animate-spin w-5 h-5 mr-2" />
+                          Impostazione...
+                        </>
+                      ) : (
+                        "Imposta NFT Contract"
+                      )}
+                    </button>
+                  </div>
+                )}
+                {nftContractAddressInRegistry && !isNftContractSetCorrectly && (
+                    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
+                        **Attenzione:** L'indirizzo del Contratto NFT nel Registry è: <span className="font-mono break-all">{nftContractAddressInRegistry}</span>
+                        <br />L'indirizzo atteso è: <span className="font-mono break-all">{SCIENTIFIC_CONTENT_NFT_ADDRESS}</span>
+                        <br />**Non corrispondono.** Per favore, imposta l'indirizzo corretto.
+                    </div>
+                )}
+              </div>
+
+              {/* Registration Form */}
+              <form onSubmit={(e) => {
+                  e.preventDefault();
+                  handleRegisterContent(e);
+                  console.log("RegisterContentPage: Cliccato 'Registra Contenuto'.");
+              }} className="bg-white p-8 rounded-xl shadow-2xl border border-indigo-100">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                  <span className="bg-indigo-500 text-white rounded-full p-2 mr-3 shadow-md">
+                    <InformationCircleIcon className="w-6 h-6" />
+                  </span>
+                  Dettagli Contenuto
+                </h2>
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  {/* Contenuto principale */}
+                  <div className="space-y-4">
+                    <div>
+                      <label htmlFor="contentTitle" className="block text-sm font-semibold text-gray-700 mb-1">
+                        Titolo del Contenuto <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        id="contentTitle"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 disabled:bg-gray-100 disabled:text-gray-500"
+                        value={contentTitle}
+                        onChange={(e) => setContentTitle(e.target.value)}
+                        required
+                        disabled={isProcessing || isRegistrySuccess}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="contentDescription" className="block text-sm font-semibold text-gray-700 mb-1">
+                        Descrizione del Contenuto <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        id="contentDescription"
+                        rows={4}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 disabled:bg-gray-100 disabled:text-gray-500"
+                        value={contentDescription}
+                        onChange={(e) => setDescriptionContent(e.target.value)}
+                        required
+                        disabled={isProcessing || isRegistrySuccess}
+                      ></textarea>
+                    </div>
+                    <div>
+                      <label htmlFor="maxCopies" className="block text-sm font-semibold text-gray-700 mb-1">
+                        Numero Massimo di Copie (NFT) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        id="maxCopies"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 disabled:bg-gray-100 disabled:text-gray-500"
+                        value={maxCopies}
+                        onChange={(e) => setMaxCopies(Math.min(5, Math.max(1, parseInt(e.target.value) || 1)))}
+                        min="1"
+                        max="5"
+                        required
+                        disabled={isProcessing || isRegistrySuccess}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Il numero massimo di copie deve essere tra 1 e 5.</p>
+                    </div>
+                  </div>
+
+                  {/* Selezione Template e Caricamento File */}
+                  <div className="space-y-4">
+                    <div>
+                      <label htmlFor="templateSelect" className="block text-sm font-semibold text-gray-700 mb-1">
+                        Seleziona un Template NFT <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        id="templateSelect"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 bg-white disabled:bg-gray-100 disabled:text-gray-500"
+                        value={selectedTemplateId}
+                        onChange={(e) => {
+                            setSelectedTemplateId(e.target.value);
+                            console.log("RegisterContentPage: Selezionato template ID:", e.target.value);
+                        }}
+                        required
+                        disabled={isProcessing || isRegistrySuccess}
+                      >
+                        <option value="">Seleziona un template...</option>
+                        {templates.map((template) => (
+                          <option key={template._id} value={template._id}>
+                            {template.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Caricamento Immagine di Anteprima */}
+                    <div>
+                      <label htmlFor="previewImage" className="block text-sm font-semibold text-gray-700 mb-1">
+                        Immagine di Anteprima (Copertina NFT) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="file"
+                        id="previewImage"
+                        className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:file:bg-gray-200"
+                        accept="image/*"
+                        onChange={(e) => {
+                            setPreviewImage(e.target.files ? e.target.files[0] : null);
+                            console.log("RegisterContentPage: File previewImage selezionato:", e.target.files ? e.target.files[0].name : "Nessuno");
+                        }}
+                        disabled={isProcessing || isRegistrySuccess}
+                        required
+                      />
+                      {previewImage && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                              handleFileUpload(previewImage, 'preview');
+                              console.log("RegisterContentPage: Cliccato 'Carica Anteprima su IPFS'.");
+                          }}
+                          disabled={isProcessing || ipfsPreviewImageCid !== null || isRegistrySuccess}
+                          className="mt-2 px-4 py-2 bg-green-500 text-white rounded-lg shadow hover:bg-green-600 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                        >
+                          {ipfsPreviewImageCid ? "Caricato!" : isProcessing ? "Caricamento..." : "Carica Anteprima su IPFS"}
+                        </button>
+                      )}
+                      {ipfsPreviewImageCid && (
+                        <p className="mt-2 text-sm text-gray-600 flex items-center">
+                          CID Immagine: <span className="font-mono text-xs ml-2 break-all">{ipfsPreviewImageCid}</span>
+                          <button
+                                onClick={() => navigator.clipboard.writeText(buildIpfsUrl(ipfsPreviewImageCid))}
+                                className="ml-2 p-1 rounded-full text-gray-500 hover:bg-gray-200 transition"
+                                title="Copia URL IPFS"
+                            >
+                                <DocumentDuplicateIcon className="w-4 h-4" />
+                            </button>
+                            <a href={buildIpfsUrl(ipfsPreviewImageCid)} target="_blank" rel="noopener noreferrer" className="ml-2 text-blue-500 hover:underline text-xs">
+                                Vedi
+                            </a>
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Caricamento Documento Principale */}
+                    <div>
+                      <label htmlFor="mainDocument" className="block text-sm font-semibold text-gray-700 mb-1">
+                        Documento Principale (PDF, etc.) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="file"
+                        id="mainDocument"
+                        className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:file:bg-gray-200"
+                        accept="application/pdf, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        onChange={(e) => {
+                            setMainDocument(e.target.files ? e.target.files[0] : null);
+                            console.log("RegisterContentPage: File mainDocument selezionato:", e.target.files ? e.target.files[0].name : "Nessuno");
+                        }}
+                        disabled={isProcessing || isRegistrySuccess}
+                        required
+                      />
+                      {mainDocument && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                              handleFileUpload(mainDocument, 'document');
+                              console.log("RegisterContentPage: Cliccato 'Carica Documento su IPFS'.");
+                          }}
+                          disabled={isProcessing || ipfsMainDocumentCid !== null || isRegistrySuccess}
+                          className="mt-2 px-4 py-2 bg-green-500 text-white rounded-lg shadow hover:bg-green-600 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                        >
+                          {ipfsMainDocumentCid ? "Caricato!" : isProcessing ? "Caricamento..." : "Carica Documento su IPFS"}
+                        </button>
+                      )}
+                      {ipfsMainDocumentCid && (
+                        <p className="mt-2 text-sm text-gray-600 flex items-center">
+                          CID Documento: <span className="font-mono text-xs ml-2 break-all">{ipfsMainDocumentCid}</span>
+                          <button
+                                onClick={() => navigator.clipboard.writeText(buildIpfsUrl(ipfsMainDocumentCid))}
+                                className="ml-2 p-1 rounded-full text-gray-500 hover:bg-gray-200 transition"
+                                title="Copia URL IPFS"
+                            >
+                                <DocumentDuplicateIcon className="w-4 h-4" />
+                            </button>
+                            <a href={buildIpfsUrl(ipfsMainDocumentCid)} target="_blank" rel="noopener noreferrer" className="ml-2 text-blue-500 hover:underline text-xs">
+                                Vedi
+                            </a>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Metadati Specifici del Template */}
+                {selectedTemplateId && (
+                  <div className="mt-8 pt-6 border-t border-gray-200">
+                    <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <span className="bg-purple-500 text-white rounded-full p-1.5 mr-2 shadow-md">
+                            <InformationCircleIcon className="w-5 h-5" />
+                        </span>
+                        Metadati Specifici del Template
+                    </h3>
+                    {renderMetadataFields()}
+                  </div>
+                )}
+
+                {/* Error Display */}
+                {error && (
+                  <div className="mt-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg shadow-sm text-sm" role="alert">
+                    <p className="font-semibold">Errore:</p>
+                    <p>{error}</p>
+                  </div>
+                )}
+                {mintingRevertReason && (
+                  <div className="mt-6 p-4 bg-orange-100 border border-orange-400 text-orange-700 rounded-lg shadow-sm text-sm" role="alert">
+                    <p className="font-semibold">Errore di Minting:</p>
+                    <p>{mintingRevertReason}</p>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="mt-8 flex justify-end space-x-4">
+                  <button
+                    type="submit"
+                    disabled={!isFormReadyForRegistration || isProcessing || isRegistrySuccess || isRegisteringPending || isRegistering}
+                    className="px-8 py-3 bg-indigo-600 text-white font-bold rounded-lg shadow-xl hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  >
+                    {isRegisteringPending || isRegistering ? (
+                      <>
+                        <ArrowPathIcon className="animate-spin w-5 h-5 mr-3" />
+                        Registrazione in corso...
+                      </>
+                    ) : (
+                      "Registra Contenuto"
+                    )}
+                  </button>
+                </div>
+              </form>
+
+              {/* Minting Section (conditionally rendered) */}
+              {registryContentId && isRegistrySuccess && (
+                <div className="bg-white p-8 rounded-xl shadow-2xl border border-green-100">
+                  <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                    <span className="bg-green-500 text-white rounded-full p-2 mr-3 shadow-md">
+                      <CheckCircleIcon className="w-6 h-6" />
+                    </span>
+                    Minting NFT
+                  </h2>
+                  <div className="mb-4 bg-green-50 p-4 rounded-lg border border-green-200 text-green-800 flex items-center">
+                    <InformationCircleIcon className="w-6 h-6 mr-3 text-green-600" />
+                    <p className="text-lg font-medium">Contenuto Registrato! ID: <span className="font-mono">{registryContentId.toString()}</span></p>
+                    <button
+                        onClick={() => navigator.clipboard.writeText(registryContentId.toString())}
+                        className="ml-2 p-1 rounded-full text-green-700 hover:bg-green-100 transition"
+                        title="Copia Content ID"
+                    >
+                        <DocumentDuplicateIcon className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {!ipfsMetadataCid && (
+                    <p className="text-gray-700 mb-4">
+                        Ora che il contenuto è registrato, possiamo procedere al minting del tuo NFT.
+                        Il processo includerà il caricamento dei metadati su IPFS.
+                    </p>
+                  )}
+                    {ipfsMetadataCid && (
+                        <div className="mb-4 bg-blue-50 p-3 rounded-lg border border-blue-200 text-blue-800 text-sm flex items-center">
+                            <InformationCircleIcon className="w-5 h-5 mr-2 text-blue-600" />
+                            Metadati NFT caricati su IPFS: <span className="font-mono ml-2 break-all">{ipfsMetadataCid}</span>
+                            <button
+                                onClick={() => navigator.clipboard.writeText(buildIpfsUrl(ipfsMetadataCid))}
+                                className="ml-2 p-1 rounded-full text-blue-700 hover:bg-blue-100 transition"
+                                title="Copia URL Metadati"
+                            >
+                                <DocumentDuplicateIcon className="w-4 h-4" />
+                            </button>
+                            <a href={buildIpfsUrl(ipfsMetadataCid)} target="_blank" rel="noopener noreferrer" className="ml-2 text-blue-500 hover:underline text-xs">
+                                Vedi
+                            </a>
+                        </div>
+                    )}
+                  <div className="mt-6 flex justify-end space-x-4">
+                    {/* Visualizza il conteggio dei mint */}
+                    <p className="flex items-center text-gray-700 font-semibold text-lg">
+                        Mintati: {currentMintedCount} / {maxCopies}
+                    </p>
+                    <button
+                      onClick={() => {
+                          handleRequestMintNFT();
+                          console.log("RegisterContentPage: Cliccato 'Richiedi Minting NFT'.");
+                      }}
+                      disabled={!isReadyForMinting || isProcessing || isRequestMintPending || isRequestingMint}
+                      className="px-8 py-3 bg-purple-600 text-white font-bold rounded-lg shadow-xl hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                    >
+                      {isRequestMintPending || isRequestingMint ? (
+                        <>
+                          <ArrowPathIcon className="animate-spin w-5 h-5 mr-3" />
+                          Richiesta Minting in corso...
+                        </>
+                      ) : (
+                        `Richiedi Minting NFT (${MINT_PRICE_ETH} ETH)`
+                      )}
+                    </button>
+                  </div>
+
+                  {isMintingFulfilled && (
+                    <div className="mt-6 p-6 bg-green-100 border border-green-400 text-green-800 rounded-lg shadow-lg">
+                      <p className="font-bold text-2xl mb-4 flex items-center">
+                        <CheckCircleIcon className="w-8 h-8 mr-3 text-green-600" />
+                        NFT Mintato con Successo!
+                      </p>
+                      <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6">
+                        {mintedNftImageUrl && (
+                          <div className="flex-shrink-0">
+                            <img
+                              src={buildIpfsUrl(mintedNftImageUrl)}
+                              alt={originalMetadata.name || "NFT Preview"}
+                              className="w-32 h-32 object-cover rounded-lg shadow-md border border-green-300"
+                            />
+                          </div>
+                        )}
+                        <div className="text-lg">
+                          <p>
+                            **Titolo:** <span className="font-semibold">{originalMetadata.name || contentTitle}</span>
+                          </p>
+                          <p className="mt-2">
+                            **Token ID:**{" "}
+                            <span className="font-mono font-bold text-green-900">
+                              {mintedTokenId?.toString()}
+                            </span>
+                            <button
+                                onClick={() => navigator.clipboard.writeText(mintedTokenId?.toString() || "")}
+                                className="ml-2 p-1 rounded-full text-green-700 hover:bg-green-200 transition"
+                                title="Copia Token ID"
+                            >
+                                <DocumentDuplicateIcon className="w-5 h-5" />
+                            </button>
+                          </p>
+                          {mintingFulfillmentTxHash && (
+                            <p className="mt-2 text-sm text-gray-700">
+                              Hash Transazione Minting:{" "}
+                              <a
+                                href={`https://sepolia.arbiscan.io/tx/${mintingFulfillmentTxHash}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline font-mono break-all"
+                              >
+                                {mintingFulfillmentTxHash.substring(0, 10)}...{mintingFulfillmentTxHash.length > 18 ? mintingFulfillmentTxHash.substring(mintingFulfillmentTxHash.length - 8) : mintingFulfillmentTxHash}
+                              </a>
+                            </p>
+                          )}
+                          <p className="mt-4 text-gray-700">
+                            Il tuo NFT è ora disponibile sulla blockchain di Arbitrum Sepolia.
+                          </p>
+                        </div>
+                      </div>
+                      {/* Messaggio per mint multipli */}
+                      {currentMintedCount < maxCopies && (
+                          <p className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-sm flex items-center">
+                              <InformationCircleIcon className="w-5 h-5 mr-2" />
+                              Puoi mintare ancora {maxCopies - currentMintedCount} copia/e di questo contenuto. Premi "Richiedi Minting NFT" nuovamente.
+                          </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
+
+

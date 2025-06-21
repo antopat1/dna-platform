@@ -9,7 +9,17 @@ import {
   SCIENTIFIC_CONTENT_REGISTRY_ABI,
   ARBITRUM_SEPOLIA_CHAIN_ID,
 } from '@/lib/constants';
-import { arbitrumSepolia } from 'wagmi/chains';
+
+
+interface ContentData {
+  title: string;
+  author: string;
+  contentHash: string;
+  timestamp: bigint;
+  // Aggiungi altri campi che il tuo contratto restituisce
+}
+
+
 
 const ContractTestViem: React.FC = () => {
   // Wagmi Hooks per gestione account, connessione e catena
@@ -21,15 +31,15 @@ const ContractTestViem: React.FC = () => {
 
   // useReadContract: Hook per chiamate di sola lettura su smart contract
   const { data: contentData, isLoading, error: readError } = useReadContract({
-    abi: SCIENTIFIC_CONTENT_REGISTRY_ABI,
-    address: SCIENTIFIC_CONTENT_REGISTRY_ADDRESS,
-    functionName: 'getContent',
-    args: [BigInt(1)],
-    chainId: ARBITRUM_SEPOLIA_CHAIN_ID,
-    query: {
-        enabled: isConnected && chainId === ARBITRUM_SEPOLIA_CHAIN_ID,
-    },
-  });
+  abi: SCIENTIFIC_CONTENT_REGISTRY_ABI,
+  address: SCIENTIFIC_CONTENT_REGISTRY_ADDRESS,
+  functionName: 'getContent',
+  args: [BigInt(1)],
+  chainId: ARBITRUM_SEPOLIA_CHAIN_ID,
+  query: {
+    enabled: isConnected && chainId === ARBITRUM_SEPOLIA_CHAIN_ID,
+  },
+}) as { data: ContentData | undefined, isLoading: boolean, error: any };
 
   // Questo useEffect si esegue solo sul client, dopo il montaggio
   useEffect(() => {
