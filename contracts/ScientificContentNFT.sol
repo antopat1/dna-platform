@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
-import "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
+import "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol"; 
 import "./ScientificContentRegistry.sol";
 
 contract ScientificContentNFT is ERC721Enumerable, VRFConsumerBaseV2Plus {
@@ -18,7 +18,6 @@ contract ScientificContentNFT is ERC721Enumerable, VRFConsumerBaseV2Plus {
 
     ScientificContentRegistry public immutable contentRegistry;
     
-    uint256 public constant MINT_PRICE = 0.005 ether;
     uint256 private constant AUTHOR_ROYALTY_PERCENTAGE = 3;
     
     address public protocolFeeReceiver;
@@ -41,6 +40,7 @@ contract ScientificContentNFT is ERC721Enumerable, VRFConsumerBaseV2Plus {
         address minter;
         uint256 contentId;
         string metadataURI;
+        uint256 paidAmount;
     }
 
     event NFTMinted(
@@ -61,7 +61,7 @@ contract ScientificContentNFT is ERC721Enumerable, VRFConsumerBaseV2Plus {
         address _vrfCoordinator,
         bytes32 _keyHash,
         uint256 _subscriptionId
-    ) 
+    )   
         ERC721("DnA Scientific Content", "DNASCI")
         VRFConsumerBaseV2Plus(_vrfCoordinator)
     {
@@ -79,13 +79,15 @@ contract ScientificContentNFT is ERC721Enumerable, VRFConsumerBaseV2Plus {
     }
 
     function mintNFT(uint256 contentId, string memory nftMetadataURI) external payable {
-        require(msg.value >= MINT_PRICE, "Insufficient payment, required 0.005 ETH");
         require(bytes(nftMetadataURI).length > 0, "Metadata URI cannot be empty");
         
         ScientificContentRegistry.Content memory content = contentRegistry.getContent(contentId);
         
         require(content.isAvailable, "Content not available");
         require(content.mintedCopies < content.maxCopies, "No copies available");
+        
+        uint256 requiredPrice = content.nftMintPrice;
+        require(msg.value >= requiredPrice, "Insufficient payment for this content");
 
         VRFV2PlusClient.RandomWordsRequest memory request = VRFV2PlusClient.RandomWordsRequest({
             keyHash: keyHash,
@@ -97,14 +99,16 @@ contract ScientificContentNFT is ERC721Enumerable, VRFConsumerBaseV2Plus {
         });
 
         uint256 requestId = COORDINATOR.requestRandomWords(request);
+        
         _pendingMints[requestId] = PendingMint({
             minter: msg.sender,
             contentId: contentId,
-            metadataURI: nftMetadataURI
+            metadataURI: nftMetadataURI,
+            paidAmount: requiredPrice
         });
 
-        if (msg.value > MINT_PRICE) {
-            payable(msg.sender).transfer(msg.value - MINT_PRICE);
+        if (msg.value > requiredPrice) {
+            payable(msg.sender).transfer(msg.value - requiredPrice);
         }
     }
 
@@ -119,10 +123,11 @@ contract ScientificContentNFT is ERC721Enumerable, VRFConsumerBaseV2Plus {
             mintData.minter,
             mintData.contentId,
             randomWords[0],
-            mintData.metadataURI
+            mintData.metadataURI,
+            mintData.paidAmount
         ) {
             ScientificContentRegistry.Content memory content = contentRegistry.getContent(mintData.contentId);
-            uint256 authorRoyalty = (MINT_PRICE * AUTHOR_ROYALTY_PERCENTAGE) / 100;
+            uint256 authorRoyalty = (mintData.paidAmount * AUTHOR_ROYALTY_PERCENTAGE) / 100;
             
             if (authorRoyalty > 0) {
                  (bool success, ) = payable(content.author).call{value: authorRoyalty}("");
@@ -132,7 +137,7 @@ contract ScientificContentNFT is ERC721Enumerable, VRFConsumerBaseV2Plus {
         } catch {
             emit MintingFailed(mintData.minter, mintData.contentId);
             
-            (bool success, ) = payable(mintData.minter).call{value: MINT_PRICE}("");
+            (bool success, ) = payable(mintData.minter).call{value: mintData.paidAmount}("");
             require(success, "Failed to refund user on mint failure");
             
             contentRegistry.setContentAvailability(mintData.contentId, true);
@@ -145,33 +150,44 @@ contract ScientificContentNFT is ERC721Enumerable, VRFConsumerBaseV2Plus {
         address minter,
         uint256 contentId,
         uint256 randomWord,
-        string memory nftMetadataURI
+        string memory nftMetadataURI,
+        uint256 /* paidAmount */ // Questo parametro non viene più usato direttamente qui dopo l'ottimizzazione del `copyNumber`
     ) external {
         require(msg.sender == address(this), "Internal call only");
         
         uint256 newTokenId = totalSupply() + 1;
         _safeMint(minter, newTokenId);
 
-        ScientificContentRegistry.Content memory content = contentRegistry.getContent(contentId);
+        // LEGGI IL CONTENUTO PRIMA DI INCREMENTARE
+        // Questo `content` conterrà il valore di `mintedCopies` *prima* dell'incremento che stiamo per eseguire.
+        // Lo useremo per il `author` e altri dati non dipendenti dall'incremento attuale.
+        ScientificContentRegistry.Content memory oldContentState = contentRegistry.getContent(contentId);
         bool hasSpecialContent = randomWord % 10 == 0;
+
+        // ESEGUI L'INCREMENTO NEL REGISTRY
+        // Questa chiamata aggiorna il contatore 'mintedCopies' nel contratto ScientificContentRegistry.
+        bool success = contentRegistry.incrementMintedCopies(contentId);
+        require(success, "Failed to increment minted copies");
+
+        // RILEGGI IL CONTENUTO PER OTTENERE IL VALORE *AGGIORNATO* DI mintedCopies
+        // È fondamentale fare questa seconda lettura per avere il valore post-incremento.
+        ScientificContentRegistry.Content memory updatedContentState = contentRegistry.getContent(contentId);
 
         _nftMetadata[newTokenId] = NFTMetadata({
             contentId: contentId,
-            author: content.author,
+            author: oldContentState.author, // Autore rimane lo stesso
             randomSeed: randomWord,
             hasSpecialContent: hasSpecialContent,
-            copyNumber: content.mintedCopies + 1,
+            copyNumber: updatedContentState.mintedCopies, // USA IL VALORE AGGIORNATO QUI!
             metadataURI: nftMetadataURI
         });
-
-        contentRegistry.incrementMintedCopies(contentId);
 
         emit NFTMinted(
             newTokenId, 
             contentId, 
             minter, 
             hasSpecialContent, 
-            content.mintedCopies + 1,
+            updatedContentState.mintedCopies, // USA IL VALORE AGGIORNATO QUI!
             nftMetadataURI
         );
     }
@@ -219,6 +235,11 @@ contract ScientificContentNFT is ERC721Enumerable, VRFConsumerBaseV2Plus {
     function getNFTMetadata(uint256 tokenId) external view returns (NFTMetadata memory) {
         require(_exists(tokenId), "Token does not exist");
         return _nftMetadata[tokenId];
+    }
+
+    function getMintPrice(uint256 contentId) external view returns (uint256) {
+        ScientificContentRegistry.Content memory content = contentRegistry.getContent(contentId);
+        return content.nftMintPrice;
     }
 
     /**

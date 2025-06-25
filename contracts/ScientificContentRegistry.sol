@@ -44,6 +44,10 @@ contract ScientificContentRegistry is Ownable {
         require(msg.sender == nftContract, "Only NFT contract can modify");
         _;
     }
+    
+    function nextContentId() public view returns (uint256) {
+        return _contentCounter + 1;
+    }
 
     function setNFTContract(address _nftContract) external onlyOwner {
         require(_nftContract != address(0), "Invalid address");

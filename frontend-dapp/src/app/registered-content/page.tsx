@@ -1,16 +1,29 @@
 // frontend-dapp/src/app/registered-content/page.tsx
 "use client"; // Questo è un componente client-side
 
-import { useAccount } from "wagmi";
+import { useAccount, usePublicClient } from "wagmi";
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "react-hot-toast";
-import { ARBITRUM_SEPOLIA_CHAIN_ID } from "@/lib/constants";
-import { usePublicContents } from "@/hooks/usePublicContents"; // Importa il nuovo hook
-import { useRegisterContent } from "@/hooks/useRegisterContent"; // Useremo questo per la funzione di mint
+import {
+  ARBITRUM_SEPOLIA_CHAIN_ID,
+  SCIENTIFIC_CONTENT_REGISTRY_ABI,
+  SCIENTIFIC_CONTENT_REGISTRY_ADDRESS,
+  SCIENTIFIC_CONTENT_NFT_ABI, // Importa l'ABI del contratto NFT
+  SCIENTIFIC_CONTENT_NFT_ADDRESS, // Importa l'indirizzo del contratto NFT
+} from "@/lib/constants";
+import { useRegisterContent } from "@/hooks/useRegisterContent";
+import { getContract } from "viem";
+import { formatEther } from "viem";
 
-// IMPORTANTE: Assicurati che questi percorsi e componenti esistano.
+// Componenti UI (assicurati che i percorsi siano corretti)
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -21,12 +34,14 @@ import {
 } from "@/components/ui/table";
 import Link from "next/link";
 import Image from "next/image";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+import axios from "axios"; // Assicurati di aver installato axios: npm install axios
 
 // Recupera il sottodominio del gateway Pinata dalle variabili d'ambiente.
-// Assicurati che NEXT_PUBLIC_PINATA_GATEWAY_SUBDOMAIN sia impostato nel tuo .env.local
-const PINATA_GATEWAY_SUBDOMAIN = process.env.NEXT_PUBLIC_PINATA_GATEWAY_SUBDOMAIN;
+const PINATA_GATEWAY_SUBDOMAIN =
+  process.env.NEXT_PUBLIC_PINATA_GATEWAY_SUBDOMAIN;
 
-// Placeholder per LoadingSpinner se non hai ancora un componente dedicato
+// Placeholder per LoadingSpinner
 const LoadingSpinner = () => (
   <div className="flex justify-center items-center py-8">
     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
@@ -42,33 +57,53 @@ const resolveIpfsLink = (ipfsUri: string): string => {
   if (ipfsUri.startsWith("ipfs://")) {
     cid = ipfsUri.replace("ipfs://", "");
   } else {
-    // Se ipfsUri è già solo il CID (come nel caso di previewImageCID o originalDocumentFileCID)
-    cid = ipfsUri;
+    cid = ipfsUri; // Se ipfsUri è già solo il CID
   }
 
-  // Costruisci l'URL usando il tuo gateway Pinata
   if (PINATA_GATEWAY_SUBDOMAIN) {
     return `https://${PINATA_GATEWAY_SUBDOMAIN}.mypinata.cloud/ipfs/${cid}`;
   } else {
-    // Fallback a un gateway pubblico se la variabile d'ambiente non è impostata
-    console.warn("NEXT_PUBLIC_PINATA_GATEWAY_SUBDOMAIN non è impostato. Utilizzo un gateway IPFS pubblico di fallback.");
+    console.warn(
+      "NEXT_PUBLIC_PINATA_GATEWAY_SUBDOMAIN non è impostato. Utilizzo un gateway IPFS pubblico di fallback."
+    );
     return `https://ipfs.io/ipfs/${cid}`;
   }
 };
 
+// Definizione del tipo per il contenuto registrato dal contratto
+// Questa struct deve MATCHARE ESATTAMENTE la `Content` struct nel tuo ScientificContentRegistry.sol
+type RegistryContent = {
+  title: string;
+  description: string;
+  author: `0x${string}`;
+  contentHash: `0x${string}`;
+  isAvailable: boolean;
+  registrationTime: bigint;
+  maxCopies: bigint;
+  mintedCopies: bigint; // Questo campo è aggiornato atomicalmente on-chain
+  ipfsHash: string; // Questo è l'ipfsHash del documento principale registrato nel Registry
+  nftMintPrice: bigint;
+};
+
+// Nuovo tipo combinato per i dati del contenuto da mostrare nella tabella
+type DisplayContent = RegistryContent & {
+  contentId: bigint; // Aggiungiamo esplicitamente l'ID del contenuto
+  displayImageUrl: string | undefined;
+};
+
 const RegisteredContentPage = () => {
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []); // Per evitare mismatch SSR/CSR
+  useEffect(() => setMounted(true), []);
 
   const { address, isConnected, chainId } = useAccount();
-  const {
-    registeredContents,
-    isLoading: isLoadingContents,
-    error: contentsError,
-    refreshContents,
-  } = usePublicContents(); // Usiamo il nuovo hook!
+  const publicClient = usePublicClient();
 
-  // Importiamo le funzioni e gli stati necessari da useRegisterContent
+  const [registeredContents, setRegisteredContents] = useState<
+    DisplayContent[]
+  >([]);
+  const [isLoadingContents, setIsLoadingContents] = useState<boolean>(true);
+  const [contentsError, setContentsError] = useState<string | null>(null);
+
   const {
     handleRequestMintNFT,
     isRequestMintPending,
@@ -76,37 +111,186 @@ const RegisteredContentPage = () => {
     isMintingFulfilled,
     mintedTokenId,
     mintingRevertReason,
-    resetForm, // Usiamo resetForm per pulire lo stato dell'hook dopo un mint
-    handleMetadataUpload, // Importiamo handleMetadataUpload per generare i metadati al momento del mint
+    resetForm,
+    handleMetadataUpload,
   } = useRegisterContent();
 
-  // Stato locale per gestire quale contenuto è in fase di minting (per UI)
-  const [activeMintContentId, setActiveMintContentId] = useState<bigint | null>(null);
+  const [activeMintContentId, setActiveMintContentId] = useState<bigint | null>(
+    null
+  );
 
+  // --- Funzione per caricare i contenuti ---
+  const fetchRegisteredContents = useCallback(async () => {
+    if (!publicClient) {
+      setContentsError("Public client non disponibile.");
+      setIsLoadingContents(false);
+      return;
+    }
+
+    setIsLoadingContents(true);
+    setContentsError(null);
+    setRegisteredContents([]); // Resetta i contenuti prima di caricarli
+
+    try {
+      await publicClient.getBlockNumber();
+      const registryContract = getContract({
+        address: SCIENTIFIC_CONTENT_REGISTRY_ADDRESS,
+        abi: SCIENTIFIC_CONTENT_REGISTRY_ABI,
+        client: publicClient,
+      });
+
+      const nftContract = getContract({
+        address: SCIENTIFIC_CONTENT_NFT_ADDRESS,
+        abi: SCIENTIFIC_CONTENT_NFT_ABI,
+        client: publicClient,
+      });
+      await publicClient?.getBlockNumber();
+
+      const nextContentIdBigInt =
+        (await registryContract.read.nextContentId()) as bigint;
+      const totalContents = Number(nextContentIdBigInt) - 1;
+
+      const fetchedContents: DisplayContent[] = [];
+
+      for (let i = 1; i <= totalContents; i++) {
+        try {
+          const content = (await registryContract.read.getContent([
+            BigInt(i),
+          ])) as RegistryContent;
+
+          let displayImageUrl: string | undefined = undefined;
+
+          // Se ci sono copie mintate, proviamo a recuperare l'immagine dal primo NFT coniato
+          if (content.mintedCopies > BigInt(0)) {
+            try {
+              // Si assume che il tokenId del primo NFT per un dato contentId sia il contentId stesso,
+              // o che ci sia un modo per recuperare un tokenId valido per un contentId.
+              // La logica più robusta potrebbe richiedere un getter nel contratto NFT
+              // o il parsing degli eventi passati. Per ora, si mantiene l'assunzione iniziale.
+              const firstTokenIdForContent = BigInt(i); 
+              const tokenURI = (await nftContract.read.tokenURI([
+                firstTokenIdForContent,
+              ])) as string;
+
+              if (tokenURI) {
+                const resolvedTokenURI = resolveIpfsLink(tokenURI);
+                const metadataResponse = await axios.get(resolvedTokenURI);
+                const metadata = metadataResponse.data;
+
+                // LOGICA AGGIORNATA PER LA SELEZIONE DELL'IMMAGINE:
+                // 1. Cerchiamo il campo 'image' standard per l'immagine di anteprima.
+                // 2. Se 'image' non è un'immagine valida (es. è un PDF), cerchiamo il campo 'previewImageFileCID' che abbiamo aggiunto.
+                if (metadata.image) {
+                  const imageUrlAttempt = resolveIpfsLink(metadata.image);
+                  if (imageUrlAttempt.endsWith(".pdf")) {
+                    console.warn(
+                      `Token ID ${firstTokenIdForContent}: Il campo 'image' è un PDF (${imageUrlAttempt}). Cerco 'previewImageFileCID'.`
+                    );
+                    if (metadata.previewImageFileCID) {
+                      displayImageUrl = resolveIpfsLink(
+                        metadata.previewImageFileCID
+                      );
+                      console.log(
+                        `Token ID ${firstTokenIdForContent}: Trovata immagine di anteprima in 'previewImageFileCID': ${displayImageUrl}`
+                      );
+                    } else {
+                      console.warn(
+                        `Token ID ${firstTokenIdForContent}: Nessun 'previewImageFileCID' trovato. Userò l'immagine di fallback.`
+                      );
+                      displayImageUrl = undefined; 
+                    }
+                  } else {
+                    displayImageUrl = imageUrlAttempt;
+                    console.log(
+                      `Token ID ${firstTokenIdForContent}: Trovata immagine di anteprima in 'image': ${displayImageUrl}`
+                    );
+                  }
+                } else if (metadata.previewImageFileCID) {
+                  displayImageUrl = resolveIpfsLink(
+                    metadata.previewImageFileCID
+                  );
+                  console.log(
+                    `Token ID ${firstTokenIdForContent}: Trovata immagine di anteprima in 'previewImageFileCID': ${displayImageUrl}`
+                  );
+                } else {
+                  console.warn(
+                    `Token ID ${firstTokenIdForContent}: Nessun campo 'image' o 'previewImageFileCID' valido trovato nei metadati.`
+                  );
+                  displayImageUrl = undefined; 
+                }
+              }
+            } catch (metadataError) {
+              console.warn(
+                `Could not fetch or parse metadata for Content ID ${i}:`,
+                metadataError
+              );
+            }
+          }
+
+          fetchedContents.push({
+            contentId: BigInt(i),
+            ...content,
+            displayImageUrl: displayImageUrl,
+          });
+        } catch (innerError: any) {
+          console.warn(
+            `Errore durante il recupero del contenuto ID ${i}:`,
+            innerError.message || innerError.shortMessage || String(innerError)
+          );
+        }
+      }
+      setRegisteredContents(fetchedContents);
+    } catch (err: any) {
+      console.error("Errore nel recupero dei contenuti registrati:", err);
+      setContentsError(
+        `Impossibile caricare i contenuti: ${
+          err.message || err.shortMessage || String(err)
+        }`
+      );
+    } finally {
+      setIsLoadingContents(false);
+    }
+  }, [publicClient]);
+
+  // --- useEffect per il feedback del minting ---
   useEffect(() => {
-    // Gestisce il feedback per il minting iniziato/pending
     if (activeMintContentId !== null) {
       if (isRequestMintPending) {
-        toast.loading(`Inizializzazione minting per Content ID ${activeMintContentId.toString()}...`, { id: 'mintingProgress' });
+        toast.loading(
+          `Inizializzazione minting per Content ID ${activeMintContentId.toString()}...`,
+          { id: "mintingProgress" }
+        );
       } else if (isRequestingMint) {
-        toast.loading(`Conio NFT in corso per Content ID ${activeMintContentId.toString()} (richiesta VRF inviata)...`, { id: 'mintingProgress' });
+        toast.loading(
+          `Conio NFT in corso per Content ID ${activeMintContentId.toString()} (richiesta VRF inviata)...`,
+          { id: "mintingProgress" }
+        );
       }
     }
 
-    // Gestisce il feedback per il minting completato o fallito
     if (isMintingFulfilled && activeMintContentId !== null) {
       if (mintedTokenId !== null) {
-        toast.success(`🎉 NFT Mintato! Token ID: ${mintedTokenId.toString()} per Content ID ${activeMintContentId.toString()}.`, { id: 'mintingProgress' });
+        toast.success(
+          `🎉 NFT Mintato! Token ID: ${mintedTokenId.toString()} per Content ID ${activeMintContentId.toString()}.`,
+          { id: "mintingProgress" }
+        );
       } else {
-        toast.success(`🎉 Minting completato per Content ID ${activeMintContentId.toString()}.`, { id: 'mintingProgress' });
+        toast.success(
+          `🎉 Minting completato per Content ID ${activeMintContentId.toString()}.`,
+          { id: "mintingProgress" }
+        );
       }
-      refreshContents(); // Ricarica la lista dei contenuti per aggiornare i conteggi
-      setActiveMintContentId(null); // Resetta lo stato di minting della UI
-      resetForm(); // Resetta lo stato interno di useRegisterContent relativo al minting
-    } else if (mintingRevertReason && activeMintContentId !== null) {
-      toast.error(`Errore nel minting per Content ID ${activeMintContentId.toString()}: ${mintingRevertReason}`, { id: 'mintingProgress' });
+      // CHIAVE: Ricarica la lista dei contenuti per aggiornare i conteggi on-chain
+      fetchRegisteredContents(); 
       setActiveMintContentId(null);
-      resetForm(); // Resetta lo stato interno
+      resetForm();
+    } else if (mintingRevertReason && activeMintContentId !== null) {
+      toast.error(
+        `Errore nel minting per Content ID ${activeMintContentId.toString()}: ${mintingRevertReason}`,
+        { id: "mintingProgress" }
+      );
+      setActiveMintContentId(null);
+      resetForm();
     }
   }, [
     isRequestMintPending,
@@ -115,54 +299,112 @@ const RegisteredContentPage = () => {
     mintedTokenId,
     mintingRevertReason,
     activeMintContentId,
-    refreshContents,
     resetForm,
+    fetchRegisteredContents,
   ]);
 
-  // Funzione per avviare il minting di una copia specifica
-  const onMintNewCopy = useCallback(async (contentId: bigint) => {
-    if (!isConnected || chainId !== ARBITRUM_SEPOLIA_CHAIN_ID || !address) {
-      toast.error("Connetti il tuo wallet alla rete Arbitrum Sepolia.");
-      return;
+  // --- useEffect per chiamare fetchRegisteredContents inizialmente e con intervallo ---
+  useEffect(() => {
+    if (isConnected && chainId === ARBITRUM_SEPOLIA_CHAIN_ID && publicClient) {
+      fetchRegisteredContents();
+      const intervalId = setInterval(fetchRegisteredContents, 20000); // Ricarica ogni 20 secondi
+      return () => clearInterval(intervalId);
+    } else {
+      setIsLoadingContents(false);
+      setRegisteredContents([]);
+      setContentsError(null);
     }
+  }, [isConnected, chainId, publicClient, fetchRegisteredContents]);
 
-    // Controlla se c'è già un'operazione di minting in corso
-    if (activeMintContentId !== null) {
-      toast("Un'operazione di minting è già in corso. Attendi il completamento.", { icon: "ℹ️" });
-      return;
-    }
+  // --- Funzione per avviare il minting di una copia specifica ---
+  const onMintNewCopy = useCallback(
+    async (contentId: bigint) => {
+      if (!isConnected || chainId !== ARBITRUM_SEPOLIA_CHAIN_ID || !address) {
+        toast.error("Connetti il tuo wallet alla rete Arbitrum Sepolia.");
+        return;
+      }
 
-    const contentToMint = registeredContents.find(c => c.contentId === contentId);
-    if (!contentToMint) {
-      toast.error("Dettagli del contenuto non trovati.");
-      return;
-    }
+      if (activeMintContentId !== null) {
+        toast(
+          "Un'operazione di minting è già in corso. Attendi il completamento.",
+          { icon: "ℹ️" }
+        );
+        return;
+      }
 
-    // Imposta lo stato per la UI per indicare quale contenuto è in minting
-    setActiveMintContentId(contentId);
+      const contentToMint = registeredContents.find(
+        (c) => c.contentId === contentId
+      );
+      if (!contentToMint) {
+        toast.error("Dettagli del contenuto non trovati.");
+        return;
+      }
 
-    // Genera i metadati per il nuovo NFT.
-    // Usiamo i CID del documento e dell'immagine di anteprima dal contenuto registrato,
-    // e l'ID del contenuto stesso.
-    const metadataCid = await handleMetadataUpload(
-      contentId,
-      contentToMint.previewImageCID, // Passa il previewImageCID dal contentToMint
-      contentToMint.originalDocumentFileCID // Passa il originalDocumentFileCID dal contentToMint
-    );
+      if (contentToMint.mintedCopies >= contentToMint.maxCopies) {
+        toast.error(
+          "Tutte le copie disponibili per questo contenuto sono già state mintate."
+        );
+        return;
+      }
 
-    if (!metadataCid) {
-      toast.error("Impossibile caricare i metadati per il nuovo NFT. Minting annullato.");
-      setActiveMintContentId(null);
-      return;
-    }
+      setActiveMintContentId(contentId);
 
-    const metadataJsonUri = `ipfs://${metadataCid}`;
+      // Estrarre il CID dall'URL
+      const getCidFromUrl = (url: string | undefined): string | null => {
+        if (!url) return null;
+        try {
+          const urlObj = new URL(url);
+          const pathSegments = urlObj.pathname.split("/");
+          const ipfsIndex = pathSegments.indexOf("ipfs");
+          if (ipfsIndex > -1 && pathSegments.length > ipfsIndex + 1) {
+            return pathSegments[ipfsIndex + 1];
+          }
+        } catch (e) {
+          // Ignora errori se l'URL non è valido
+        }
+        return null;
+      };
 
-    // Chiama handleRequestMintNFT passando gli argomenti corretti
-    await handleRequestMintNFT(contentId, metadataJsonUri);
+      // CID dell'immagine di anteprima da usare per i nuovi metadati
+      const previewImageCidForNewMint =
+        getCidFromUrl(contentToMint.displayImageUrl) || contentToMint.ipfsHash; // Fallback al CID del documento principale
 
-  }, [address, isConnected, chainId, activeMintContentId, registeredContents, handleRequestMintNFT, handleMetadataUpload]);
+      // CID del documento principale da usare per i nuovi metadati (sempre quello dal Registry)
+      const mainDocumentCidForNewMint = contentToMint.ipfsHash;
 
+      const metadataCid = await handleMetadataUpload(
+        contentId,
+        previewImageCidForNewMint,
+        mainDocumentCidForNewMint
+      );
+
+      if (!metadataCid) {
+        toast.error(
+          "Impossibile caricare i metadati per il nuovo NFT. Minting annullato."
+        );
+        setActiveMintContentId(null);
+        return;
+      }
+
+      const metadataJsonUri = `ipfs://${metadataCid}`;
+
+      // MODIFICA CHIAVE: Rimosso l'aggiornamento ottimistico dello stato locale `registeredContents`.
+      // Ora ci si affida completamente al re-fetch dei dati dalla blockchain
+      // una volta che il minting è stato fulfillato con successo.
+      // Questo garantisce che `mintedCopies` rifletta sempre lo stato on-chain.
+
+      await handleRequestMintNFT(contentId, metadataJsonUri);
+    },
+    [
+      address,
+      isConnected,
+      chainId,
+      activeMintContentId,
+      registeredContents, // Mantenuto se usato in altre parti per selezioni, ma non per l'update di mintedCopies
+      handleRequestMintNFT,
+      handleMetadataUpload,
+    ]
+  );
 
   if (!mounted) {
     return null;
@@ -171,105 +413,189 @@ const RegisteredContentPage = () => {
   // Il controllo `!isConnected` deve essere qui all'inizio del componente Page
   if (!isConnected) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center">
-        <h1 className="text-2xl font-bold mb-4">Connetti il tuo Wallet</h1>
-        <p className="text-gray-600">Per visualizzare e interagire con i contenuti, per favore connetti il tuo wallet.</p>
-        {/* Qui potresti aggiungere un componente per connettere il wallet, es. <ConnectButton /> */}
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center bg-gray-900 text-white p-4">
+        <h1 className="text-2xl font-bold mb-4 text-purple-400">
+          Connetti il tuo Wallet
+        </h1>
+        <p className="text-gray-400 mb-4">
+          Per visualizzare e interagire con i contenuti, per favore connetti il
+          tuo wallet.
+        </p>
+        <ConnectButton /> {/* Il pulsante di connessione */}
       </div>
     );
   }
 
   if (chainId !== ARBITRUM_SEPOLIA_CHAIN_ID) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center">
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center bg-gray-900 text-red-400 p-4">
         <h1 className="text-2xl font-bold mb-4">Rete Errata</h1>
-        <p className="text-gray-600">Per favore connetti il tuo wallet alla rete Arbitrum Sepolia per visualizzare i contenuti.</p>
+        <p className="text-gray-400">
+          Per favore connetti il tuo wallet alla rete Arbitrum Sepolia per
+          visualizzare i contenuti.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <Card>
+    // container mx-auto p-4
+    <div className=" bg-gray-200 text-white min-h-screen">
+      <Card className="bg-gray-200 border-purple-600">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold">Contenuti Scientifici Registrati</CardTitle>
-          <CardDescription>
-            Esplora tutti i contenuti scientifici registrati. Se disponibile, puoi coniare una nuova copia NFT.
+          <CardTitle className="text-3xl font-bold text-purple-400">
+            Contenuti Scientifici Registrati
+          </CardTitle>
+          <CardDescription className="text-gray-700">
+            Esplora tutti i contenuti scientifici registrati. Se disponibile,
+            puoi coniare una nuova copia NFT.
           </CardDescription>
         </CardHeader>
         <CardContent>
           {isLoadingContents ? (
             <LoadingSpinner />
           ) : contentsError ? (
-            <div className="text-red-500">Errore: {contentsError}</div>
+            <div className="text-red-500 text-center py-8">
+              Errore: {contentsError}
+            </div>
           ) : registeredContents.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">Nessun contenuto registrato trovato.</div>
+            <div className="text-center text-gray-500 py-8 text-lg">
+              Nessun contenuto registrato trovato.
+            </div>
           ) : (
             <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
+              <Table className="min-w-full divide-y divide-gray-200">
+                <TableHeader className="bg-gray-700">
                   <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Titolo</TableHead>
-                    <TableHead>Immagine Copertina</TableHead>
-                    <TableHead>Documento Principale</TableHead>
-                    <TableHead>Copie (Mintate/Massime)</TableHead>
-                    <TableHead>Azioni</TableHead>
+                    <TableHead className="px-4 py-2 text-left text-sm font-semibold text-gray-200">
+                      ID
+                    </TableHead>
+                    <TableHead className="px-4 py-2 text-left text-sm font-semibold text-gray-200">
+                      Titolo
+                    </TableHead>
+                    <TableHead className="px-4 py-2 text-left text-sm font-semibold text-gray-200">
+                      Autore
+                    </TableHead>
+                    <TableHead className="px-4 py-2 text-left text-sm font-semibold text-gray-200">
+                      Immagine Copertina
+                    </TableHead>
+                    <TableHead className="px-4 py-2 text-left text-sm font-semibold text-gray-200">
+                      Documento Principale
+                    </TableHead>
+                    <TableHead className="px-4 py-2 text-left text-sm font-semibold text-gray-200">
+                      Copie (Mintate/Massime)
+                    </TableHead>
+                    <TableHead className="px-4 py-2 text-left text-sm font-semibold text-gray-200">
+                      Prezzo Mint
+                    </TableHead>
+                    <TableHead className="px-4 py-2 text-left text-sm font-semibold text-gray-200">
+                      Disponibilità
+                    </TableHead>
+                    <TableHead className="px-4 py-2 text-left text-sm font-semibold text-gray-200">
+                      Azioni
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
+                <TableBody className="bg-gray-600 divide-y divide-gray-700">
                   {registeredContents.map((content) => (
-                    <TableRow key={content.contentId.toString()}>
-                      <TableCell className="font-medium">{content.contentId.toString()}</TableCell>
-                      <TableCell>{content.title}</TableCell>
-                      <TableCell>
-                        {content.previewImageCID ? (
+                    <TableRow
+                      key={content.contentId.toString()}
+                      className="hover:bg-gray-500 transition-colors"
+                    >
+                      <TableCell className="px-4 py-3 whitespace-nowrap font-medium text-purple-300">
+                        {content.contentId.toString()}
+                      </TableCell>
+                      <TableCell className="px-4 py-3 whitespace-nowrap text-gray-200">
+                        {content.title}
+                      </TableCell>
+                      <TableCell className="px-4 py-3 whitespace-nowrap text-gray-200 text-xs">
+                        {content.author}
+                      </TableCell>
+                      <TableCell className="px-4 py-3 whitespace-nowrap">
+                        {content.displayImageUrl ? (
                           <Image
-                            src={resolveIpfsLink(content.previewImageCID)}
+                            src={content.displayImageUrl}
                             alt={`Copertina di ${content.title}`}
                             width={80}
                             height={80}
                             className="rounded-md object-cover"
                             onError={(e) => {
-                              e.currentTarget.src = "https://placehold.co/80x80/cccccc/ffffff?text=No+Image";
+                              e.currentTarget.src =
+                                "https://placehold.co/80x80/333333/ffffff?text=No+Img";
                               e.currentTarget.alt = "Immagine non disponibile";
                             }}
                           />
                         ) : (
-                          <span className="text-gray-400">N/A</span>
+                          <Image
+                            src="https://placehold.co/80x80/333333/ffffff?text=No+Img"
+                            alt="Immagine non disponibile"
+                            width={80}
+                            height={80}
+                            className="rounded-md object-cover"
+                          />
                         )}
                       </TableCell>
-                      <TableCell>
-                        {content.originalDocumentFileCID ? (
-                          <Link href={resolveIpfsLink(content.originalDocumentFileCID)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                      <TableCell className="px-4 py-3 whitespace-nowrap">
+                        {content.ipfsHash ? ( 
+                          <Link
+                            href={resolveIpfsLink(content.ipfsHash)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 hover:underline"
+                          >
                             Scarica Documento
                           </Link>
                         ) : (
                           <span className="text-gray-400">Non Disponibile</span>
                         )}
                       </TableCell>
-                      <TableCell>
-                        {content.mintedCopies.toString()} / {content.maxCopies.toString()}
+                      <TableCell className="px-4 py-3 whitespace-nowrap text-gray-200">
+                        {content.mintedCopies.toString()} /{" "}
+                        {content.maxCopies.toString()}
                       </TableCell>
-                      <TableCell>
-                        {content.mintedCopies < content.maxCopies && content.isAvailable ? (
+                      <TableCell className="px-4 py-3 whitespace-nowrap text-gray-200">
+                        {formatEther(content.nftMintPrice)} ETH
+                      </TableCell>
+                      <TableCell className="px-4 py-3 whitespace-nowrap">
+                        <span
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            content.isAvailable &&
+                            content.mintedCopies < content.maxCopies
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {content.isAvailable &&
+                          content.mintedCopies < content.maxCopies
+                            ? "Disponibile"
+                            : "Esaurito"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-4 py-3 whitespace-nowrap">
+                        {content.mintedCopies < content.maxCopies &&
+                        content.isAvailable ? (
                           <Button
                             onClick={() => onMintNewCopy(content.contentId)}
                             disabled={
-                              // Disabilita se questo è il contenuto attualmente in fase di minting
                               activeMintContentId === content.contentId ||
                               isRequestMintPending ||
-                              isRequestingMint ||
-                              isMintingFulfilled // Disabilita se il mint è già stato fulfillment
+                              isRequestingMint
                             }
-                            className="bg-blue-500 hover:bg-blue-600 text-white"
+                            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md shadow-sm text-sm font-medium"
                           >
-                            {activeMintContentId === content.contentId ? (
-                              isMintingFulfilled ? "Minting Completato!" : "Minting in corso..."
-                            ) : "Conia Nuova Copia"}
+                            {activeMintContentId === content.contentId
+                              ? isRequestingMint
+                                ? "Minting in corso..."
+                                : "Preparazione..."
+                              : "Conia Nuova Copia"}
                           </Button>
                         ) : (
-                          <span className="text-gray-500">Limite Copie Raggiunto</span>
+                          <Button
+                            disabled
+                            className="bg-gray-600 text-gray-400 px-4 py-2 rounded-md shadow-sm text-sm font-medium cursor-not-allowed"
+                          >
+                            Non Disponibile
+                          </Button>
                         )}
                       </TableCell>
                     </TableRow>
@@ -285,267 +611,3 @@ const RegisteredContentPage = () => {
 };
 
 export default RegisteredContentPage;
-
-// // frontend-dapp/src/app/registered-content/page.tsx
-// "use client"; // Questo è un componente client-side
-
-// import { useAccount } from "wagmi";
-// import { useEffect, useState, useCallback } from "react";
-// import { toast } from "react-hot-toast";
-// import { ARBITRUM_SEPOLIA_CHAIN_ID } from "@/lib/constants";
-// import { usePublicContents } from "@/hooks/usePublicContents"; // Importa il nuovo hook
-// import { useRegisterContent } from "@/hooks/useRegisterContent"; // Useremo questo per la funzione di mint
-
-// // IMPORTANTE: Assicurati che questi percorsi e componenti esistano.
-// // Esempio: `components/LoadingSpinner.tsx`
-// // Esempio: `components/ui/button.tsx`, `components/ui/card.tsx`, `components/ui/table.tsx` da shadcn/ui
-// import { Button } from "@/components/ui/button";
-// import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-// import {
-//   Table,
-//   TableBody,
-//   TableCell,
-//   TableHead,
-//   TableHeader,
-//   TableRow,
-// } from "@/components/ui/table";
-// import Link from "next/link";
-// import Image from "next/image";
-
-// // Placeholder per LoadingSpinner se non hai ancora un componente dedicato
-// const LoadingSpinner = () => (
-//   <div className="flex justify-center items-center py-8">
-//     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-//     <p className="ml-4 text-gray-700">Caricamento...</p>
-//   </div>
-// );
-
-
-// // Funzione helper per risolvere i link IPFS (la stessa che era nell'hook, la mettiamo qui per riuso)
-// const resolveIpfsLink = (ipfsUri: string): string => {
-//   if (!ipfsUri) return "";
-//   if (ipfsUri.startsWith("ipfs://")) {
-//     const cid = ipfsUri.replace("ipfs://", "");
-//     // Considera di configurare un gateway IPFS preferito o di fallback
-//     // ad esempio, il tuo gateway dedicato se ne hai uno, o un servizio come Pinata/Infura
-//     return `https://${cid}.ipfs.dweb.link/`;
-//   }
-//   return ipfsUri;
-// };
-
-// const RegisteredContentPage = () => {
-//   const [mounted, setMounted] = useState(false);
-//   useEffect(() => setMounted(true), []); // Per evitare mismatch SSR/CSR
-
-//   const { address, isConnected, chainId } = useAccount();
-//   const {
-//     registeredContents,
-//     isLoading: isLoadingContents,
-//     error: contentsError,
-//     refreshContents,
-//   } = usePublicContents(); // Usiamo il nuovo hook!
-
-//   // Importiamo le funzioni e gli stati necessari da useRegisterContent
-//   const {
-//     handleRequestMintNFT,
-//     isRequestMintPending,
-//     isRequestingMint,
-//     isMintingFulfilled,
-//     mintedTokenId,
-//     mintingRevertReason,
-//     resetForm,
-//     // setRegistryContentId non è più strettamente necessario esporlo e usarlo direttamente qui per il minting
-//   } = useRegisterContent();
-
-//   // Stato locale per gestire quale contenuto è in fase di minting (per UI)
-//   const [activeMintContentId, setActiveMintContentId] = useState<bigint | null>(null);
-
-//   useEffect(() => {
-//     // Gestisce il feedback per il minting iniziato/pending
-//     if (activeMintContentId !== null) {
-//       if (isRequestMintPending) {
-//         toast.loading(`Inizializzazione minting per Content ID ${activeMintContentId.toString()}...`);
-//       } else if (isRequestingMint) {
-//         toast.loading(`Conio NFT in corso per Content ID ${activeMintContentId.toString()} (richiesta VRF inviata)...`);
-//       }
-//     }
-
-//     // Gestisce il feedback per il minting completato o fallito
-//     if (isMintingFulfilled && activeMintContentId !== null) {
-//       if (mintedTokenId !== null) {
-//         toast.success(`🎉 NFT Mintato! Token ID: ${mintedTokenId.toString()} per Content ID ${activeMintContentId.toString()}.`);
-//       } else {
-//         toast.success(`🎉 Minting completato per Content ID ${activeMintContentId.toString()}.`);
-//       }
-//       refreshContents(); // Ricarica la lista dei contenuti per aggiornare i conteggi
-//       setActiveMintContentId(null); // Resetta lo stato di minting della UI
-//       resetForm(); // Resetta lo stato interno di useRegisterContent relativo al minting
-//     } else if (mintingRevertReason && activeMintContentId !== null) {
-//       toast.error(`Errore nel minting per Content ID ${activeMintContentId.toString()}: ${mintingRevertReason}`);
-//       setActiveMintContentId(null);
-//       resetForm(); // Resetta lo stato interno
-//     }
-//   }, [
-//     isRequestMintPending,
-//     isRequestingMint,
-//     isMintingFulfilled,
-//     mintedTokenId,
-//     mintingRevertReason,
-//     activeMintContentId,
-//     refreshContents,
-//     resetForm,
-//   ]);
-
-
-//   // Funzione per avviare il minting di una copia specifica
-//   const onMintNewCopy = useCallback(async (contentId: bigint) => {
-//     if (!isConnected || chainId !== ARBITRUM_SEPOLIA_CHAIN_ID || !address) {
-//       toast.error("Connetti il tuo wallet alla rete Arbitrum Sepolia.");
-//       return;
-//     }
-
-//     // Controlla se c'è già un'operazione di minting in corso
-//     if (activeMintContentId !== null) {
-//       toast("Un'operazione di minting è già in corso. Attendi il completamento.", { icon: "ℹ️" });
-//       return;
-//     }
-
-//     const contentToMint = registeredContents.find(c => c.contentId === contentId);
-//     if (!contentToMint) {
-//       toast.error("Dettagli del contenuto non trovati.");
-//       return;
-//     }
-
-//     // Imposta lo stato per la UI per indicare quale contenuto è in minting
-//     setActiveMintContentId(contentId);
-
-//     // Qui ora passiamo i due argomenti richiesti
-//     if (!contentToMint.firstMintMetadataJsonUri) {
-//       toast.error("Impossibile trovare i metadati del primo mint per questo contenuto.");
-//       setActiveMintContentId(null); // Resetta lo stato attivo se non si può procedere
-//       return;
-//     }
-
-//     await handleRequestMintNFT(contentId, contentToMint.firstMintMetadataJsonUri);
-
-//   }, [address, isConnected, chainId, activeMintContentId, registeredContents, handleRequestMintNFT]);
-
-
-//   if (!mounted) {
-//     return null;
-//   }
-
-//   // Non controllare l'account admin qui, la pagina è pubblica
-//   if (!isConnected) {
-//     return (
-//       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center">
-//         <h1 className="text-2xl font-bold mb-4">Connetti il tuo Wallet</h1>
-//         <p className="text-gray-600">Per visualizzare e interagire con i contenuti, per favore connetti il tuo wallet.</p>
-//         {/* Potresti aggiungere qui un pulsante per connettere il wallet */}
-//       </div>
-//     );
-//   }
-
-//   if (chainId !== ARBITRUM_SEPOLIA_CHAIN_ID) {
-//     return (
-//       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center">
-//         <h1 className="text-2xl font-bold mb-4">Rete Errata</h1>
-//         <p className="text-gray-600">Per favore connetti il tuo wallet alla rete Arbitrum Sepolia per visualizzare i contenuti.</p>
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div className="container mx-auto p-4">
-//       <Card>
-//         <CardHeader>
-//           <CardTitle className="text-2xl font-bold">Contenuti Scientifici Registrati</CardTitle>
-//           <CardDescription>
-//             Esplora tutti i contenuti scientifici registrati. Se disponibile, puoi coniare una nuova copia NFT.
-//           </CardDescription>
-//         </CardHeader>
-//         <CardContent>
-//           {isLoadingContents ? (
-//             <LoadingSpinner />
-//           ) : contentsError ? (
-//             <div className="text-red-500">Errore: {contentsError}</div>
-//           ) : registeredContents.length === 0 ? (
-//             <div className="text-center text-gray-500 py-8">Nessun contenuto registrato trovato.</div>
-//           ) : (
-//             <div className="overflow-x-auto">
-//               <Table>
-//                 <TableHeader>
-//                   <TableRow>
-//                     <TableHead>ID</TableHead>
-//                     <TableHead>Titolo</TableHead>
-//                     <TableHead>Immagine Copertina</TableHead>
-//                     <TableHead>Documento Principale</TableHead>
-//                     <TableHead>Copie (Mintate/Massime)</TableHead>
-//                     <TableHead>Azioni</TableHead>
-//                   </TableRow>
-//                 </TableHeader>
-//                 <TableBody>
-//                   {registeredContents.map((content) => (
-//                     <TableRow key={content.contentId.toString()}>
-//                       <TableCell className="font-medium">{content.contentId.toString()}</TableCell>
-//                       <TableCell>{content.title}</TableCell>
-//                       <TableCell>
-//                         {content.previewImageCID ? (
-//                           // Il path della sorgente dell'immagine dovrebbe usare resolveIpfsLink
-//                           <Image
-//                             src={resolveIpfsLink(`ipfs://${content.previewImageCID}`)}
-//                             alt={`Copertina di ${content.title}`}
-//                             width={80}
-//                             height={80}
-//                             className="rounded-md object-cover"
-//                           />
-//                         ) : (
-//                           <span className="text-gray-400">N/A</span>
-//                         )}
-//                       </TableCell>
-//                       <TableCell>
-//                         {content.originalDocumentFileCID ? ( // Usa originalDocumentFileCID dai metadati NFT
-//                           <Link href={resolveIpfsLink(`ipfs://${content.originalDocumentFileCID}`)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-//                             Scarica Documento
-//                           </Link>
-//                         ) : (
-//                           <span className="text-gray-400">Non Disponibile</span>
-//                         )}
-//                       </TableCell>
-//                       <TableCell>
-//                         {content.mintedCopies.toString()} / {content.maxCopies.toString()}
-//                       </TableCell>
-//                       <TableCell>
-//                         {content.mintedCopies < content.maxCopies && content.isAvailable ? (
-//                           <Button
-//                             onClick={() => onMintNewCopy(content.contentId)}
-//                             disabled={
-//                               // Disabilita se questo è il contenuto attualmente in fase di minting
-//                               activeMintContentId === content.contentId ||
-//                               isRequestMintPending ||
-//                               isRequestingMint ||
-//                               isMintingFulfilled
-//                             }
-//                             className="bg-blue-500 hover:bg-blue-600 text-white"
-//                           >
-//                             {activeMintContentId === content.contentId ? (
-//                               isMintingFulfilled ? "Minting Completato!" : "Minting in corso..."
-//                             ) : "Conia Nuova Copia"}
-//                           </Button>
-//                         ) : (
-//                           <span className="text-gray-500">Limite Copie Raggiunto</span>
-//                         )}
-//                       </TableCell>
-//                     </TableRow>
-//                   ))}
-//                 </TableBody>
-//               </Table>
-//             </div>
-//           )}
-//         </CardContent>
-//       </Card>
-//     </div>
-//   );
-// };
-
-// export default RegisteredContentPage;
