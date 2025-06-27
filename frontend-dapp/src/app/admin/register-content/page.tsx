@@ -3,9 +3,11 @@
 
 import React, { useState, useEffect } from "react";
 import { Toaster } from "react-hot-toast";
+import { toast } from "react-hot-toast";
 import { useRegisterContent } from "@/hooks/useRegisterContent";
 import { useIsMounted } from "@/hooks/useIsMounted";
 import { useRouter } from "next/navigation";
+import { parseEther } from "viem";
 import {
   SCIENTIFIC_CONTENT_NFT_ADDRESS,
   ARBITRUM_SEPOLIA_CHAIN_ID,
@@ -71,7 +73,7 @@ export default function RegisterContentPage() {
     handleFileUpload,
     handleSetNftContract,
     handleRegisterContent,
-    handleRequestMintNFT,
+    handleRequestMintForNewContent,
     resetForm,
     MINT_PRICE_ETH,
   } = useRegisterContent();
@@ -848,7 +850,7 @@ export default function RegisterContentPage() {
                     </p>
                     <button
                       onClick={() => {
-                        handleRequestMintNFT();
+                        handleRequestMintForNewContent();
                         console.log(
                           "RegisterContentPage: Cliccato 'Richiedi Minting NFT'."
                         );
