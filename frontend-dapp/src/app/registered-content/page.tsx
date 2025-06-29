@@ -1,4 +1,3 @@
-// frontend-dapp/src/app/registered-content/page.tsx
 "use client";
 
 import { useAccount, usePublicClient } from "wagmi";
@@ -147,8 +146,8 @@ const RegisteredContentPage = () => {
   const [registeredContents, setRegisteredContents] = useState<DisplayContent[]>([]);
   const [isLoadingContents, setIsLoadingContents] = useState<boolean>(true);
   const [contentsError, setContentsError] = useState<string | null>(null);
+  const [isAnyMintingInProgress, setIsAnyMintingInProgress] = useState<boolean>(false);
 
-  // Stati per gestire il minting con fallback
   const [mintingStates, setMintingStates] = useState<Map<string, MintingState>>(new Map());
   const [showSuccessNotification, setShowSuccessNotification] = useState<{
     contentId: bigint;
@@ -256,7 +255,6 @@ const RegisteredContentPage = () => {
     }
   }, [publicClient]);
 
-  // Funzione per aggiungere un nuovo stato di minting
   const addMintingState = useCallback((contentId: bigint) => {
     const key = contentId.toString();
     setMintingStates(prev => {
@@ -268,9 +266,9 @@ const RegisteredContentPage = () => {
       });
       return newStates;
     });
+    setIsAnyMintingInProgress(true);
   }, []);
 
-  // Funzione per completare il minting
   const completeMinting = useCallback((contentId: bigint, tokenId?: bigint, txHash?: string) => {
     const key = contentId.toString();
     setMintingStates(prev => {
@@ -286,9 +284,9 @@ const RegisteredContentPage = () => {
       }
       return newStates;
     });
+    setIsAnyMintingInProgress(false);
   }, []);
 
-  // Funzione per rimuovere lo stato di minting
   const removeMintingState = useCallback((contentId: bigint) => {
     const key = contentId.toString();
     setMintingStates(prev => {
@@ -296,23 +294,21 @@ const RegisteredContentPage = () => {
       newStates.delete(key);
       return newStates;
     });
+    setIsAnyMintingInProgress(false);
   }, []);
 
-  // Funzione per verificare se un contenuto è in fase di minting
   const isContentMinting = useCallback((contentId: bigint): boolean => {
     const key = contentId.toString();
     const state = mintingStates.get(key);
     return state !== undefined && !state.isCompleted;
   }, [mintingStates]);
 
-  // Polling per verificare se il minting è completato
   const checkMintingCompletion = useCallback(async (contentId: bigint) => {
     if (!publicClient || !address) return;
 
     try {
       const currentBlock = await publicClient.getBlockNumber();
       
-      // Cerca eventi NFTMinted recenti
       const mintEvents = await publicClient.getLogs({
         address: SCIENTIFIC_CONTENT_NFT_ADDRESS,
         event: {
@@ -325,11 +321,10 @@ const RegisteredContentPage = () => {
             { name: 'metadataURI', type: 'string', indexed: false }
           ]
         },
-        fromBlock: currentBlock - BigInt(50), // Cerca negli ultimi 50 blocchi
+        fromBlock: currentBlock - BigInt(50),
         toBlock: 'latest'
       });
 
-      // Filtra gli eventi per il contentId e owner correnti
       const relevantEvents = mintEvents.filter((event: any) => {
         const eventContentId = event.args?.contentId;
         const eventOwner = event.args?.owner;
@@ -348,69 +343,55 @@ const RegisteredContentPage = () => {
           txHash
         });
 
-        // Completa il minting
         completeMinting(contentId, tokenId, txHash);
         
-        // Chiudi toast di loading
         toast.dismiss(`mint-${contentId.toString()}`);
         
-        // Mostra notifica di successo
         setShowSuccessNotification({
           contentId,
           tokenId,
           txHash
         });
 
-        // Ricarica contenuti
         setTimeout(() => {
           fetchRegisteredContents();
         }, 2000);
 
-        return true; // Minting completato
+        return true;
       }
     } catch (error) {
       console.error("Errore durante il controllo del minting:", error);
     }
     
-    return false; // Minting non ancora completato
+    return false;
   }, [publicClient, address, completeMinting, fetchRegisteredContents]);
 
-  // Timeout automatico per il fallback
   const setupMintingTimeout = useCallback((contentId: bigint) => {
     const timeoutId = setTimeout(async () => {
       console.log(`Timeout raggiunto per contentId: ${contentId.toString()}`);
       
-      // Prova un ultimo controllo prima del fallback
       const isCompleted = await checkMintingCompletion(contentId);
       
       if (!isCompleted) {
-        // Fallback: considera il minting completato
-        console.log("Attivando fallback per minting completato");
-        
-        // Chiudi toast di loading
         toast.dismiss(`mint-${contentId.toString()}`);
-        
-        // Mostra notifica di fallback
+
         setShowSuccessNotification({
           contentId,
           tokenId: null,
           txHash: null
         });
         
-        // Completa il minting localmente
         completeMinting(contentId);
-        
-        // Ricarica contenuti
+
         setTimeout(() => {
           fetchRegisteredContents();
         }, 2000);
       }
-    }, 12000); // 12 secondi
+    }, 12000);
 
     return timeoutId;
   }, [checkMintingCompletion, completeMinting, fetchRegisteredContents]);
 
-  // Carica contenuti al mount e setup interval
   useEffect(() => {
     if (isConnected && chainId === ARBITRUM_SEPOLIA_CHAIN_ID && publicClient) {
       fetchRegisteredContents();
@@ -423,12 +404,10 @@ const RegisteredContentPage = () => {
     }
   }, [isConnected, chainId, publicClient, fetchRegisteredContents]);
 
-  // Polling per verificare il completamento dei minting attivi - CORRETTO
   useEffect(() => {
     if (mintingStates.size === 0) return;
 
     const intervalId = setInterval(async () => {
-      // Usa Array.from per convertire l'iteratore in array
       const mintingEntries = Array.from(mintingStates.entries());
       
       for (const [key, state] of mintingEntries) {
@@ -436,7 +415,7 @@ const RegisteredContentPage = () => {
           await checkMintingCompletion(state.contentId);
         }
       }
-    }, 3000); // Controlla ogni 3 secondi
+    }, 3000);
 
     return () => clearInterval(intervalId);
   }, [mintingStates, checkMintingCompletion]);
@@ -448,9 +427,8 @@ const RegisteredContentPage = () => {
         return;
       }
 
-      // Controlla se c'è già un minting in corso per questo contenuto
-      if (isContentMinting(contentId)) {
-        toast.error("Un minting è già in corso per questo contenuto. Attendi il completamento.");
+      if (isAnyMintingInProgress) {
+        toast.error("Un minting è già in corso. Attendi il completamento prima di avviarne un altro.");
         return;
       }
 
@@ -469,19 +447,14 @@ const RegisteredContentPage = () => {
         return;
       }
 
-      console.log("Iniziando minting per contentId:", contentId.toString());
-
-      // Aggiungi lo stato di minting
       addMintingState(contentId);
 
-      // Mostra toast di preparazione
       toast.loading(
         `Preparazione minting per Content ID ${contentId.toString()}...`,
         { id: `mint-${contentId.toString()}` }
       );
 
       try {
-        // Reset dello stato di minting nell'hook
         if (resetMintingState) {
           resetMintingState();
         }
@@ -507,7 +480,6 @@ const RegisteredContentPage = () => {
 
         const metadataJsonUri = `ipfs://${metadataCid}`;
 
-        // Aggiorna toast
         toast.loading(
           `Conio NFT in corso per Content ID ${contentId.toString()}...`,
           { id: `mint-${contentId.toString()}` }
@@ -520,22 +492,16 @@ const RegisteredContentPage = () => {
           contentToMint.nftMintPrice
         );
 
-        console.log("Transazione di minting avviata, avviando timeout...");
-        
-        // Avvia il timeout per il fallback
         setupMintingTimeout(contentId);
 
       } catch (err: any) {
         console.error("Errore nel minting:", err);
         
-        // Rimuovi lo stato di minting in caso di errore
         removeMintingState(contentId);
         
-        // Chiudi toast di loading e mostra errore
         toast.dismiss(`mint-${contentId.toString()}`);
         toast.error(`Errore: ${err.message || "Operazione fallita"}`);
         
-        // Reset dell'hook
         if (resetMintingState) {
           resetMintingState();
         }
@@ -546,7 +512,7 @@ const RegisteredContentPage = () => {
       isConnected,
       chainId,
       registeredContents,
-      isContentMinting,
+      isAnyMintingInProgress,
       addMintingState,
       removeMintingState,
       handleRequestMintForCopy,
@@ -559,12 +525,10 @@ const RegisteredContentPage = () => {
   const handleCloseSuccessNotification = () => {
     setShowSuccessNotification(null);
     
-    // Rimuovi lo stato di minting se presente
     if (showSuccessNotification) {
       removeMintingState(showSuccessNotification.contentId);
     }
     
-    // Reset finale degli stati
     if (resetMintingState) {
       resetMintingState();
     }
@@ -672,6 +636,7 @@ const RegisteredContentPage = () => {
                 <TableBody className="bg-gray-600 divide-y divide-gray-700">
                   {registeredContents.map((content) => {
                     const isCurrentlyMinting = isContentMinting(content.contentId);
+                    const isContentAvailable = content.mintedCopies < content.maxCopies && content.isAvailable;
                     
                     return (
                       <TableRow
@@ -735,27 +700,24 @@ const RegisteredContentPage = () => {
                         <TableCell className="px-4 py-3 whitespace-nowrap">
                           <span
                             className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                              content.isAvailable &&
-                              content.mintedCopies < content.maxCopies
+                              isContentAvailable
                                 ? "bg-green-100 text-green-800"
                                 : "bg-red-100 text-red-800"
                             }`}
                           >
-                            {content.isAvailable &&
-                            content.mintedCopies < content.maxCopies
-                              ? "Disponibile"
-                              : "Esaurito"}
+                            {isContentAvailable ? "Disponibile" : "Esaurito"}
                           </span>
                         </TableCell>
                         <TableCell className="px-4 py-3 whitespace-nowrap">
-                          {content.mintedCopies < content.maxCopies &&
-                          content.isAvailable ? (
+                          {isContentAvailable ? (
                             <Button
                               onClick={() => onMintNewCopy(content.contentId)}
-                              disabled={isCurrentlyMinting}
+                              disabled={isAnyMintingInProgress}
                               className={`px-4 py-2 rounded-md shadow-sm text-sm font-medium transition-colors ${
                                 isCurrentlyMinting
-                                  ? "bg-yellow-600 hover:bg-yellow-700 text-white cursor-not-allowed"
+                                  ? "bg-yellow-600 hover:bg-yellow-700 text-white"
+                                  : isAnyMintingInProgress
+                                  ? "bg-gray-500 text-gray-300 cursor-not-allowed"
                                   : "bg-purple-600 hover:bg-purple-700 text-white"
                               }`}
                             >
@@ -764,6 +726,8 @@ const RegisteredContentPage = () => {
                                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                                   Coniando...
                                 </div>
+                              ) : isAnyMintingInProgress ? (
+                                "Altro minting in corso"
                               ) : (
                                 "Conia Nuova Copia"
                               )}
