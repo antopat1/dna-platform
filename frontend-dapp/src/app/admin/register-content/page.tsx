@@ -3,11 +3,9 @@
 
 import React, { useState, useEffect } from "react";
 import { Toaster } from "react-hot-toast";
-import { toast } from "react-hot-toast";
 import { useRegisterContent } from "@/hooks/useRegisterContent";
 import { useIsMounted } from "@/hooks/useIsMounted";
 import { useRouter } from "next/navigation";
-import { parseEther } from "viem";
 import {
   SCIENTIFIC_CONTENT_NFT_ADDRESS,
   ARBITRUM_SEPOLIA_CHAIN_ID,
@@ -125,6 +123,18 @@ export default function RegisterContentPage() {
   const isNftContractSetCorrectly =
     nftContractAddressInRegistry?.toLowerCase() ===
     SCIENTIFIC_CONTENT_NFT_ADDRESS.toLowerCase();
+  
+  // TROVA IL NUMERO MASSIMO DI COPIE DAL TEMPLATE SELEZIONATO
+  const currentTemplateMaxCopies = templates.find(t => t._id === selectedTemplateId)?.maxCopies || 1;
+
+  // Assicurati che maxCopies sia sempre <= currentTemplateMaxCopies
+  // Questo useEffect gestisce il caso in cui l'utente abbia selezionato un valore
+  // di maxCopies più alto rispetto al nuovo template scelto.
+  useEffect(() => {
+    if (maxCopies > currentTemplateMaxCopies) {
+      setMaxCopies(currentTemplateMaxCopies);
+    }
+  }, [maxCopies, currentTemplateMaxCopies, setMaxCopies]);  
 
   const isFormReadyForRegistration =
     ipfsMainDocumentCid &&
@@ -133,7 +143,7 @@ export default function RegisterContentPage() {
     contentDescription &&
     selectedTemplateId &&
     maxCopies >= 1 &&
-    maxCopies <= 5 &&
+    maxCopies <= currentTemplateMaxCopies && // Usa il limite del template
     isNftContractSetCorrectly;
 
   const isReadyForMinting =
@@ -513,18 +523,19 @@ export default function RegisterContentPage() {
                         onChange={(e) =>
                           setMaxCopies(
                             Math.min(
-                              5,
+                              currentTemplateMaxCopies,
                               Math.max(1, parseInt(e.target.value) || 1)
                             )
                           )
                         }
                         min="1"
-                        max="5"
+                        max={currentTemplateMaxCopies.toString()} 
                         required
                         disabled={isProcessing || isRegistrySuccess}
                       />
                       <p className="text-xs text-gray-500 mt-1">
-                        Il numero massimo di copie deve essere tra 1 e 5.
+                        Il numero massimo di copie deve essere tra 1 e{" "}
+                        {currentTemplateMaxCopies}. (Definito dal template selezionato)
                       </p>
                     </div>
                   </div>
@@ -969,3 +980,5 @@ export default function RegisterContentPage() {
     </div>
   );
 }
+
+

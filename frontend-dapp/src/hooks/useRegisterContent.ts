@@ -554,6 +554,8 @@ export const useRegisterContent = () => {
     ]
   );
 
+
+
   // PER IL MINTING INIZIALE (dopo registrazione)
   const handleRequestMintForNewContent = useCallback(async () => {
     // Reset stato precedente
