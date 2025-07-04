@@ -28,5 +28,9 @@ export const DAO_ABI = DaoABI.abi;
 
 // Configurazione per la rete Arbitrum Sepolia
 export const ARBITRUM_SEPOLIA_CHAIN_ID = 421614; // Chain ID ufficiale di Arbitrum Sepolia
-export const ARBITRUM_SEPOLIA_RPC_URL = "https://sepolia-rollup.arbitrum.io/rpc"; // URL RPC pubblico
+export const ARBITRUM_SEPOLIA_RPC_URL = process.env.NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC_URL; // URL RPC pubblico "https://sepolia-rollup.arbitrum.io/rpc";
+// Aggiungi un controllo di tipo, altrimenti TypeScript potrebbe lamentarsi che è string | undefined
+if (!ARBITRUM_SEPOLIA_RPC_URL) {
+  throw new Error("Missing NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC_URL environment variable.");
+}
 export const ARBITRUM_SEPOLIA_EXPLORER_URL = "https://sepolia.arbiscan.io/"; // URL di Arbiscan per Sepolia
