@@ -294,6 +294,18 @@ export default function NftDetailsPage() {
                 </p>
               </div>
 
+              {/* NUOVO BLOCCO: Badge per Contenuto Speciale */}
+              {nftData.hasSpecialContent && (
+                <div className="bg-yellow-100 p-4 rounded-lg flex items-center justify-center border border-yellow-400">
+                  <span className="text-yellow-700 text-xl mr-2 animate-pulse">✨</span>
+                  <p className="text-lg text-yellow-800 font-bold">
+                    EDIZIONE SPECIALE!
+                  </p>
+                  <span className="text-yellow-700 text-xl ml-2 animate-pulse">✨</span>
+                </div>
+              )}
+              {/* FINE NUOVO BLOCCO */}
+
               {/* Mostra lo stato di proprietà */}
               <div className={`p-4 rounded-lg ${isOwner ? 'bg-green-50' : 'bg-gray-50'}`}>
                 <p className="text-lg text-gray-800">
@@ -482,6 +494,7 @@ export default function NftDetailsPage() {
     </div>
   );
 }
+
 
 // // frontend-dapp/src/app/nft-details/[tokenId]/page.tsx
 

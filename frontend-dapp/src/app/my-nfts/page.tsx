@@ -1,11 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState, useEffect } from "react";
-import {
-  useAccount,
-  useWalletClient,
-  usePublicClient,
-} from "wagmi";
+import { useAccount, useWalletClient, usePublicClient } from "wagmi";
 import { toast, Toaster } from "react-hot-toast";
 import { Address, isAddress } from "viem";
 import {
@@ -34,6 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useOwnedNfts, NFT as OwnedNFT } from "@/hooks/useOwnedNfts";
 import { resolveIpfsLink } from "@/utils/ipfs";
+import { Star } from "lucide-react";
 
 // --- TIPI DI STATO PER LE MIGLIORIE ---
 type SaleType = "sale" | "auction";
@@ -647,6 +644,10 @@ export default function MyNFTsPage() {
                         <TableHead className="px-4 py-2 text-left text-sm font-semibold text-gray-200">
                           Immagine Copertina
                         </TableHead>
+                        {/* NUOVA COLONNA PER INDICATORE SPECIALE */}
+                        <TableHead className="px-4 py-2 text-center text-sm font-semibold text-gray-200">
+                          Speciale
+                        </TableHead>
                         <TableHead className="px-4 py-2 text-left text-sm font-semibold text-gray-200">
                           Azioni
                         </TableHead>
@@ -720,6 +721,15 @@ export default function MyNFTsPage() {
                                   e.currentTarget.src = PLACEHOLDER_IMAGE_URL;
                                 }}
                               />
+                            </TableCell>
+                            <TableCell className="px-4 py-3 whitespace-nowrap text-center">
+                              {nft.hasSpecialContent && (
+                                <div className="flex justify-center items-center">
+                                  <div title="Contenuto Speciale">
+                                    <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+                                  </div>
+                                </div>
+                              )}
                             </TableCell>
                             <TableCell
                               className="px-4 py-3 whitespace-nowrap"

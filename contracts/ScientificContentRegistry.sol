@@ -23,6 +23,7 @@ contract ScientificContentRegistry is Ownable {
 
     mapping(uint256 => Content) private _contents;
     mapping(bytes32 => bool) private _usedHashes;
+    mapping(address => bool) public isAuthorWhitelisted;
     uint256 private _contentCounter;
     address public nftContract;
 
@@ -39,9 +40,22 @@ contract ScientificContentRegistry is Ownable {
     event CopyMinted(uint256 indexed contentId, uint256 currentCopies);
     event NFTContractSet(address indexed nftContract);
     event DebugLog(string message, uint256 id, string data);
+    event AuthorWhitelisted(address indexed author);
+    event AuthorRemovedFromWhitelist(address indexed author);
+
+    constructor() {
+        // Imposta l'owner come autore whitelisted di default
+        isAuthorWhitelisted[msg.sender] = true;
+        emit AuthorWhitelisted(msg.sender);
+    }
 
     modifier onlyNFTContract() {
         require(msg.sender == nftContract, "Only NFT contract can modify");
+        _;
+    }
+
+    modifier onlyWhitelistedAuthor() {
+        require(isAuthorWhitelisted[msg.sender], "Author not whitelisted");
         _;
     }
     
@@ -56,13 +70,29 @@ contract ScientificContentRegistry is Ownable {
         emit NFTContractSet(_nftContract);
     }
 
+    function addAuthorToWhitelist(address _authorAddress) external onlyOwner {
+        require(_authorAddress != address(0), "Invalid address");
+        require(!isAuthorWhitelisted[_authorAddress], "Author already whitelisted");
+        
+        isAuthorWhitelisted[_authorAddress] = true;
+        emit AuthorWhitelisted(_authorAddress);
+    }
+
+    function removeAuthorFromWhitelist(address _authorAddress) external onlyOwner {
+        require(_authorAddress != address(0), "Invalid address");
+        require(isAuthorWhitelisted[_authorAddress], "Author not whitelisted");
+        
+        isAuthorWhitelisted[_authorAddress] = false;
+        emit AuthorRemovedFromWhitelist(_authorAddress);
+    }
+
     function registerContent(
         string memory title,
         string memory description,
         uint256 maxCopies,
         string memory _ipfsHash,
         uint256 _nftMintPrice
-    ) external returns (uint256) {
+    ) external onlyWhitelistedAuthor returns (uint256) {
         require(bytes(title).length > 0, "Title cannot be empty");
         require(bytes(description).length > 0, "Description cannot be empty");
         require(maxCopies > 0, "Must allow at least one copy");

@@ -17,7 +17,7 @@ import {
   DocumentDuplicateIcon,
   ArrowPathIcon,
 } from "@heroicons/react/24/outline";
-
+import { Star, Circle } from "lucide-react";
 console.log("Componente RegisterContentPage caricato.");
 
 export default function RegisterContentPage() {
@@ -120,9 +120,10 @@ export default function RegisterContentPage() {
   const isNftContractSetCorrectly =
     nftContractAddressInRegistry?.toLowerCase() ===
     SCIENTIFIC_CONTENT_NFT_ADDRESS.toLowerCase();
-  
+
   // TROVA IL NUMERO MASSIMO DI COPIE DAL TEMPLATE SELEZIONATO
-  const currentTemplateMaxCopies = templates.find(t => t._id === selectedTemplateId)?.maxCopies || 1;
+  const currentTemplateMaxCopies =
+    templates.find((t) => t._id === selectedTemplateId)?.maxCopies || 1;
 
   // Assicurati che maxCopies sia sempre <= currentTemplateMaxCopies
   // Questo useEffect gestisce il caso in cui l'utente abbia selezionato un valore
@@ -131,7 +132,7 @@ export default function RegisterContentPage() {
     if (maxCopies > currentTemplateMaxCopies) {
       setMaxCopies(currentTemplateMaxCopies);
     }
-  }, [maxCopies, currentTemplateMaxCopies, setMaxCopies]);  
+  }, [maxCopies, currentTemplateMaxCopies, setMaxCopies]);
 
   const isFormReadyForRegistration =
     ipfsMainDocumentCid &&
@@ -526,13 +527,14 @@ export default function RegisterContentPage() {
                           )
                         }
                         min="1"
-                        max={currentTemplateMaxCopies.toString()} 
+                        max={currentTemplateMaxCopies.toString()}
                         required
                         disabled={isProcessing || isRegistrySuccess}
                       />
                       <p className="text-xs text-gray-500 mt-1">
                         Il numero massimo di copie deve essere tra 1 e{" "}
-                        {currentTemplateMaxCopies}. (Definito dal template selezionato)
+                        {currentTemplateMaxCopies}. (Definito dal template
+                        selezionato)
                       </p>
                     </div>
                   </div>
@@ -899,11 +901,27 @@ export default function RegisterContentPage() {
                           </div>
                         )}
                         <div className="text-lg">
-                          <p>
+                          <p className="flex items-center">
                             **Titolo:**{" "}
-                            <span className="font-semibold">
+                            <span className="font-semibold ml-2">
                               {originalMetadata.name || contentTitle}
                             </span>
+                            {/* Indicatore Edizione Speciale */}
+                            {originalMetadata.hasSpecialContent ? (
+                              <div className="flex items-center ml-3 px-2 py-1 bg-yellow-100 border border-yellow-300 rounded-full">
+                                <Star className="w-4 h-4 text-yellow-600 mr-1" />
+                                <span className="text-xs font-semibold text-yellow-800">
+                                  Edizione Speciale
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center ml-3 px-2 py-1 bg-blue-100 border border-blue-300 rounded-full">
+                                <Circle className="w-4 h-4 text-blue-600 mr-1" />
+                                <span className="text-xs font-semibold text-blue-800">
+                                  Edizione Standard
+                                </span>
+                              </div>
+                            )}
                           </p>
                           <p className="mt-2">
                             **Token ID:**{" "}
@@ -977,5 +995,3 @@ export default function RegisterContentPage() {
     </div>
   );
 }
-
-
