@@ -3,6 +3,8 @@ node_modules
 frontend-dapp/.env.local
 backend-event-listener/venv/
 
+venv/
+
 # Hardhat files
 /cache
 /artifacts
