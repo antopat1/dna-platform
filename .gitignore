@@ -1,5 +1,7 @@
 node_modules
 .env
+frontend-dapp/.env.local
+backend-event-listener/venv/
 
 # Hardhat files
 /cache
