@@ -1,60 +1,75 @@
+# backend-event-listener/config.py
+
 import os
 from dotenv import load_dotenv
-import json # Importa il modulo json
 
-# Carica le variabili d'ambiente dal file .env nella radice del progetto
-# Il percorso '../.env' è corretto se config.py si trova in backend-event-listener/ e .env è nella root di dnaPlatform
-load_dotenv(dotenv_path='../.env')
+load_dotenv() # Carica le variabili d'ambiente dal file .env
 
-# --- Variabili d'Ambiente ---
-MONGO_DB_URI = os.getenv("MONGODB_URI")
-ARBITRUM_SEPOLIA_RPC_URL = os.getenv("ARBITRUM_SEPOLIA_RPC_URL")
+# Configurazione Blockchain
+RPC_URL = os.getenv("ARBITRUM_SEPOLIA_RPC_URL", "https://sepolia-rollup.arbitrum.io/rpc")
 
-# Indirizzi dei contratti
-SCIENTIFIC_CONTENT_NFT_ADDRESS = os.getenv("SCIENTIFIC_CONTENT_NFT_CONTRACT_ADDRESS")
-SCIENTIFIC_CONTENT_REGISTRY_ADDRESS = os.getenv("SCIENTIFIC_CONTENT_REGISTRY_CONTRACT_ADDRESS")
-SCIENTIFIC_CONTENT_MARKETPLACE_ADDRESS = os.getenv("SCIENTIFIC_CONTENT_MARKETPLACE_CONTRACT_ADDRESS")
+# Indirizzi dei Contratti
+NFT_CONTRACT_ADDRESS = os.getenv("SCIENTIFIC_CONTENT_NFT_CONTRACT_ADDRESS")
+MARKETPLACE_CONTRACT_ADDRESS = os.getenv("SCIENTIFIC_CONTENT_MARKETPLACE_CONTRACT_ADDRESS")
 
-# Assicurati che tutte le variabili d'ambiente necessarie siano caricate
-if not all([MONGO_DB_URI, ARBITRUM_SEPOLIA_RPC_URL,
-             SCIENTIFIC_CONTENT_NFT_ADDRESS, SCIENTIFIC_CONTENT_REGISTRY_ADDRESS,
-             SCIENTIFIC_CONTENT_MARKETPLACE_ADDRESS]):
-    raise ValueError("One or more environment variables (MONGODB_URI, ARBITRUM_SEPOLIA_RPC_URL, contract addresses) are not set.")
+# Calcola i percorsi ABI relativamente alla posizione di questo file (config.py)
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT_DIR = os.path.join(CURRENT_DIR, os.pardir)
 
-# --- Caricamento degli ABI dai file JSON di Hardhat ---
+NFT_ABI_PATH = os.path.join(PROJECT_ROOT_DIR, "artifacts", "contracts", "ScientificContentNFT.sol", "ScientificContentNFT.json")
+MARKETPLACE_ABI_PATH = os.path.join(PROJECT_ROOT_DIR, "artifacts", "contracts", "DnAContentMarketplace.sol", "DnAContentMarketplace.json")
 
-# La funzione load_abi_from_hardhat carica l'ABI specifico da un file JSON di Hardhat
-def load_abi_from_hardhat(contract_name: str) -> list:
-    # Il percorso è relativo a config.py.
-    # '../artifacts/' per risalire alla root di dnaPlatform e poi entrare in artifacts.
-    # Nota che il tuo marketplace ABI è DnAContentMarketplace.json, quindi il nome del file deve corrispondere.
-    abi_path = os.path.join('..', 'artifacts', 'contracts', f'{contract_name}.sol', f'{contract_name}.json')
+# Nomi degli eventi da monitorare
+NFT_EVENT_NAMES_TO_MONITOR = [
+    "Approval",
+    "ApprovalForAll",
+    "BaseURIUpdated",
+    "CoordinatorSet",
+    "MintingFailed",
+    "NFTMinted",
+    "OwnershipTransferRequested",
+    "OwnershipTransferred",
+    "ProtocolFeeReceiverUpdated",
+    "ProtocolFeesWithdrawn",
+    "Transfer"
+]
 
-    if contract_name == "DnAContentMarketplace":
-        abi_path = os.path.join('..', 'artifacts', 'contracts', 'DnAContentMarketplace.sol', 'DnAContentMarketplace.json')
-    elif contract_name == "ScientificContentNFT":
-        abi_path = os.path.join('..', 'artifacts', 'contracts', 'ScientificContentNFT.sol', 'ScientificContentNFT.json')
-    elif contract_name == "ScientificContentRegistry":
-        abi_path = os.path.join('..', 'artifacts', 'contracts', 'ScientificContentRegistry.sol', 'ScientificContentRegistry.json')
-    else:
-        raise ValueError(f"Unknown contract name: {contract_name}. Cannot find ABI path.")
+MARKETPLACE_EVENT_NAMES_TO_MONITOR = [
+    "AuctionEnded",
+    "AuctionStarted",
+    "NFTClaimed",
+    "NFTListedForSale",
+    "NFTPurchased",
+    "NFTSaleRemoved",
+    "NewBid",
+    "OwnershipTransferred",
+    "ProtocolFeeReceiverUpdated",
+    "ProtocolFeeUpdated",
+    "ProtocolFeesWithdrawn",
+    "RefundProcessed"
+]
 
-    try:
-        with open(abi_path, 'r') as f:
-            full_abi_data = json.load(f)
-            # L'ABI effettivo è contenuto sotto la chiave 'abi' nel JSON di Hardhat
-            return full_abi_data.get('abi')
-    except FileNotFoundError:
-        raise FileNotFoundError(f"ABI file not found for {contract_name} at {abi_path}. Have you compiled your contracts?")
-    except json.JSONDecodeError:
-        raise ValueError(f"Error decoding JSON for {contract_name} at {abi_path}. Check if the file is a valid JSON.")
+# Configurazione MongoDB
+MONGODB_URI = os.getenv("MONGODB_URI")
+DB_NAME = os.getenv("DB_NAME", "DnaContentMarketplaceDB")
+COLLECTION_NAME = os.getenv("COLLECTION_NAME", "events")
 
-# Carica gli ABI per ciascun contratto
-SCIENTIFIC_CONTENT_NFT_ABI = load_abi_from_hardhat("ScientificContentNFT")
-SCIENTIFIC_CONTENT_REGISTRY_ABI = load_abi_from_hardhat("ScientificContentRegistry")
-# Attenzione: il nome del tuo file ABI per il marketplace è "DnAContentMarketplace.json"
-SCIENTIFIC_CONTENT_MARKETPLACE_ABI = load_abi_from_hardhat("DnAContentMarketplace")
+# Altre configurazioni
+POLLING_INTERVAL_SECONDS = 1500
+MAX_BLOCKS_TO_SCAN_PER_CYCLE = 100 # non lo imposto a 1000 per non saturare il free tier di Alchemy
 
-# Verifica che gli ABI siano stati caricati (opzionale ma consigliato per debug)
-if not all([SCIENTIFIC_CONTENT_NFT_ABI, SCIENTIFIC_CONTENT_REGISTRY_ABI, SCIENTIFIC_CONTENT_MARKETPLACE_ABI]):
-    raise ValueError("One or more contract ABIs could not be loaded. Check contract names and file paths.")
+# BLOCCHI INIZIALI DI DEPLOY DEI CONTRATTI
+INITIAL_START_BLOCKS = {
+    NFT_CONTRACT_ADDRESS: 170582031,
+    MARKETPLACE_CONTRACT_ADDRESS: 170582068
+}
+
+# ********************************************************************************
+# NUOVA VARIABILE D'AMBIENTE PER OVERRIDE DEL BLOCCO DI PARTENZA
+# ********************************************************************************
+# Se impostata (es. OVERRIDE_START_BLOCK=170800000 nel .env o nella shell),
+# il listener inizierà la scansione da questo blocco, ignorando lo stato nel DB
+# e i blocchi di deploy. Utile per testare solo eventi futuri.
+# Assicurati che sia un intero.
+OVERRIDE_START_BLOCK = os.getenv("OVERRIDE_START_BLOCK")
+

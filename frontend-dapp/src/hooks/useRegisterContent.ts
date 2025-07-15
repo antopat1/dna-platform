@@ -1,4 +1,4 @@
-//frontend-dapp\src\hooks\useRegisterContent.ts#
+// frontend-dapp/src/hooks/useRegisterContent.ts
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   useAccount,
@@ -11,11 +11,10 @@ import { toast } from "react-hot-toast";
 import {
   SCIENTIFIC_CONTENT_REGISTRY_ADDRESS,
   SCIENTIFIC_CONTENT_REGISTRY_ABI,
-  SCIENTIFIC_CONTENT_NFT_ADDRESS,
-  SCIENTIFIC_CONTENT_NFT_ABI,
+  SCIENTIFIC_CONTENT_NFT_ADDRESS, // Mantenuto per il controllo di setNftContract
   ARBITRUM_SEPOLIA_CHAIN_ID,
 } from "@/lib/constants";
-import { parseEther, Abi, decodeEventLog, AbiEvent, getContract } from "viem";
+import { parseEther, Abi, decodeEventLog, AbiEvent } from "viem";
 
 interface NftTemplate {
   _id: string;
@@ -41,18 +40,7 @@ interface ContentOnChain {
 const CONTENT_REGISTERED_EVENT_TOPIC =
   "0xb3fb1534604fd9d4678cce38f4708f0b6725d2692cbfb2af0e493612a78944dc";
 
-const MINT_PRICE_ETH = "0.005";
-
-interface NFTMintedEventArgs {
-  tokenId: bigint;
-  contentId: bigint;
-  owner: `0x${string}`;
-  isSpecial: boolean;
-  copyNumber: bigint;
-  metadataURI: string;
-}
-
-// Aggiungi un ref per tracciare il contentId durante il polling
+const MINT_PRICE_ETH = "0.005"; // Mantenuto qui perché è legato al prezzo di registrazione iniziale
 
 export const useRegisterContent = () => {
   const [mounted, setMounted] = useState(false);
@@ -85,51 +73,21 @@ export const useRegisterContent = () => {
   const [registryContentId, setRegistryContentId] = useState<bigint | null>(
     null
   );
-  const [mintedTokenId, setMintedTokenId] = useState<bigint | null>(null);
-  const [isMintingFulfilled, setIsMintingFulfilled] = useState(false);
-  const [mintingFulfillmentTxHash, setMintingFulfillmentTxHash] = useState<
-    `0x${string}` | null
-  >(null);
-  const [mintedNftImageUrl, setMintedNftImageUrl] = useState<string | null>(
-    null
-  );
-  const [mintingRevertReason, setMintingRevertReason] = useState<string | null>(
-    null
-  );
-
-  const hasStartedMintPolling = useRef(false);
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastCheckedBlockNumber = useRef<bigint | null>(null);
-
-  const currentMintContentIdRef = useRef<bigint | null>(null);
 
   const {
     data: registryHash,
     writeContract: registerContentContract,
     isPending: isRegisteringPending,
+    error: registerContentError,
+    reset: resetRegisterContent,
   } = useWriteContract();
 
   const {
     isLoading: isRegistering,
     isSuccess: isRegistrySuccess,
     isError: isRegistryError,
+    error: registryReceiptError,
   } = useWaitForTransactionReceipt({ hash: registryHash });
-
-  const {
-    data: requestMintHash,
-    writeContract: requestMintContract,
-    isPending: isRequestMintPending,
-    error: requestMintWriteError,
-    reset: resetRequestMintContract,
-  } = useWriteContract();
-
-  const {
-    isLoading: isRequestingMint,
-    isSuccess: isRequestMintSuccess,
-    isError: isRequestMintError,
-    error: requestMintReceiptError,
-  } = useWaitForTransactionReceipt({ hash: requestMintHash });
 
   const { data: nftContractAddressInRegistry } = useReadContract({
     abi: SCIENTIFIC_CONTENT_REGISTRY_ABI as Abi,
@@ -140,28 +98,6 @@ export const useRegisterContent = () => {
       enabled: mounted && isConnected && chainId === ARBITRUM_SEPOLIA_CHAIN_ID,
     },
   }) as { data: `0x${string}` | undefined };
-
-  const {
-    data: contentDetails,
-    isLoading: isLoadingContentDetails,
-    isError: isErrorContentDetails,
-    refetch: refetchContentDetails,
-  } = useReadContract({
-    abi: SCIENTIFIC_CONTENT_REGISTRY_ABI as Abi,
-    address: SCIENTIFIC_CONTENT_REGISTRY_ADDRESS,
-    functionName: "getContent",
-    args: [registryContentId || BigInt(0)],
-    chainId: ARBITRUM_SEPOLIA_CHAIN_ID,
-    query: {
-      enabled:
-        mounted && !!registryContentId && chainId === ARBITRUM_SEPOLIA_CHAIN_ID,
-    },
-  }) as {
-    data: ContentOnChain | undefined;
-    isLoading: boolean;
-    isError: boolean;
-    refetch: () => void;
-  };
 
   const {
     data: setNftContractHash,
@@ -222,15 +158,26 @@ export const useRegisterContent = () => {
     }
   }, [selectedTemplateId, templates]);
 
-  const resetMintingState = useCallback(() => {
+  const resetForm = useCallback(() => {
+    setSelectedTemplateId("");
+    setContentTitle("");
+    setDescriptionContent("");
+    setMaxCopies(1);
+    setPreviewImage(null);
+    setMainDocument(null);
+    setMetadataInputs({});
+    setOriginalMetadata({});
+
+    setIpfsPreviewImageCid(null);
+    setIpfsMainDocumentCid(null);
+    setIpfsMetadataCid(null);
+
     setError(null);
-    setMintingRevertReason(null);
-    setIsMintingFulfilled(false);
-    setMintedTokenId(null);
-    setMintingFulfillmentTxHash(null);
-    setMintedNftImageUrl(null);
-    resetRequestMintContract();
-  }, [resetRequestMintContract]);
+    setIsProcessing(false);
+    setRegistryContentId(null);
+
+    resetRegisterContent();
+  }, [resetRegisterContent]);
 
   const handleFileUpload = useCallback(
     async (file: File, fileType: "preview" | "document") => {
@@ -285,10 +232,11 @@ export const useRegisterContent = () => {
     []
   );
 
+  // handleMetadataUpload rimane qui, ma sarà più generico o chiamato per la registrazione
   const handleMetadataUpload = useCallback(
     async (
       options: {
-        isCopy?: boolean;
+        isCopy?: boolean; // Questo campo potrebbe non servire più qui se la logica di copia va in Admin
         contentId?: bigint;
         title?: string;
         description?: string;
@@ -303,31 +251,28 @@ export const useRegisterContent = () => {
       try {
         let fullMetadata: any;
 
+        // Se options.isCopy è true, significa che i metadati sono per un NFT di copia,
+        // questa logica verrà spostata in useAdminContentManagement.ts
         if (options.isCopy) {
-          // METADATI PER COPIA NFT
-          fullMetadata = {
-            name: options.title || "Scientific Content Copy",
-            description:
-              options.description || "Copy of registered scientific content",
-            image: options.previewImageIpfsHash
-              ? `ipfs://${options.previewImageIpfsHash}`
-              : undefined,
-            external_url: `https://tuo-dominio-dapp.com/content/${
-              options.contentId?.toString() || "unknown"
-            }`,
-            attributes: [
-              { trait_type: "Author Address", value: address },
-              {
-                trait_type: "Registry Content ID",
-                value: options.contentId?.toString() || "N/A",
-              },
-              { trait_type: "Content Type", value: "Copy" },
-            ],
-            originalDocumentFileCID: options.mainDocumentIpfsHash,
-            previewImageFileCID: options.previewImageIpfsHash,
-          };
+            // Questo blocco sarà rimosso o modificato se la logica di copia va altrove.
+            // Per ora lo lasciamo come promemoria, ma idealmente dovrebbe essere gestito altrove.
+            // Se lo lasciamo qui, assicurati che i parametri necessari siano disponibili.
+            fullMetadata = {
+                name: options.title || "Scientific Content Copy",
+                description: options.description || "Copy of registered scientific content",
+                image: options.previewImageIpfsHash ? `ipfs://${options.previewImageIpfsHash}` : undefined,
+                external_url: `https://tuo-dominio-dapp.com/content/${options.contentId?.toString() || "unknown"}`,
+                attributes: [
+                    { trait_type: "Author Address", value: address },
+                    { trait_type: "Registry Content ID", value: options.contentId?.toString() || "N/A" },
+                    { trait_type: "Content Type", value: "Copy" },
+                ],
+                originalDocumentFileCID: options.mainDocumentIpfsHash,
+                previewImageFileCID: options.previewImageIpfsHash,
+            };
+
         } else {
-          // METADATI PER REGISTRAZIONE INIZIALE (comportamento originale)
+          // METADATI PER REGISTRAZIONE INIZIALE
           const template = templates.find((t) => t._id === selectedTemplateId);
           if (!template) {
             throw new Error("Nessun template selezionato.");
@@ -554,152 +499,7 @@ export const useRegisterContent = () => {
     ]
   );
 
-
-
-  // PER IL MINTING INIZIALE (dopo registrazione)
-  const handleRequestMintForNewContent = useCallback(async () => {
-    // Reset stato precedente
-    resetRequestMintContract();
-    setError(null);
-    setMintingRevertReason(null);
-    hasStartedMintPolling.current = false;
-    setIsMintingFulfilled(false);
-    setMintedTokenId(null);
-    setMintingFulfillmentTxHash(null);
-    setMintedNftImageUrl(null);
-
-    // Controlli preliminari
-    if (isRequestMintPending || isRequestingMint || isProcessing) {
-      toast("Un'operazione è già in corso. Attendi il completamento.", {
-        icon: "ℹ️",
-      });
-      return;
-    }
-
-    if (!registryContentId) {
-      setError("Contenuto non ancora registrato o ID non recuperato.");
-      toast.error("Contenuto non ancora registrato o ID non recuperato.");
-      return;
-    }
-
-    setIsProcessing(true);
-    toast("Preparazione dei metadati per il minting NFT...", { icon: "⏳" });
-
-    try {
-      // 1. CARICA I METADATI SU IPFS
-      const metadataCid = await handleMetadataUpload({ isCopy: false });
-
-      if (!metadataCid) {
-        throw new Error(
-          "Errore nel caricamento dei metadati per il minting dell'NFT."
-        );
-      }
-
-      const metadataURI = `ipfs://${metadataCid}`;
-      const mintPriceWei = parseEther(MINT_PRICE_ETH);
-
-      // Imposta il contentId corrente per il polling
-      currentMintContentIdRef.current = registryContentId;
-      console.log("Avvio minting per contentId:", registryContentId.toString());
-
-      // 2. AVVIA IL MINTING
-      requestMintContract({
-        abi: SCIENTIFIC_CONTENT_NFT_ABI as Abi,
-        address: SCIENTIFIC_CONTENT_NFT_ADDRESS,
-        functionName: "mintNFT",
-        args: [registryContentId, metadataURI],
-        value: mintPriceWei,
-      });
-    } catch (err: any) {
-      const errorMessage =
-        err.message || "Errore sconosciuto durante l'avvio del minting";
-      setError(`Errore nell'avvio del minting: ${errorMessage}`);
-      toast.error(`Errore: ${errorMessage}`);
-      setIsProcessing(false);
-      setMintingRevertReason(errorMessage);
-    }
-  }, [
-    isRequestMintPending,
-    isRequestingMint,
-    isProcessing,
-    resetRequestMintContract,
-    registryContentId,
-    handleMetadataUpload,
-    requestMintContract,
-  ]);
-
-  // PER IL MINTING DI COPIE AGGIUNTIVE (dalla pagina dei contenuti registrati)
-  const handleRequestMintForCopy = useCallback(
-    async (contentId: bigint, metadataURI: string, mintPriceWei: bigint) => {
-      // Reset stato precedente
-      resetRequestMintContract();
-      setError(null);
-      setMintingRevertReason(null);
-      hasStartedMintPolling.current = false;
-      setIsMintingFulfilled(false);
-      setMintedTokenId(null);
-      setMintingFulfillmentTxHash(null);
-      setMintedNftImageUrl(null);
-
-      // Imposta il contentId corrente
-      currentMintContentIdRef.current = contentId;
-
-      setIsProcessing(true);
-
-      try {
-        requestMintContract({
-          abi: SCIENTIFIC_CONTENT_NFT_ABI as Abi,
-          address: SCIENTIFIC_CONTENT_NFT_ADDRESS,
-          functionName: "mintNFT",
-          args: [contentId, metadataURI],
-          value: mintPriceWei,
-        });
-      } catch (err: any) {
-        const errorMessage =
-          err.message || "Errore sconosciuto durante l'avvio del minting";
-        setError(`Errore nell'avvio del minting: ${errorMessage}`);
-        toast.error(`Errore: ${errorMessage}`);
-        setIsProcessing(false);
-        setMintingRevertReason(errorMessage);
-      }
-    },
-    [requestMintContract, resetRequestMintContract]
-  );
-
-  const resetForm = useCallback(() => {
-    setSelectedTemplateId("");
-    setContentTitle("");
-    setDescriptionContent("");
-    setMaxCopies(1);
-    setPreviewImage(null);
-    setMainDocument(null);
-    setMetadataInputs({});
-    setOriginalMetadata({});
-
-    setIpfsPreviewImageCid(null);
-    setIpfsMainDocumentCid(null);
-    setIpfsMetadataCid(null);
-
-    setError(null);
-    setIsProcessing(false);
-    setRegistryContentId(null);
-    setMintedTokenId(null);
-    setIsMintingFulfilled(false);
-    setMintingFulfillmentTxHash(null);
-    setMintedNftImageUrl(null);
-    setMintingRevertReason(null);
-
-    resetRequestMintContract();
-
-    hasStartedMintPolling.current = false;
-    if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
-    if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current);
-    pollingIntervalRef.current = null;
-    pollingTimeoutRef.current = null;
-    lastCheckedBlockNumber.current = null;
-    currentMintContentIdRef.current = null;
-  }, [resetRequestMintContract]);
-
+  // --- useEffect per la registrazione del contenuto ---
   useEffect(() => {
     if (isSetNftContractSuccess) {
       toast.success(
@@ -797,278 +597,26 @@ export const useRegisterContent = () => {
 
     if (isRegistryError) {
       setError("Errore nella registrazione del contenuto on-chain.");
-      toast.error("Errore nella registrazione del contenuto on-chain.");
+      // Puoi aggiungere dettagli dall'errore della ricevuta se disponibili
+      if (registryReceiptError) {
+          console.error("Dettagli errore ricevuta registrazione:", registryReceiptError);
+          toast.error(`Errore nella registrazione del contenuto on-chain: ${registryReceiptError.message}`);
+      } else if (registerContentError) {
+          console.error("Dettagli errore writeContract registrazione:", registerContentError);
+          toast.error(`Errore nella registrazione del contenuto on-chain: ${registerContentError.message}`);
+      } else {
+          toast.error("Errore nella registrazione del contenuto on-chain.");
+      }
       setIsProcessing(false);
-    }
-  }, [isRegistrySuccess, isRegistryError, registryHash, publicClient]);
-
-  useEffect(() => {
-    if (requestMintWriteError) {
-      console.error(
-        "Errore di scrittura della transazione di minting:",
-        requestMintWriteError
-      );
-      const errorMessage =
-        requestMintWriteError.message ||
-        "Transazione di minting rifiutata o fallita.";
-      setError(`Errore di transazione: ${errorMessage}`);
-      toast.error(`Errore di transazione: ${errorMessage}`);
-      setIsProcessing(false);
-      setMintingRevertReason(errorMessage);
-    }
-
-    if (isRequestMintError && requestMintReceiptError) {
-      console.error(
-        "Errore nella ricevuta della transazione di richiesta minting (VRF):",
-        requestMintReceiptError
-      );
-      const revertReason = requestMintReceiptError.message.includes(
-        "reverted with the following reason"
-      )
-        ? requestMintReceiptError.message
-            .split("reverted with the following reason:")[1]
-            ?.trim()
-            .split("\n")[0]
-            ?.replace(/["']+/g, "") ||
-          "Transazione di richiesta VRF fallita on-chain"
-        : requestMintReceiptError.message;
-
-      setError(`Errore richiesta VRF: ${revertReason}`);
-      toast.error(`Errore Richiesta VRF: ${revertReason}`, { duration: 8000 });
-      setIsProcessing(false);
-      setMintingRevertReason(revertReason);
-    }
-
-    if (
-      isRequestMintSuccess &&
-      requestMintHash &&
-      publicClient &&
-      registryContentId &&
-      !isMintingFulfilled &&
-      !hasStartedMintPolling.current
-    ) {
-      toast.success(
-        "Richiesta di Minting NFT (VRF) inviata con successo! In attesa dell'NFT con i tratti casuali...",
-        { duration: 7000 }
-      );
-      toast(`Hash Tx Richiesta VRF: ${requestMintHash}`, { icon: "🔗" });
-
-      setIsProcessing(true);
-      hasStartedMintPolling.current = true;
-      lastCheckedBlockNumber.current = null;
-
-      console.log("Inizio polling per l'evento NFTMinted...");
-
-      const checkMintedNftEvent = async () => {
-        try {
-          const latestBlock = await publicClient.getBlockNumber();
-          let fromBlock: bigint | undefined;
-
-          if (!lastCheckedBlockNumber.current) {
-            const receipt = await publicClient.getTransactionReceipt({
-              hash: requestMintHash,
-            });
-            fromBlock = receipt?.blockNumber;
-          } else {
-            fromBlock = lastCheckedBlockNumber.current + BigInt(1);
-          }
-
-          if (!fromBlock || fromBlock > latestBlock) {
-            console.log(
-              "LOG (Polling): Nessun nuovo blocco da controllare o blocco iniziale non disponibile."
-            );
-            return;
-          }
-
-          console.log(
-            `LOG (Polling): Cerco eventi NFTMinted da blocco ${fromBlock} a ${latestBlock}`
-          );
-
-          const nftMintedEventAbi = (SCIENTIFIC_CONTENT_NFT_ABI as Abi).find(
-            (item): item is AbiEvent =>
-              item.type === "event" && item.name === "NFTMinted"
-          );
-
-          if (!nftMintedEventAbi) {
-            console.error(
-              "Errore: Definizione dell'evento NFTMinted non trovata nell'ABI del contratto NFT."
-            );
-            toast.error(
-              "Errore interno: Definizione evento NFTMinted mancante."
-            );
-            return;
-          }
-
-          const logs = await publicClient.getLogs({
-            address: SCIENTIFIC_CONTENT_NFT_ADDRESS,
-            event: nftMintedEventAbi,
-            fromBlock: fromBlock,
-            toBlock: latestBlock,
-          });
-
-          console.log("LOG (Polling): Eventi NFTMinted ricevuti:", logs);
-
-          for (const log of logs) {
-            try {
-              const decoded = decodeEventLog({
-                abi: SCIENTIFIC_CONTENT_NFT_ABI as Abi,
-                eventName: "NFTMinted",
-                topics: log.topics,
-                data: log.data,
-              });
-
-              if (
-                decoded.eventName === "NFTMinted" &&
-                decoded.args &&
-                typeof decoded.args === "object" &&
-                "tokenId" in decoded.args &&
-                typeof decoded.args.tokenId === "bigint" &&
-                "contentId" in decoded.args &&
-                typeof decoded.args.contentId === "bigint" &&
-                "owner" in decoded.args &&
-                typeof decoded.args.owner === "string" &&
-                "isSpecial" in decoded.args &&
-                typeof decoded.args.isSpecial === "boolean" &&
-                "copyNumber" in decoded.args &&
-                typeof decoded.args.copyNumber === "bigint" &&
-                "metadataURI" in decoded.args &&
-                typeof decoded.args.metadataURI === "string"
-              ) {
-                const args = decoded.args as NFTMintedEventArgs;
-
-                console.log(
-                  "LOG (Polling): Evento NFTMinted decodificato con successo:",
-                  args
-                );
-
-                const foundTokenId = args.tokenId;
-                const foundContentId = args.contentId;
-                const foundOwner = args.owner;
-
-                if (
-                  currentMintContentIdRef.current &&
-                  foundContentId === currentMintContentIdRef.current &&
-                  foundOwner.toLowerCase() === address?.toLowerCase()
-                ) {
-                  if (!isMintingFulfilled) {
-                    setMintedTokenId(foundTokenId);
-                    setMintingFulfillmentTxHash(log.transactionHash);
-                    setIsMintingFulfilled(true);
-
-                    if (ipfsPreviewImageCid) {
-                      setMintedNftImageUrl(ipfsPreviewImageCid);
-                    } else {
-                      setMintedNftImageUrl(null);
-                    }
-
-                    toast.success(
-                      `🎉 NFT Mintato! Token ID: ${foundTokenId.toString()}`
-                    );
-                    setIsProcessing(false);
-                    refetchContentDetails();
-
-                    if (pollingIntervalRef.current) {
-                      clearInterval(pollingIntervalRef.current);
-                      pollingIntervalRef.current = null;
-                    }
-                    if (pollingTimeoutRef.current) {
-                      clearTimeout(pollingTimeoutRef.current);
-                      pollingTimeoutRef.current = null;
-                    }
-                    return;
-                  }
-                } else {
-                  console.log(
-                    `LOG (Polling): Evento NFTMinted per contentId diverso (${foundContentId}) o owner diverso (${foundOwner}) dal richiesto (${registryContentId} / ${address}). Ignoro.`
-                  );
-                }
-              } else {
-                console.warn(
-                  "LOG (Polling): Evento NFTMinted decodificato ma argomenti mancanti o tipi non corrispondenti.",
-                  decoded
-                );
-              }
-            } catch (decodeErr) {
-              console.error(
-                "ERRORE (Polling): Fallimento nella decodifica di un log NFTMinted:",
-                decodeErr,
-                log
-              );
-            }
-          }
-          lastCheckedBlockNumber.current = latestBlock;
-        } catch (err: any) {
-          console.error(
-            "ERRORE (Polling): Errore durante il recupero dei log per NFTMinted:",
-            err
-          );
-        }
-      };
-
-      pollingIntervalRef.current = setInterval(checkMintedNftEvent, 15 * 1000);
-
-      pollingTimeoutRef.current = setTimeout(() => {
-        if (!isMintingFulfilled) {
-          console.warn(
-            "ATTENZIONE: Timeout raggiunto. L'evento NFTMinted non è stato rilevato entro il tempo limite."
-          );
-          setError(
-            "La transazione di minting non è stata confermata in tempo. Potrebbe esserci un ritardo on-chain o un problema col VRF."
-          );
-          toast.error(
-            "Minting non confermato. Controlla il block explorer per l'hash di richiesta VRF. Potrebbe essere necessario riprovare.",
-            { duration: 15000 }
-          );
-          setIsProcessing(false);
-          if (pollingIntervalRef.current) {
-            clearInterval(pollingIntervalRef.current);
-            pollingIntervalRef.current = null;
-          }
-        }
-      }, 300 * 1000);
-
-      return () => {
-        if (pollingIntervalRef.current) {
-          clearInterval(pollingIntervalRef.current);
-          pollingIntervalRef.current = null;
-        }
-        if (pollingTimeoutRef.current) {
-          clearTimeout(pollingTimeoutRef.current);
-          pollingTimeoutRef.current = null;
-        }
-        hasStartedMintPolling.current = false;
-        lastCheckedBlockNumber.current = null;
-        console.log("Cleanup: Polling per NFTMinted e timeout rimossi.");
-      };
     }
   }, [
-    isRequestMintSuccess,
-    requestMintHash,
+    isRegistrySuccess,
+    isRegistryError,
+    registryHash,
     publicClient,
-    registryContentId,
-    ipfsPreviewImageCid,
-    isMintingFulfilled,
-    requestMintWriteError,
-    isRequestMintError,
-    requestMintReceiptError,
-    address,
-    refetchContentDetails,
+    registryReceiptError,
+    registerContentError
   ]);
-
-  useEffect(() => {
-    return () => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
-      }
-      if (pollingTimeoutRef.current) {
-        clearTimeout(pollingTimeoutRef.current);
-        pollingTimeoutRef.current = null;
-      }
-      hasStartedMintPolling.current = false;
-      lastCheckedBlockNumber.current = null;
-    };
-  }, []);
 
   return {
     mounted,
@@ -1096,39 +644,30 @@ export const useRegisterContent = () => {
     error,
     isProcessing,
     registryContentId,
-    mintedTokenId,
-    isMintingFulfilled,
-    mintingFulfillmentTxHash,
-    mintedNftImageUrl,
     originalMetadata,
-    mintingRevertReason,
-    contentDetails,
-    isLoadingContentDetails,
-    isErrorContentDetails,
-    handleMetadataUpload,
-    setIpfsPreviewImageCid,
-    setIpfsMainDocumentCid,
-    setRegistryContentId,
     nftContractAddressInRegistry,
     isRegisteringPending,
     isRegistering,
     isRegistrySuccess,
     registryHash,
-    isRequestMintPending,
-    isRequestingMint,
-    isRequestMintSuccess,
-    requestMintHash,
     isSettingNftContract,
     isSetNftContractPending,
     handleFileUpload,
     handleSetNftContract,
     handleRegisterContent,
-    handleRequestMintForNewContent,
-    handleRequestMintForCopy,
     resetForm,
     MINT_PRICE_ETH,
     ARBITRUM_SEPOLIA_CHAIN_ID,
-    SCIENTIFIC_CONTENT_NFT_ADDRESS,
-    resetMintingState,
+    // La funzione handleMetadataUpload ora può essere passata
+    // o gestita internamente se la sua unica funzione è preparare i metadati
+    // per la registrazione del contenuto.
+    // Se serve anche per il minting in useAdminContentManagement, dovrà essere esposta.
+    handleMetadataUpload,
+    // Espongo anche i setter dei CID in caso serva aggiornarli dall'esterno,
+    // ad esempio se un componente li riceve da un'API separata.
+    setIpfsPreviewImageCid,
+    setIpfsMainDocumentCid,
   };
 };
+
+

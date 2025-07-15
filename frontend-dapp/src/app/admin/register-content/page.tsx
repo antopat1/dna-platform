@@ -1,11 +1,12 @@
-// frontend-dapp/src/app/admin/register-content/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
 import { Toaster } from "react-hot-toast";
 import { useRegisterContent } from "@/hooks/useRegisterContent";
+import useAdminContentManagement from "@/hooks/useAdminContentManagement";
 import { useIsMounted } from "@/hooks/useIsMounted";
 import { useRouter } from "next/navigation";
+import { useCallback } from "react";
 import {
   SCIENTIFIC_CONTENT_NFT_ADDRESS,
   ARBITRUM_SEPOLIA_CHAIN_ID,
@@ -18,14 +19,12 @@ import {
   ArrowPathIcon,
 } from "@heroicons/react/24/outline";
 import { Star, Circle } from "lucide-react";
-console.log("Componente RegisterContentPage caricato.");
 
 export default function RegisterContentPage() {
   const mounted = useIsMounted();
   const router = useRouter();
 
-  console.log("RegisterContentPage: Inizio del render.");
-
+  // Hook per la registrazione del contenuto
   const {
     isConnected,
     chainId,
@@ -51,71 +50,43 @@ export default function RegisterContentPage() {
     error,
     isProcessing,
     registryContentId,
-    mintedTokenId,
-    isMintingFulfilled,
-    mintingFulfillmentTxHash,
-    mintedNftImageUrl,
     originalMetadata,
-    mintingRevertReason,
     nftContractAddressInRegistry,
     isRegisteringPending,
     isRegistering,
     isRegistrySuccess,
-    isRequestMintPending,
-    isRequestingMint,
     isSettingNftContract,
     isSetNftContractPending,
     handleFileUpload,
     handleSetNftContract,
     handleRegisterContent,
-    handleRequestMintForNewContent,
     resetForm,
     MINT_PRICE_ETH,
   } = useRegisterContent();
 
-  const [showOptionalMetadata, setShowOptionalMetadata] = useState(false);
-  const [currentMintedCount, setCurrentMintedCount] = useState(0);
+  const handleMintingCompleted = useCallback(() => {
+    setCurrentMintedCount((prev) => prev + 1);
+  }, []);
 
-  console.log("RegisterContentPage: Stati attuali:", {
-    isConnected,
-    chainId,
-    address,
-    isProcessing,
-    registryContentId: registryContentId?.toString(),
-    mintedTokenId: mintedTokenId?.toString(),
+  // Hook per la gestione del minting e operazioni amministrative
+  const {
+    handleRequestMintForNewContent,
+    isProcessing: isAdminProcessing,
+    mintedTokenId,
     isMintingFulfilled,
     mintingFulfillmentTxHash,
-    error,
+    mintedNftImageUrl,
     mintingRevertReason,
-    currentMintedCount,
-    maxCopies,
-  });
+    resetAdminState,
+    resetMintingState,
+  } = useAdminContentManagement(handleMintingCompleted);
+
+  const [showOptionalMetadata, setShowOptionalMetadata] = useState(false);
+  const [currentMintedCount, setCurrentMintedCount] = useState(0);
 
   const PINATA_GATEWAY_SUBDOMAIN =
     process.env.NEXT_PUBLIC_PINATA_GATEWAY_SUBDOMAIN ||
     "your-default-subdomain";
-
-  useEffect(() => {
-    console.log("RegisterContentPage: useEffect - Mounted status:", mounted);
-  }, [mounted]);
-
-  // Effetto per aggiornare il conteggio dei mint quando un mint è completato con successo
-  useEffect(() => {
-    console.log(
-      "RegisterContentPage: useEffect - Checking isMintingFulfilled and mintedTokenId for count update."
-    );
-    if (isMintingFulfilled && mintedTokenId) {
-      console.log(
-        `RegisterContentPage: Minting Fulfilled! Token ID: ${mintedTokenId.toString()}. Aggiornamento conteggio.`
-      );
-      setCurrentMintedCount((prev) => prev + 1);
-      console.log(
-        `RegisterContentPage: Nuovo conteggio mintati: ${
-          currentMintedCount + 1
-        }`
-      );
-    }
-  }, [isMintingFulfilled, mintedTokenId]); // Dipende solo dallo stato dell'ultimo mint
 
   const isNftContractSetCorrectly =
     nftContractAddressInRegistry?.toLowerCase() ===
@@ -126,8 +97,6 @@ export default function RegisterContentPage() {
     templates.find((t) => t._id === selectedTemplateId)?.maxCopies || 1;
 
   // Assicurati che maxCopies sia sempre <= currentTemplateMaxCopies
-  // Questo useEffect gestisce il caso in cui l'utente abbia selezionato un valore
-  // di maxCopies più alto rispetto al nuovo template scelto.
   useEffect(() => {
     if (maxCopies > currentTemplateMaxCopies) {
       setMaxCopies(currentTemplateMaxCopies);
@@ -141,7 +110,7 @@ export default function RegisterContentPage() {
     contentDescription &&
     selectedTemplateId &&
     maxCopies >= 1 &&
-    maxCopies <= currentTemplateMaxCopies && // Usa il limite del template
+    maxCopies <= currentTemplateMaxCopies &&
     isNftContractSetCorrectly;
 
   const isReadyForMinting =
@@ -164,14 +133,11 @@ export default function RegisterContentPage() {
   };
 
   const handleFullReset = () => {
-    console.log(
-      "RegisterContentPage: handleFullReset chiamato. Resetto form e contatore."
-    );
     resetForm();
     setCurrentMintedCount(0);
+    resetAdminState();
   };
 
-  // Funzione di reset che ricarica completamente la pagina
   const resetAll = () => {
     window.location.reload();
   };
@@ -183,15 +149,8 @@ export default function RegisterContentPage() {
       !template.metadataSchema ||
       !template.metadataSchema.properties
     ) {
-      console.log(
-        "RegisterContentPage: Nessun template selezionato o schema metadati non valido."
-      );
       return null;
     }
-    console.log(
-      "RegisterContentPage: Rendering campi metadati per template:",
-      template.name
-    );
 
     const properties = template.metadataSchema.properties;
     const requiredFields = template.metadataSchema.required || [];
@@ -232,10 +191,7 @@ export default function RegisterContentPage() {
             {key === "image" && (
               <p className="text-xs text-blue-600 mb-2 bg-blue-50 p-2 rounded-md border border-blue-200">
                 **Importante:** Inserisci solo il **CID** dell'immagine IPFS. Il
-                link completo verrà generato automaticamente. (es. per
-                `https://bafkreiglnzp25a5vvqnwldex7x77kvowdxwhnhhemrleoq4rsce77xkfiq.ipfs.dweb.link/`
-                inserisci solo
-                `bafkreiglnzp25a5vvqnwldex7x77kvowdxwhnhhemrleoq4rsce77xkfiq`)
+                link completo verrà generato automaticamente.
               </p>
             )}
             {value.type === "string" && (
@@ -277,12 +233,7 @@ export default function RegisterContentPage() {
         ) && (
           <button
             type="button"
-            onClick={() => {
-              setShowOptionalMetadata(!showOptionalMetadata);
-              console.log(
-                `RegisterContentPage: Toggling optional metadata. Now: ${!showOptionalMetadata}`
-              );
-            }}
+            onClick={() => setShowOptionalMetadata(!showOptionalMetadata)}
             className="text-blue-600 hover:underline text-sm mt-4 flex items-center"
             disabled={isProcessing || isRegistrySuccess}
           >
@@ -297,11 +248,6 @@ export default function RegisterContentPage() {
   };
 
   const currentChainIsArbitrumSepolia = chainId === ARBITRUM_SEPOLIA_CHAIN_ID;
-  console.log(
-    `RegisterContentPage: Chain ID: ${chainId}, Is Arbitrum Sepolia: ${currentChainIsArbitrumSepolia}`
-  );
-
-  console.log("RegisterContentPage: Fine del render.");
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">
@@ -314,12 +260,7 @@ export default function RegisterContentPage() {
       {/* Pulsanti Globali di Navigazione */}
       <div className="flex justify-center space-x-4 mb-8">
         <button
-          onClick={() => {
-            router.push("/admin/registered-content");
-            console.log(
-              "RegisterContentPage: Cliccato 'Accedi ai Contenuti Registrati'."
-            );
-          }}
+          onClick={() => router.push("/admin/registered-content")}
           className="px-6 py-2 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 transition-all duration-300"
         >
           Accedi ai Contenuti Registrati
@@ -378,9 +319,6 @@ export default function RegisterContentPage() {
                         navigator.clipboard.writeText(
                           nftContractAddressInRegistry || ""
                         );
-                        console.log(
-                          "RegisterContentPage: Copia indirizzo NFT Registry."
-                        );
                       }}
                       className="ml-2 p-1 rounded-full text-gray-500 hover:bg-gray-200 transition"
                       title="Copia Indirizzo"
@@ -410,12 +348,7 @@ export default function RegisterContentPage() {
                       poter registrare contenuti.
                     </p>
                     <button
-                      onClick={() => {
-                        handleSetNftContract();
-                        console.log(
-                          "RegisterContentPage: Cliccato 'Imposta NFT Contract'."
-                        );
-                      }}
+                      onClick={handleSetNftContract}
                       disabled={isSetNftContractPending || isSettingNftContract}
                       className="ml-4 px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                     >
@@ -451,13 +384,7 @@ export default function RegisterContentPage() {
 
               {/* Registration Form */}
               <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleRegisterContent(e);
-                  console.log(
-                    "RegisterContentPage: Cliccato 'Registra Contenuto'."
-                  );
-                }}
+                onSubmit={handleRegisterContent}
                 className="bg-white p-8 rounded-xl shadow-2xl border border-indigo-100"
               >
                 <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
@@ -553,13 +480,7 @@ export default function RegisterContentPage() {
                         id="templateSelect"
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 bg-white disabled:bg-gray-100 disabled:text-gray-500"
                         value={selectedTemplateId}
-                        onChange={(e) => {
-                          setSelectedTemplateId(e.target.value);
-                          console.log(
-                            "RegisterContentPage: Selezionato template ID:",
-                            e.target.value
-                          );
-                        }}
+                        onChange={(e) => setSelectedTemplateId(e.target.value)}
                         required
                         disabled={isProcessing || isRegistrySuccess}
                       >
@@ -586,27 +507,20 @@ export default function RegisterContentPage() {
                         id="previewImage"
                         className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:file:bg-gray-200"
                         accept="image/*"
-                        onChange={(e) => {
+                        onChange={(e) =>
                           setPreviewImage(
                             e.target.files ? e.target.files[0] : null
-                          );
-                          console.log(
-                            "RegisterContentPage: File previewImage selezionato:",
-                            e.target.files ? e.target.files[0].name : "Nessuno"
-                          );
-                        }}
+                          )
+                        }
                         disabled={isProcessing || isRegistrySuccess}
                         required
                       />
                       {previewImage && (
                         <button
                           type="button"
-                          onClick={() => {
-                            handleFileUpload(previewImage, "preview");
-                            console.log(
-                              "RegisterContentPage: Cliccato 'Carica Anteprima su IPFS'."
-                            );
-                          }}
+                          onClick={() =>
+                            handleFileUpload(previewImage, "preview")
+                          }
                           disabled={
                             isProcessing ||
                             ipfsPreviewImageCid !== null ||
@@ -664,27 +578,20 @@ export default function RegisterContentPage() {
                         id="mainDocument"
                         className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:file:bg-gray-200"
                         accept="application/pdf, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                        onChange={(e) => {
+                        onChange={(e) =>
                           setMainDocument(
                             e.target.files ? e.target.files[0] : null
-                          );
-                          console.log(
-                            "RegisterContentPage: File mainDocument selezionato:",
-                            e.target.files ? e.target.files[0].name : "Nessuno"
-                          );
-                        }}
+                          )
+                        }
                         disabled={isProcessing || isRegistrySuccess}
                         required
                       />
                       {mainDocument && (
                         <button
                           type="button"
-                          onClick={() => {
-                            handleFileUpload(mainDocument, "document");
-                            console.log(
-                              "RegisterContentPage: Cliccato 'Carica Documento su IPFS'."
-                            );
-                          }}
+                          onClick={() =>
+                            handleFileUpload(mainDocument, "document")
+                          }
                           disabled={
                             isProcessing ||
                             ipfsMainDocumentCid !== null ||
@@ -860,20 +767,21 @@ export default function RegisterContentPage() {
                     </p>
                     <button
                       onClick={() => {
-                        handleRequestMintForNewContent();
-                        console.log(
-                          "RegisterContentPage: Cliccato 'Richiedi Minting NFT'."
+                        resetMintingState(); // Reset dello stato di minting
+                        handleRequestMintForNewContent(
+                          registryContentId,
+                          contentTitle,
+                          contentDescription,
+                          ipfsMainDocumentCid,
+                          ipfsPreviewImageCid
                         );
                       }}
                       disabled={
-                        !isReadyForMinting ||
-                        isProcessing ||
-                        isRequestMintPending ||
-                        isRequestingMint
+                        !isReadyForMinting || isProcessing || isAdminProcessing
                       }
                       className="px-8 py-3 bg-purple-600 text-white font-bold rounded-lg shadow-xl hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                     >
-                      {isRequestMintPending || isRequestingMint ? (
+                      {isAdminProcessing ? (
                         <>
                           <ArrowPathIcon className="animate-spin w-5 h-5 mr-3" />
                           Richiesta Minting in corso...
@@ -900,9 +808,9 @@ export default function RegisterContentPage() {
                             />
                           </div>
                         )}
-                        <div className="text-lg">
-                          <p className="flex items-center">
-                            **Titolo:**{" "}
+                        {/* FIX: Changed <p> to <div> here as it contained a <div> conditionally */}
+                        <div className="flex items-center text-lg">
+                           **Titolo:**{" "}
                             <span className="font-semibold ml-2">
                               {originalMetadata.name || contentTitle}
                             </span>
@@ -922,8 +830,9 @@ export default function RegisterContentPage() {
                                 </span>
                               </div>
                             )}
-                          </p>
-                          <p className="mt-2">
+                        </div>
+                        <div className="text-lg">
+                           <p className="mt-2">
                             **Token ID:**{" "}
                             <span className="font-mono font-bold text-green-900">
                               {mintedTokenId?.toString()}
@@ -958,7 +867,7 @@ export default function RegisterContentPage() {
                               </a>
                             </p>
                           )}
-                          <p className="mt-4 text-gray-700">
+                           <p className="mt-4 text-gray-700">
                             Il tuo NFT è ora disponibile sulla blockchain di
                             Arbitrum Sepolia.
                           </p>
@@ -966,21 +875,19 @@ export default function RegisterContentPage() {
                       </div>
                       {/* Messaggio per mint multipli */}
                       {currentMintedCount < maxCopies && (
-                        <p className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-sm flex items-center">
+                        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-sm flex items-center">
                           <InformationCircleIcon className="w-5 h-5 mr-2" />
                           Puoi mintare ancora {maxCopies -
                             currentMintedCount}{" "}
                           copia/e di questo contenuto. Premi "Richiedi Minting
                           NFT" nuovamente.
-                        </p>
+                        </div>
                       )}
                     </div>
                   )}
                 </div>
               )}
               <div className="flex justify-center mt-6">
-                {" "}
-                {/* Aggiungi un div per centrare il pulsante */}
                 <button
                   onClick={resetAll}
                   className="px-6 py-2 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 transition-all duration-300"
@@ -995,3 +902,4 @@ export default function RegisterContentPage() {
     </div>
   );
 }
+
