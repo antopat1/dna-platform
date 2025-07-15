@@ -48,7 +48,31 @@ interface NFTMintedEventArgs {
 // Prezzo di minting
 const MINT_PRICE_ETH = "0.005";
 
-// Funzione placeholder o helper per il caricamento dei metadati.
+// Funzione per salvare l'evento in MongoDB (adattala al tuo endpoint reale)
+const saveMintEventToMongo = async (eventData: {
+  contentId: string;
+  tokenId: string;
+  owner: string;
+  metadataURI: string;
+  // Aggiungi altri campi come nel tuo handleRequestMintForNewContent
+}) => {
+  try {
+    const response = await fetch("/api/save-mint-event", { // Assumi endpoint simile al tuo progetto
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(eventData),
+    });
+    if (!response.ok) {
+      throw new Error("Errore nel salvataggio su MongoDB");
+    }
+    toast.success("Evento mint salvato su MongoDB!");
+  } catch (err: any) {
+    console.error("Errore salvataggio MongoDB:", err);
+    toast.error(`Errore salvataggio su DB: ${err.message}`);
+  }
+};
+
+// Funzione per il caricamento dei metadati (con fix per BigInt)
 const uploadMetadataToIpfs = async (
   address: `0x${string}` | undefined,
   contentId: bigint | null,
@@ -104,9 +128,14 @@ const uploadMetadataToIpfs = async (
     };
   }
 
+  // Safeguard: Converti eventuali BigInt in stringhe
+  const serializedMetadata = JSON.stringify(fullMetadata, (key, value) =>
+    typeof value === "bigint" ? value.toString() : value
+  );
+
   try {
     const formData = new FormData();
-    const metadataBlob = new Blob([JSON.stringify(fullMetadata)], {
+    const metadataBlob = new Blob([serializedMetadata], {
       type: "application/json",
     });
     formData.append("file", metadataBlob, "metadata.json");
@@ -270,6 +299,28 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
         );
         setIsProcessing(false);
         lastProcessedTxHashRef.current = nftTxHash;
+
+        // Aggiunta: Salva evento in MongoDB (simile a handleRequestMintForNewContent)
+        if (nftTxReceipt.logs) {
+          const mintLog = nftTxReceipt.logs.find((log) =>
+            log.address === SCIENTIFIC_CONTENT_NFT_ADDRESS &&
+            log.topics[0] === "NFTMinted" // Assumi topic corretto
+          );
+          if (mintLog) {
+            const decoded = decodeEventLog({
+              abi: SCIENTIFIC_CONTENT_NFT_ABI,
+              data: mintLog.data,
+              topics: mintLog.topics,
+            }) as { args: NFTMintedEventArgs };
+            await saveMintEventToMongo({
+              contentId: decoded.args.contentId.toString(),
+              tokenId: decoded.args.tokenId.toString(),
+              owner: decoded.args.owner,
+              metadataURI: decoded.args.metadataURI,
+              // Aggiungi altri campi come nel tuo progetto
+            });
+          }
+        }
       } else if (
         isNftTxConfirmationError &&
         nftTxConfirmationError &&
@@ -802,7 +853,7 @@ const sendTransaction = useCallback(
           onMintingCompleted();
         }
       } else {
-        toast.error("Mancata immagine di preview");
+        // toast.error("Mancata immagine di preview");
         setIsProcessing(false);
       }
     }
@@ -883,3 +934,4 @@ const sendTransaction = useCallback(
 };
 
 export default useAdminContentManagement;
+

@@ -11,6 +11,7 @@ import {
   SCIENTIFIC_CONTENT_NFT_ADDRESS,
 } from "@/lib/constants";
 import { useRegisterContent } from "@/hooks/useRegisterContent";
+import  useAdminContentManagement from "@/hooks/useAdminContentManagement";
 import { getContract } from "viem";
 import { formatEther } from "viem";
 import { Toaster } from "react-hot-toast";
@@ -177,13 +178,14 @@ const RegisteredContentPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
 
   const {
-    handleRequestMintForCopy,
     handleMetadataUpload,
-    resetMintingState,
-    isRequestMintPending,
-    isRequestingMint,
-    error,
   } = useRegisterContent();
+
+  const {
+    handleRequestMintForCopy,
+    resetMintingState,
+  } = useAdminContentManagement();
+
 
   // Funzioni per gestire la cache in localStorage con conversione BigInt
   type SerializedDisplayContent = Omit<DisplayContent, 'contentId' | 'registrationTime' | 'maxCopies' | 'mintedCopies' | 'nftMintPrice'> & {
@@ -763,26 +765,10 @@ const RegisteredContentPage = () => {
           resetMintingState();
         }
 
-        const mainDocCid = contentToMint.ipfsHash.replace("ipfs://", "");
+        const mainDocCid = contentToMint.ipfsHash.replace("ipfs://", "") || null;
         const previewCid = contentToMint.displayImageUrl
           ? contentToMint.displayImageUrl.split("/ipfs/")[1]
-          : "";
-
-        console.log("Caricando metadati...");
-        const metadataCid = await handleMetadataUpload({
-          isCopy: true,
-          contentId: contentId,
-          title: contentToMint.title,
-          description: contentToMint.description,
-          mainDocumentIpfsHash: mainDocCid,
-          previewImageIpfsHash: previewCid,
-        });
-
-        if (!metadataCid) {
-          throw new Error("Impossibile generare i metadati per il nuovo NFT");
-        }
-
-        const metadataJsonUri = `ipfs://${metadataCid}`;
+          : null;
 
         toast.loading(
           `Conio NFT in corso per Content ID ${contentId.toString()}...`,
@@ -792,7 +778,10 @@ const RegisteredContentPage = () => {
         console.log("Avviando transazione di minting...");
         await handleRequestMintForCopy(
           contentId,
-          metadataJsonUri,
+          contentToMint.title,
+          contentToMint.description,
+          mainDocCid,
+          previewCid,
           contentToMint.nftMintPrice
         );
 
@@ -819,7 +808,6 @@ const RegisteredContentPage = () => {
       addMintingState,
       removeMintingState,
       handleRequestMintForCopy,
-      handleMetadataUpload,
       resetMintingState,
       setupMintingTimeout,
     ]
@@ -1098,5 +1086,7 @@ const RegisteredContentPage = () => {
 };
 
 export default RegisteredContentPage;
+
+
 
 
