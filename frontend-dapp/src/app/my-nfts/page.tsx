@@ -1,3 +1,5 @@
+// frontend-dapp\src\app\my-nfts\page.tsx
+
 "use client";
 
 import { useCallback, useMemo, useState, useEffect } from "react";
@@ -31,6 +33,14 @@ import { Input } from "@/components/ui/input";
 import { useOwnedNfts, NFT as OwnedNFT } from "@/hooks/useOwnedNfts";
 import { resolveIpfsLink } from "@/utils/ipfs";
 import { Star } from "lucide-react";
+import {
+  trackTransaction,
+  buildPendingTxDetails,
+  buildConfirmedTxDetails,
+  buildFailedTxDetails,
+  TransactionDetails,
+} from "@/utils/trackTransaction";
+import { decodeEventLog, formatUnits } from "viem";
 
 // --- TIPI DI STATO PER LE MIGLIORIE ---
 type SaleType = "sale" | "auction";
@@ -425,7 +435,7 @@ export default function MyNFTsPage() {
         return;
       }
 
-      if (!walletClient || !address || !publicClient) {
+      if (!walletClient || !address || !publicClient || !chainId) {
         toast.error("Wallet o client pubblici non disponibili.");
         return;
       }
@@ -443,6 +453,8 @@ export default function MyNFTsPage() {
         `Trasferimento NFT ID ${nft.tokenId.toString()} a ${recipient}...`
       );
 
+      let hash: `0x${string}` | undefined;
+
       try {
         const nftContractAddress: Address = SCIENTIFIC_CONTENT_NFT_ADDRESS;
         if (!nftContractAddress) {
@@ -457,7 +469,25 @@ export default function MyNFTsPage() {
           args: [address, recipient as Address, nft.tokenId],
         });
 
-        const hash = await walletClient.writeContract(request);
+        hash = await walletClient.writeContract(request);
+
+        // Traccia la transazione come pending
+        const metadata = {
+          tokenId: nft.tokenId.toString(),
+          recipient,
+          type: "Transfer",
+        };
+        const pendingDetails = buildPendingTxDetails(
+          hash,
+          address,
+          nftContractAddress,
+          BigInt(0),
+          "safeTransferFrom",
+          "ScientificContentNFT",
+          chainId,
+          metadata
+        );
+        await trackTransaction(pendingDetails);
 
         toast.loading(
           `Transazione inviata: ${hash.slice(0, 6)}...${hash.slice(
@@ -482,6 +512,13 @@ export default function MyNFTsPage() {
         );
 
         if (transactionReceipt.status === "success") {
+          // Traccia la transazione come confermata
+          const confirmedDetails = buildConfirmedTxDetails(
+            pendingDetails,
+            transactionReceipt
+          );
+          await trackTransaction(confirmedDetails);
+
           toast.success(
             `NFT ID ${nft.tokenId.toString()} trasferito con successo! Transazione: ${hash.slice(
               0,
@@ -509,6 +546,13 @@ export default function MyNFTsPage() {
           });
           refetchOwnedNfts();
         } else {
+          // Traccia la transazione come fallita (reverted)
+          const failedDetails = buildFailedTxDetails(
+            pendingDetails,
+            new Error("Transaction reverted")
+          );
+          await trackTransaction(failedDetails);
+
           toast.error(
             `Trasferimento fallito per NFT ID ${nft.tokenId.toString()}.`,
             {
@@ -523,6 +567,25 @@ export default function MyNFTsPage() {
           );
         }
       } catch (err: any) {
+        // Traccia la transazione come fallita
+        const metadata = {
+          tokenId: nft.tokenId.toString(),
+          recipient,
+          type: "Transfer",
+        };
+        const initialDetails = {
+          transactionHash: hash || ("0x" as `0x${string}`),
+          from: address,
+          to: SCIENTIFIC_CONTENT_NFT_ADDRESS,
+          value: "0",
+          methodName: "safeTransferFrom",
+          contractName: "ScientificContentNFT",
+          chainId,
+          metadata,
+        };
+        const failedDetails = buildFailedTxDetails(initialDetails, err);
+        await trackTransaction(failedDetails);
+
         toast.error(
           `Errore nel trasferimento: ${
             err.shortMessage || err.message || "Operazione fallita"
@@ -549,6 +612,7 @@ export default function MyNFTsPage() {
       address,
       walletClient,
       publicClient,
+      chainId,
       transferAddressInput,
       refetchOwnedNfts,
     ]
@@ -850,3 +914,4 @@ export default function MyNFTsPage() {
     </div>
   );
 }
+
