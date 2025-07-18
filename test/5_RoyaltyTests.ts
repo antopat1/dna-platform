@@ -26,49 +26,59 @@ describe("Royalty Tests", function () {
     nft = deployment.nft;
     subscriptionId = deployment.subscriptionId;
 
-    // Register a content for testing
-    const title = "Test Content";
-    const description = "Test Description";
+    // Register a content for testing - DEVE PASSARE TUTTI I 5 PARAMETRI
+    const title = "Royalty Test Content"; // Ho cambiato il nome per chiarezza tra i test
+    const description = "Description for royalty test";
     const maxCopies = 10;
+    const ipfsHash = "ipfs://QmRoyaltyTestHash"; // Aggiunto il parametro mancante
+    const nftMintPrice = parseEther("0.05"); // Aggiunto il parametro mancante
 
     const tx = await registry.write.registerContent(
-      [title, description, BigInt(maxCopies)],
+      [title, description, BigInt(maxCopies), ipfsHash, nftMintPrice], // Ora sono 5 parametri
       { account: owner.account }
     );
     await publicClient.waitForTransactionReceipt({ hash: tx });
 
-    contentId = 1n;
+    contentId = 1n; // Si assume che sia il primo contenuto registrato
   });
 
   it("Should correctly distribute royalties to the author", async function () {
     const mintPrice = parseEther("0.05");
     const testMetadataURI = "ipfs://test/royalty/metadata"; // Nuovo argomento per mintNFT
 
+    // Saldo iniziale dell'autore (owner)
     const initialAuthorBalance = await publicClient.getBalance({
       address: owner.account.address,
     });
 
-    const mintTx = await nft.write.mintNFT([contentId, testMetadataURI], { // Modificato qui
+    // Effettua il minting da un altro account per simulare un utente
+    const mintTx = await nft.write.mintNFT([contentId, testMetadataURI], {
       value: mintPrice,
       account: otherAccount.account,
     });
     await publicClient.waitForTransactionReceipt({ hash: mintTx });
 
-    // Per completare il processo e pulire _pendingMints
+    // Ottieni il requestId della richiesta di random words
     const randomWordsRequestedEvents = await mockVRF.getEvents.RandomWordsRequested();
-    const requestId = randomWordsRequestedEvents[0].args.requestId;
+    // Prendi l'ultimo requestId per assicurarti che sia quello del mint appena eseguito
+    const requestId = randomWordsRequestedEvents[randomWordsRequestedEvents.length - 1].args.requestId;
+
+    // Simula la fulfillment della richiesta VRF. Questo è il punto in cui le royalty vengono trasferite.
     await mockVRF.write.fulfillRandomWords([requestId], { account: owner.account });
 
+    // Saldo finale dell'autore dopo la distribuzione delle royalty
     const finalAuthorBalance = await publicClient.getBalance({
       address: owner.account.address,
     });
+
+    // Calcola l'importo delle royalty (3% come definito nel contratto)
     const royaltyAmount = (mintPrice * 3n) / 100n;
 
-    // Convertiamo i valori bigint in number per utilizzare closeTo
-    const expectedAuthorBalance = Number(initialAuthorBalance + royaltyAmount);
-    const actualAuthorBalance = Number(finalAuthorBalance);
-    const tolerance = Number(parseEther("0.001")); // Tolleranza di 0.001 ETH
+    // Definisci una tolleranza per i confronti, a causa delle gas fee
+    const tolerance = Number(parseEther("0.001")); // Tolleranza di 0.001 ETH convertita a number
 
-    expect(actualAuthorBalance).to.be.closeTo(expectedAuthorBalance, tolerance);
+    // Verifica che il saldo finale dell'autore sia approssimativamente uguale al saldo iniziale più le royalty.
+    // Convertiamo i BigInt in Number per usare `closeTo`.
+    expect(Number(finalAuthorBalance)).to.be.closeTo(Number(initialAuthorBalance + royaltyAmount), tolerance);
   });
 });

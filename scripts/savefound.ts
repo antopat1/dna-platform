@@ -13,7 +13,7 @@ dotenv.config();
 import ScientificContentNFT_ABI_JSON from '../artifacts/contracts/ScientificContentNFT.sol/ScientificContentNFT.json';
 
 async function main() {
-  const nftAddress = "0xbd4c0b6cf8f7193d222676b622bc1b6e23fa8dbb" as `0x${string}`; // Indirizzo del contratto NFT
+  const nftAddress = "0x314210af75f4338f1db06fa047a25e314cd8777e" as `0x${string}`; // Indirizzo del contratto NFT
 
   // La chiave privata viene già formattata con '0x' in hardhat.config.ts
   // Ma qui dobbiamo assicurarci che sia `0x${string}` per viem.

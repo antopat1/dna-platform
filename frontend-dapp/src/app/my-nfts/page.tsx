@@ -1,4 +1,4 @@
-// frontend-dapp\src\app\my-nfts\page.tsx
+// frontend-dapp/src/app/my-nfts/page.tsx
 
 "use client";
 
@@ -31,6 +31,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useOwnedNfts, NFT as OwnedNFT } from "@/hooks/useOwnedNfts";
+import { useMarketplaceInteractions } from "@/hooks/useMarketplaceInteractions"; // Nuovo hook importato
 import { resolveIpfsLink } from "@/utils/ipfs";
 import { Star } from "lucide-react";
 import {
@@ -40,11 +41,12 @@ import {
   buildFailedTxDetails,
   TransactionDetails,
 } from "@/utils/trackTransaction";
-import { decodeEventLog, formatUnits } from "viem";
+import { decodeEventLog, formatUnits, parseEther } from "viem";
 
 // --- TIPI DI STATO PER LE MIGLIORIE ---
 type SaleType = "sale" | "auction";
 type NftFilter = "all" | "sale" | "auction";
+type NftSaleStatus = { type: SaleType; price?: string; minPrice?: string; endTime?: number } | null;
 
 const PLACEHOLDER_IMAGE_URL =
   "https://placehold.co/80x80/333333/ffffff?text=No+Img";
@@ -94,7 +96,7 @@ const ToggleSwitch = ({
   </div>
 );
 
-// Componente Modale per Vendita/Asta (MODIFICATO per passare il tipo di vendita)
+// Componente Modale per Vendita/Asta (COMPLETO)
 const SellAuctionModal = ({
   nft,
   isOpen,
@@ -104,11 +106,13 @@ const SellAuctionModal = ({
   nft: OwnedNFT | null;
   isOpen: boolean;
   onClose: () => void;
-  onConfirmSale: (tokenId: bigint, saleType: SaleType) => void; // MODIFICATO: ora accetta anche il tipo di vendita
+  onConfirmSale: (tokenId: bigint, saleType: SaleType, price: string, duration?: number) => void;
 }) => {
   const [isAuction, setIsAuction] = useState(false);
   const [price, setPrice] = useState("");
+  const [duration, setDuration] = useState("24"); // Default 24 ore
   const [priceError, setPriceError] = useState("");
+  const [durationError, setDurationError] = useState("");
 
   const validatePrice = (value: string) => {
     const numericValue = parseFloat(value);
@@ -128,13 +132,32 @@ const SellAuctionModal = ({
     return true;
   };
 
+  const validateDuration = (value: string) => {
+    const numericValue = parseInt(value);
+    if (isNaN(numericValue)) {
+      setDurationError("Inserisci una durata valida");
+      return false;
+    }
+    if (numericValue < 1) {
+      setDurationError("Durata minima 1 ora");
+      return false;
+    }
+    if (numericValue > 720) { // 30 giorni = 720 ore
+      setDurationError("Durata massima 720 ore (30 giorni)");
+      return false;
+    }
+    setDurationError("");
+    return true;
+  };
+
   const handlePriceChange = (value: string) => {
     setPrice(value);
-    if (value) {
-      validatePrice(value);
-    } else {
-      setPriceError("");
-    }
+    if (value) validatePrice(value);
+  };
+
+  const handleDurationChange = (value: string) => {
+    setDuration(value);
+    if (value) validateDuration(value);
   };
 
   const handleStartSale = () => {
@@ -142,29 +165,29 @@ const SellAuctionModal = ({
       toast.error("Inserisci un prezzo valido tra 0.005 e 5 ETH");
       return;
     }
+    if (isAuction && (!duration || !validateDuration(duration))) {
+      toast.error("Inserisci una durata valida tra 1 e 720 ore");
+      return;
+    }
 
     const saleType: SaleType = isAuction ? "auction" : "sale";
-    const alertMessage = isAuction
-      ? `ASTA AVVIATA!\nNFT ID: ${nft?.tokenId.toString()}\nPrezzo di partenza: ${price} ETH\nTitolo: ${
-          nft?.title
-        }`
-      : `VENDITA IMMEDIATA AVVIATA!\nNFT ID: ${nft?.tokenId.toString()}\nPrezzo: ${price} ETH\nTitolo: ${
-          nft?.title
-        }`;
+    const durationSeconds = isAuction ? parseInt(duration) * 3600 : undefined;
 
-    alert(alertMessage);
-
-    onConfirmSale(nft.tokenId, saleType); // MODIFICATO: passa il tokenId e il tipo di vendita
+    onConfirmSale(nft.tokenId, saleType, price, durationSeconds);
 
     setPrice("");
+    setDuration("24");
     setPriceError("");
+    setDurationError("");
     setIsAuction(false);
     onClose();
   };
 
   const handleClose = () => {
     setPrice("");
+    setDuration("24");
     setPriceError("");
+    setDurationError("");
     setIsAuction(false);
     onClose();
   };
@@ -241,6 +264,33 @@ const SellAuctionModal = ({
             Prezzo minimo: 0.005 ETH - Prezzo massimo: 5 ETH
           </p>
         </div>
+        {isAuction && (
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Durata dell'asta (ore)
+            </label>
+            <div className="relative">
+              <Input
+                type="number"
+                min="1"
+                max="720"
+                placeholder="es. 24"
+                value={duration}
+                onChange={(e) => handleDurationChange(e.target.value)}
+                className="bg-gray-700 text-white border border-gray-500 rounded-md p-3 text-sm focus:border-purple-400 focus:ring-purple-400 pr-12"
+              />
+              <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">
+                ore
+              </span>
+            </div>
+            {durationError && (
+              <p className="text-red-400 text-xs mt-1">{durationError}</p>
+            )}
+            <p className="text-gray-500 text-xs mt-1">
+              Durata minima: 1 ora - Massima: 720 ore (30 giorni)
+            </p>
+          </div>
+        )}
         <div className="flex space-x-3">
           <Button
             onClick={handleClose}
@@ -250,9 +300,9 @@ const SellAuctionModal = ({
           </Button>
           <Button
             onClick={handleStartSale}
-            disabled={!price || !!priceError}
+            disabled={!price || !!priceError || (isAuction && (!!durationError || !duration))}
             className={`flex-1 px-4 py-2 rounded-md ${
-              !price || !!priceError
+              !price || !!priceError || (isAuction && (!!durationError || !duration))
                 ? "bg-gray-500 text-gray-300 cursor-not-allowed"
                 : "bg-purple-600 hover:bg-purple-700 text-white"
             }`}
@@ -306,6 +356,15 @@ export default function MyNFTsPage() {
   const { ownedNfts, isLoadingNfts, fetchError, refetchOwnedNfts } =
     useOwnedNfts();
 
+  // Nuovo hook per interazioni marketplace
+  const {
+    getNftStatus,
+    listForSale,
+    startAuction,
+    removeFromSale,
+    isLoading: isMarketplaceLoading,
+  } = useMarketplaceInteractions();
+
   const [transferAddressInput, setTransferAddressInput] = useState<
     Map<string, string>
   >(new Map());
@@ -324,10 +383,11 @@ export default function MyNFTsPage() {
   const [selectedNft, setSelectedNft] = useState<OwnedNFT | null>(null);
 
   // --- STATI MODIFICATI E NUOVI ---
-  const [saleStatus, setSaleStatus] = useState<Map<string, SaleType>>(
+  const [saleStatus, setSaleStatus] = useState<Map<string, NftSaleStatus>>(
     new Map()
   );
   const [activeFilter, setActiveFilter] = useState<NftFilter>("all");
+  const [isLoadingStatus, setIsLoadingStatus] = useState(false);
 
   const isChainCorrect = chainId === ARBITRUM_SEPOLIA_CHAIN_ID;
 
@@ -335,6 +395,33 @@ export default function MyNFTsPage() {
   useEffect(() => {
     setCurrentPage(1);
   }, [activeFilter]);
+
+  // NUOVO: Fetch stato reale di vendita/asta dal contratto marketplace
+  const fetchNftSaleStatus = useCallback(async (tokenId: bigint): Promise<NftSaleStatus> => {
+    try {
+      // Usa la funzione dall'hook per consistenza
+      return await getNftStatus(tokenId);
+    } catch (err) {
+      console.error(`Errore fetch status NFT ${tokenId}:`, err);
+      return null;
+    }
+  }, [getNftStatus]);
+
+  // Fetch status per tutti gli NFT owned
+  useEffect(() => {
+    const fetchAllStatuses = async () => {
+      if (!ownedNfts.length || !publicClient) return;
+      setIsLoadingStatus(true);
+      const newStatusMap = new Map<string, NftSaleStatus>();
+      for (const nft of ownedNfts) {
+        const status = await fetchNftSaleStatus(nft.tokenId);
+        if (status) newStatusMap.set(nft.tokenId.toString(), status);
+      }
+      setSaleStatus(newStatusMap);
+      setIsLoadingStatus(false);
+    };
+    fetchAllStatuses();
+  }, [ownedNfts, publicClient, fetchNftSaleStatus]);
 
   // Lista di NFT filtrata in base al filtro attivo e allo stato di vendita
   const filteredAndDisplayableNfts = useMemo(() => {
@@ -351,7 +438,7 @@ export default function MyNFTsPage() {
 
     return displayable.filter((nft) => {
       const status = saleStatus.get(nft.tokenId.toString());
-      return status === activeFilter;
+      return status?.type === activeFilter;
     });
   }, [ownedNfts, activeFilter, saleStatus]);
 
@@ -400,28 +487,48 @@ export default function MyNFTsPage() {
     setSelectedNft(null);
   }, []);
 
-  // MODIFICATO: ora salva il tipo di vendita ('sale' o 'auction')
+  // MODIFICATO: ora usa le funzioni del nuovo hook
   const handleConfirmSale = useCallback(
-    (tokenId: bigint, saleType: SaleType) => {
-      setSaleStatus((prev) => {
-        const newMap = new Map(prev);
-        newMap.set(tokenId.toString(), saleType);
-        return newMap;
-      });
+    async (tokenId: bigint, saleType: SaleType, price: string, duration?: number) => {
+      try {
+        if (saleType === "sale") {
+          await listForSale(tokenId, price);
+          toast.success(`Vendita avviata per NFT ${tokenId}!`);
+        } else {
+          if (!duration) throw new Error("Durata asta mancante");
+          await startAuction(tokenId, price, duration);
+          toast.success(`Asta avviata per NFT ${tokenId}!`);
+        }
+        // Refetch status dopo conferma
+        const newStatus = await fetchNftSaleStatus(tokenId);
+        setSaleStatus((prev) => new Map(prev).set(tokenId.toString(), newStatus));
+      } catch (err: any) {
+        toast.error(`Errore: ${err.message}`);
+      }
     },
-    []
+    [listForSale, startAuction, fetchNftSaleStatus]
   );
 
-  const handleRevokeSale = useCallback((nft: OwnedNFT) => {
-    alert(
-      `Vendita/Asta per l'NFT ID ${nft.tokenId.toString()} revocata con successo!`
-    );
-    setSaleStatus((prev) => {
-      const newMap = new Map(prev);
-      newMap.delete(nft.tokenId.toString());
-      return newMap;
-    });
-  }, []);
+  const handleRevokeSale = useCallback(async (nft: OwnedNFT) => {
+    const nftIdString = nft.tokenId.toString();
+    const currentStatus = saleStatus.get(nftIdString);
+    if (!currentStatus) return;
+
+    try {
+      if (currentStatus.type === "sale") {
+        await removeFromSale(nft.tokenId);
+        toast.success(`Vendita revocata per NFT ${nftIdString}!`);
+      } else {
+        toast.error("Le aste non possono essere revocate una volta avviate.");
+        return;
+      }
+      // Refetch status
+      const newStatus = await fetchNftSaleStatus(nft.tokenId);
+      setSaleStatus((prev) => new Map(prev).set(nftIdString, newStatus));
+    } catch (err: any) {
+      toast.error(`Errore revoca: ${err.message}`);
+    }
+  }, [saleStatus, removeFromSale, fetchNftSaleStatus]);
 
   const handleTransfer = useCallback(
     async (nft: OwnedNFT) => {
@@ -659,7 +766,7 @@ export default function MyNFTsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoadingNfts ? (
+          {isLoadingNfts || isLoadingStatus || isMarketplaceLoading ? (
             <LoadingSpinner />
           ) : fetchError ? (
             <div className="text-red-500 text-center py-8">
@@ -722,10 +829,11 @@ export default function MyNFTsPage() {
                         const nftIdString = nft.tokenId.toString();
                         const isTokenTransferring =
                           isTransferring.get(nftIdString) || false;
+                        const currentSaleStatus = saleStatus.get(nftIdString);
                         const isTransferButtonDisabled =
                           !isValidAddress.get(nftIdString) ||
                           isTokenTransferring ||
-                          saleStatus.has(nftIdString); // Disabilita se l'NFT è in vendita o all'asta
+                          !!currentSaleStatus; // Disabilita se in vendita/asta
 
                         const currentTransferStatus =
                           transferStatus.get(nftIdString);
@@ -734,11 +842,10 @@ export default function MyNFTsPage() {
                           : PLACEHOLDER_IMAGE_URL;
 
                         // --- LOGICA MODIFICATA PER TESTO DINAMICO ---
-                        const saleType = saleStatus.get(nftIdString);
-                        const revokeButtonText =
-                          saleType === "auction"
-                            ? "Revoca Asta"
-                            : "Revoca Vendita";
+                        const revokeButtonText = currentSaleStatus?.type === "auction"
+                          ? "Revoca Asta"
+                          : "Revoca Vendita";
+                        const isRevokeDisabled = !currentSaleStatus || isMarketplaceLoading || (currentSaleStatus.type === "auction"); // Disabilita per aste
 
                         return (
                           <TableRow
@@ -802,7 +909,10 @@ export default function MyNFTsPage() {
                               <div className="flex flex-col space-y-2">
                                 <Button
                                   onClick={() => handleSellAuction(nft)}
-                                  className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-md text-sm"
+                                  disabled={!!currentSaleStatus || isMarketplaceLoading}
+                                  className={`bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-md text-sm ${
+                                    !!currentSaleStatus || isMarketplaceLoading ? "opacity-50 cursor-not-allowed" : ""
+                                  }`}
                                 >
                                   Vendi / Avvia Asta
                                 </Button>
@@ -810,9 +920,10 @@ export default function MyNFTsPage() {
                                 {/* --- BOTTONE DI REVOCA CON TESTO DINAMICO --- */}
                                 <Button
                                   onClick={() => handleRevokeSale(nft)}
-                                  disabled={!saleType} // Disabilitato se non è in vendita/asta
+                                  disabled={isRevokeDisabled}
+                                  title={currentSaleStatus?.type === "auction" ? "Le aste non possono essere revocate" : ""}
                                   className={`px-3 py-1 rounded-md text-sm ${
-                                    !saleType
+                                    isRevokeDisabled
                                       ? "bg-gray-500 text-gray-300 cursor-not-allowed"
                                       : "bg-red-600 hover:bg-red-700 text-white"
                                   }`}
@@ -847,7 +958,7 @@ export default function MyNFTsPage() {
                                   >
                                     {isTokenTransferring
                                       ? "Trasferendo..."
-                                      : saleStatus.has(nftIdString)
+                                      : !!currentSaleStatus
                                       ? "Non trasferibile (In vendita/asta)"
                                       : "Trasferisci"}
                                   </Button>
@@ -914,4 +1025,5 @@ export default function MyNFTsPage() {
     </div>
   );
 }
+
 

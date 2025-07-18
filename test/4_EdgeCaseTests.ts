@@ -26,13 +26,15 @@ describe("Edge Case Tests", function () {
     nft = deployment.nft;
     subscriptionId = deployment.subscriptionId;
 
-    // Registra un contenuto per i test
+    // Registra un contenuto per i test - DEVE PASSARE TUTTI I 5 PARAMETRI
     const title = "Edge Case Test Content";
     const description = "Edge Case Test Description";
     const maxCopies = 2; // Numero limitato di copie per testare il limite
+    const ipfsHash = "ipfs://QmEdgeCaseHash"; // Aggiunto il parametro mancante
+    const nftMintPrice = parseEther("0.05"); // Aggiunto il parametro mancante
 
     const tx = await registry.write.registerContent(
-      [title, description, BigInt(maxCopies)],
+      [title, description, BigInt(maxCopies), ipfsHash, nftMintPrice], // Ora sono 5 parametri
       { account: owner.account }
     );
     await publicClient.waitForTransactionReceipt({ hash: tx });
@@ -45,11 +47,11 @@ describe("Edge Case Tests", function () {
     const testMetadataURI = "ipfs://test/nft/metadata/edgecase_insufficient";
 
     await expect(
-      nft.write.mintNFT([contentId, testMetadataURI], { // Modificato qui
+      nft.write.mintNFT([contentId, testMetadataURI], {
         value: insufficientMintPrice,
         account: owner.account,
       })
-    ).to.be.rejectedWith("Insufficient payment");
+    ).to.be.rejectedWith("Insufficient payment for this content"); // Assicurati che il messaggio di errore sia esatto
   });
 
   it("Should prevent minting when metadata URI is empty", async function () {
@@ -57,7 +59,7 @@ describe("Edge Case Tests", function () {
     const emptyMetadataURI = ""; // URI vuoto
 
     await expect(
-      nft.write.mintNFT([contentId, emptyMetadataURI], { // Modificato qui
+      nft.write.mintNFT([contentId, emptyMetadataURI], {
         value: mintPrice,
         account: owner.account,
       })
@@ -77,7 +79,8 @@ describe("Edge Case Tests", function () {
     });
     await publicClient.waitForTransactionReceipt({ hash: mintTx1 });
     const randomWordsRequestedEvents1 = await mockVRF.getEvents.RandomWordsRequested();
-    const requestId1 = randomWordsRequestedEvents1[randomWordsRequestedEvents1.length -1].args.requestId;
+    // Prendi l'ultimo requestId per assicurarti che sia quello del mint appena eseguito
+    const requestId1 = randomWordsRequestedEvents1[randomWordsRequestedEvents1.length - 1].args.requestId;
     await mockVRF.write.fulfillRandomWords([requestId1], { account: owner.account });
 
     // Mint la seconda copia
@@ -87,8 +90,12 @@ describe("Edge Case Tests", function () {
     });
     await publicClient.waitForTransactionReceipt({ hash: mintTx2 });
     const randomWordsRequestedEvents2 = await mockVRF.getEvents.RandomWordsRequested();
-    const requestId2 = randomWordsRequestedEvents2[randomWordsRequestedEvents2.length -1].args.requestId;
+    // Prendi l'ultimo requestId per assicurarti che sia quello del mint appena eseguito
+    const requestId2 = randomWordsRequestedEvents2[randomWordsRequestedEvents2.length - 1].args.requestId;
     await mockVRF.write.fulfillRandomWords([requestId2], { account: owner.account });
+
+    // A questo punto, mintedCopies dovrebbe essere 2, e maxCopies è 2.
+    // Il contenuto dovrebbe essere marcato come non disponibile.
 
     // Tentativo di mintare una terza copia (dovrebbe fallire)
     await expect(
@@ -96,6 +103,6 @@ describe("Edge Case Tests", function () {
         value: mintPrice,
         account: owner.account,
       })
-    ).to.be.rejectedWith("Content not available"); // <-- MODIFICA QUI
+    ).to.be.rejectedWith("Content not available");
   });
 });

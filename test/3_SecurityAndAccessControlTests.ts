@@ -26,13 +26,15 @@ describe("Security and Access Control Tests", function () {
     nft = deployment.nft;
     subscriptionId = deployment.subscriptionId;
 
-    // Register a content for testing
+    // Register a content for testing - DEVE PASSARE TUTTI I 5 PARAMETRI
     const title = "Test Content";
     const description = "Test Description";
     const maxCopies = 10;
+    const ipfsHash = "ipfs://QmTestSecurityHash"; // Aggiunto il parametro mancante
+    const nftMintPrice = parseEther("0.05"); // Aggiunto il parametro mancante
 
     const tx = await registry.write.registerContent(
-      [title, description, BigInt(maxCopies)],
+      [title, description, BigInt(maxCopies), ipfsHash, nftMintPrice], // Ora sono 5 parametri
       { account: owner.account }
     );
     await publicClient.waitForTransactionReceipt({ hash: tx });
@@ -69,27 +71,42 @@ describe("Security and Access Control Tests", function () {
     const testMetadataURI = "ipfs://test/nft/metadata/security"; // URI di esempio
 
     // Verifica che il pagamento venga correttamente trasferito all'autore
+    // Nota: Il saldo dell'autore sarà influenzato anche dalle gas fee delle transazioni precedenti,
+    // quindi usiamo una tolleranza per il confronto.
     const initialAuthorBalance = await publicClient.getBalance({
       address: owner.account.address,
     });
 
-    const mintTx = await nft.write.mintNFT([contentId, testMetadataURI], { // Modificato qui
+    const mintTx = await nft.write.mintNFT([contentId, testMetadataURI], {
       value: mintPrice,
       account: otherAccount.account,
     });
     await publicClient.waitForTransactionReceipt({ hash: mintTx });
 
+    // Per testare il trasferimento di royalty, dobbiamo simulare la fulfillment della VRF
+    const randomWordsRequestedEvents =
+      await mockVRF.getEvents.RandomWordsRequested();
+    const requestId = randomWordsRequestedEvents[0].args.requestId;
+
+    const fulfillTx = await mockVRF.write.fulfillRandomWords([requestId], {
+      account: owner.account, // Generalmente il fulfiller è il coordinatore VRF
+    });
+    await publicClient.waitForTransactionReceipt({ hash: fulfillTx });
+
     const finalAuthorBalance = await publicClient.getBalance({
       address: owner.account.address,
     });
-    const royaltyAmount = (mintPrice * 3n) / 100n;
+    const royaltyAmount = (mintPrice * 3n) / 100n; // 3% di royalty
 
-    // Convertiamo i valori bigint in number per utilizzare closeTo
-    const expectedAuthorBalance = Number(initialAuthorBalance + royaltyAmount);
-    const actualAuthorBalance = Number(finalAuthorBalance);
-    const tolerance = Number(parseEther("0.001")); // Tolleranza di 0.001 ETH
+    // Convertiamo i valori bigint in number per la funzione closeTo
+    const tolerance = Number(parseEther("0.001")); // Tolleranza di 0.001 ETH convertita a number
 
-    expect(actualAuthorBalance).to.be.closeTo(expectedAuthorBalance, tolerance);
+    // Il saldo finale dell'autore dovrebbe essere circa il saldo iniziale + la royalty
+    // Teniamo conto che l'owner è anche il deployer e paga gas per altre operazioni
+    // Quindi, un controllo più robusto potrebbe richiedere di isolare questo test o
+    // di calcolare i costi del gas. Per ora, usiamo closeTo.
+    expect(Number(finalAuthorBalance)).to.be.closeTo(Number(initialAuthorBalance + royaltyAmount), tolerance);
+
 
     // Verifica che l'eccesso di pagamento venga restituito al minter
     const excessPayment = parseEther("0.01");
@@ -97,20 +114,30 @@ describe("Security and Access Control Tests", function () {
       address: otherAccount.account.address,
     });
 
-    const mintTxWithExcess = await nft.write.mintNFT([contentId, testMetadataURI], { // Modificato qui
+    const mintTxWithExcess = await nft.write.mintNFT([contentId, testMetadataURI], {
       value: mintPrice + excessPayment,
       account: otherAccount.account,
     });
     await publicClient.waitForTransactionReceipt({ hash: mintTxWithExcess });
 
+    // Anche qui, dobbiamo simulare la fulfillment per il secondo mint
+    const randomWordsRequestedEvents2 =
+      await mockVRF.getEvents.RandomWordsRequested();
+    // Trova l'ultimo requestId per il secondo mint
+    const requestId2 = randomWordsRequestedEvents2[randomWordsRequestedEvents2.length - 1].args.requestId;
+
+    const fulfillTx2 = await mockVRF.write.fulfillRandomWords([requestId2], {
+      account: owner.account,
+    });
+    await publicClient.waitForTransactionReceipt({ hash: fulfillTx2 });
+
     const finalMinterBalance = await publicClient.getBalance({
       address: otherAccount.account.address,
     });
 
-    // Convertiamo i valori bigint in number per utilizzare closeTo
-    const expectedMinterBalance = Number(initialMinterBalance - mintPrice);
-    const actualMinterBalance = Number(finalMinterBalance);
-
-    expect(actualMinterBalance).to.be.closeTo(expectedMinterBalance, tolerance);
+    // Il minter dovrebbe aver pagato solo il mintPrice, e l'eccesso dovrebbe essere tornato.
+    // Il saldo finale dovrebbe essere il saldo iniziale meno il mintPrice e le gas fee.
+    // Usiamo closeTo per tenere conto delle gas fee.
+    expect(Number(finalMinterBalance)).to.be.closeTo(Number(initialMinterBalance - mintPrice), tolerance);
   });
 });
