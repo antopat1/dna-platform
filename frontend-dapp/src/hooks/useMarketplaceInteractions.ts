@@ -1,3 +1,5 @@
+// frontend-dapp/src/hooks/useMarketplaceInteractions.ts
+
 import { useState, useCallback } from 'react';
 import { useAccount, useWalletClient, usePublicClient } from 'wagmi';
 import { toast } from 'react-hot-toast';
@@ -22,7 +24,7 @@ export type SaleType = 'sale' | 'auction';
 
 export type NftSaleStatus =
   | { type: 'sale'; price: string; seller: Address }
-  | { type: 'auction'; minPrice: string; endTime: number; highestBid: string; highestBidder: Address };
+  | { type: 'auction'; seller: Address; minPrice: string; endTime: number; highestBid: string; highestBidder: Address };
 
 export const useMarketplaceInteractions = () => {
   const { address, chainId } = useAccount();
@@ -143,52 +145,40 @@ export const useMarketplaceInteractions = () => {
       return null;
     }
     try {
-      console.log(`Getting sale status for tokenId: ${tokenId.toString()}`);
-      // L'ABI conferma che nftsForSale (fixedPriceListings) restituisce (seller, tokenId, price, isActive, listedAt)
-      // Per compatibilità con il tipo attuale, estraiamo solo seller e price se isActive è true
       const fixedPriceListing = await publicClient.readContract({
         address: SCIENTIFIC_CONTENT_MARKETPLACE_ADDRESS,
         abi: SCIENTIFIC_CONTENT_MARKETPLACE_ABI,
-        functionName: 'fixedPriceListings', // Usiamo fixedPriceListings come da ABI
+        functionName: 'fixedPriceListings',
         args: [tokenId],
-      }) as [`0x${string}`, bigint, bigint, boolean, bigint]; // (seller, tokenId, price, isActive, listedAt)
+      }) as readonly [`0x${string}`, bigint, bigint, boolean, bigint];
 
-      console.log(`Raw fixed price listing data for ${tokenId.toString()}:`, fixedPriceListing);
-
-      if (fixedPriceListing[3] === true) { // Se isActive è true
+      if (fixedPriceListing[3]) { // isActive
         return {
           type: 'sale',
-          price: formatEther(fixedPriceListing[2]), // price
-          seller: fixedPriceListing[0], // seller
+          price: formatEther(fixedPriceListing[2]),
+          seller: fixedPriceListing[0],
         };
       }
 
-      console.log(`Getting auction status for tokenId: ${tokenId.toString()}`);
-      // L'ABI conferma che auctions restituisce (seller, tokenId, minPrice, highestBid, highestBidder, startTime, endTime, isActive, claimed)
       const auction = await publicClient.readContract({
         address: SCIENTIFIC_CONTENT_MARKETPLACE_ADDRESS,
         abi: SCIENTIFIC_CONTENT_MARKETPLACE_ABI,
         functionName: 'auctions',
         args: [tokenId],
-      }) as [`0x${string}`, bigint, bigint, bigint, `0x${string}`, bigint, bigint, boolean, boolean]; // Mappa i campi come da ABI
+      }) as readonly [`0x${string}`, bigint, bigint, bigint, `0x${string}`, bigint, bigint, boolean, boolean];
 
-      console.log(`Raw auction data for ${tokenId.toString()}:`, auction);
       const currentTime = Math.floor(Date.now() / 1000);
-      console.log("Current time (seconds):", currentTime);
-      console.log("Auction end time (seconds):", Number(auction[6])); // endTime è il 7° elemento (indice 6)
-
-      // Check if it's an active auction (isActive is true and endTime is in the future)
-      if (auction[7] === true && Number(auction[6]) > currentTime) { // isActive è l'8° elemento (indice 7)
+      if (auction[7] && Number(auction[6]) > currentTime) { // isActive and endTime > now
         return {
           type: 'auction',
-          minPrice: formatEther(auction[2]), // minPrice
-          endTime: Number(auction[6]), // endTime
-          highestBid: formatEther(auction[3]), // highestBid
-          highestBidder: auction[4], // highestBidder
+          seller: auction[0],
+          minPrice: formatEther(auction[2]),
+          endTime: Number(auction[6]),
+          highestBid: formatEther(auction[3]),
+          highestBidder: auction[4],
         };
       }
 
-      console.log(`No active sale or auction found for tokenId: ${tokenId.toString()}`);
       return null;
     } catch (error) {
       console.error(`Error fetching status for NFT ${tokenId.toString()}:`, error);
@@ -204,8 +194,6 @@ export const useMarketplaceInteractions = () => {
     }
 
     const priceWei = parseEther(priceEth);
-    console.log(`Listing NFT ${tokenId.toString()} for sale. Price ETH: ${priceEth}, Price Wei: ${priceWei.toString()}`);
-
     setIsLoading(true);
     const loadingToastId = toast.loading(`Mettendo in vendita NFT ID ${tokenId.toString()}...`);
 
@@ -223,19 +211,15 @@ export const useMarketplaceInteractions = () => {
         toast.loading(`Marketplace approvato. Mettendo in vendita NFT ID ${tokenId.toString()}...`, { id: loadingToastId });
       }
 
-      console.log("Simulating listNFTForSale transaction...");
       const { request } = await publicClient.simulateContract({
         account: address,
         address: SCIENTIFIC_CONTENT_MARKETPLACE_ADDRESS,
         abi: SCIENTIFIC_CONTENT_MARKETPLACE_ABI,
         functionName: 'listNFTForSale',
-        // --- CORREZIONE: RIMOSSO SCIENTIFIC_CONTENT_NFT_ADDRESS ---
-        // L'ABI mostra che listNFTForSale si aspetta solo 'tokenId' e 'price'.
         args: [tokenId, priceWei],
       });
 
       hash = await walletClient.writeContract(request);
-      console.log("listNFTForSale transaction sent. Hash:", hash);
 
       pendingDetails = buildPendingTxDetails(
         hash,
@@ -252,7 +236,6 @@ export const useMarketplaceInteractions = () => {
       toast.loading(`Transazione inviata: ${hash.slice(0, 6)}...${hash.slice(-4)}. In attesa di conferma...`, { id: loadingToastId });
 
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
-      console.log("listNFTForSale transaction receipt:", receipt);
 
       if (receipt.status === 'success') {
         const confirmedDetails = buildConfirmedTxDetails(pendingDetails, receipt);
@@ -300,8 +283,6 @@ export const useMarketplaceInteractions = () => {
     }
 
     const minPriceWei = parseEther(minPriceEth);
-    console.log(`Starting auction for NFT ${tokenId.toString()}. Min Price ETH: ${minPriceEth}, Min Price Wei: ${minPriceWei.toString()}, Duration Seconds: ${durationSeconds}`);
-
     setIsLoading(true);
     const loadingToastId = toast.loading(`Avvio asta per NFT ID ${tokenId.toString()}...`);
 
@@ -319,26 +300,22 @@ export const useMarketplaceInteractions = () => {
         toast.loading(`Marketplace approvato. Avvio asta per NFT ID ${tokenId.toString()}...`, { id: loadingToastId });
       }
 
-      console.log("Simulating createAuction transaction...");
       const { request } = await publicClient.simulateContract({
         account: address,
         address: SCIENTIFIC_CONTENT_MARKETPLACE_ADDRESS,
         abi: SCIENTIFIC_CONTENT_MARKETPLACE_ABI,
-        functionName: 'startAuction', // La funzione è 'startAuction'
-        // --- CORREZIONE: RIMOSSO SCIENTIFIC_CONTENT_NFT_ADDRESS ---
-        // L'ABI mostra che startAuction si aspetta solo 'tokenId', 'minPrice', 'duration'.
+        functionName: 'startAuction',
         args: [tokenId, minPriceWei, BigInt(durationSeconds)],
       });
 
       hash = await walletClient.writeContract(request);
-      console.log("createAuction transaction sent. Hash:", hash);
 
       pendingDetails = buildPendingTxDetails(
         hash,
         address,
         SCIENTIFIC_CONTENT_MARKETPLACE_ADDRESS,
         BigInt(0),
-        "createAuction", // Nome della funzione nel tracking, puoi mantenerlo così o cambiarlo a "startAuction" per consistenza.
+        "startAuction",
         "Marketplace",
         chainId,
         { tokenId: tokenId.toString(), minPriceEth, durationSeconds, saleType: 'auction' }
@@ -348,7 +325,6 @@ export const useMarketplaceInteractions = () => {
       toast.loading(`Transazione inviata: ${hash.slice(0, 6)}...${hash.slice(-4)}. In attesa di conferma...`, { id: loadingToastId });
 
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
-      console.log("createAuction transaction receipt:", receipt);
 
       if (receipt.status === 'success') {
         const confirmedDetails = buildConfirmedTxDetails(pendingDetails, receipt);
@@ -372,7 +348,7 @@ export const useMarketplaceInteractions = () => {
           from: address as Address,
           to: SCIENTIFIC_CONTENT_MARKETPLACE_ADDRESS as Address,
           value: "0",
-          methodName: "startAuction", // Cambiato per consistenza con ABI
+          methodName: "startAuction",
           contractName: "Marketplace",
           chainId: chainId!,
           status: 'pending',
@@ -395,7 +371,6 @@ export const useMarketplaceInteractions = () => {
       return;
     }
 
-    console.log(`Removing NFT ${tokenId.toString()} from sale.`);
     setIsLoading(true);
     const loadingToastId = toast.loading(`Revocando la vendita per NFT ID ${tokenId.toString()}...`);
 
@@ -403,17 +378,15 @@ export const useMarketplaceInteractions = () => {
     let pendingDetails: TransactionDetails | undefined;
 
     try {
-      console.log("Simulating removeNFTFromSale transaction...");
       const { request } = await publicClient.simulateContract({
         account: address,
         address: SCIENTIFIC_CONTENT_MARKETPLACE_ADDRESS,
         abi: SCIENTIFIC_CONTENT_MARKETPLACE_ABI,
         functionName: 'removeNFTFromSale',
-        args: [tokenId], // L'ABI conferma che si aspetta solo 'tokenId'
+        args: [tokenId],
       });
 
       hash = await walletClient.writeContract(request);
-      console.log("removeNFTFromSale transaction sent. Hash:", hash);
 
       pendingDetails = buildPendingTxDetails(
         hash,
@@ -430,7 +403,6 @@ export const useMarketplaceInteractions = () => {
       toast.loading(`Transazione inviata: ${hash.slice(0, 6)}...${hash.slice(-4)}. In attesa di conferma...`, { id: loadingToastId });
 
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
-      console.log("removeNFTFromSale transaction receipt:", receipt);
 
       if (receipt.status === 'success') {
         const confirmedDetails = buildConfirmedTxDetails(pendingDetails, receipt);

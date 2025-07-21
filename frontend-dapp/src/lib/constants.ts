@@ -1,3 +1,4 @@
+
 // frontend-dapp/src/lib/constants.ts
 
 // Importa le ABI dai tuoi file JSON
@@ -40,3 +41,9 @@ if (!ARBITRUM_SEPOLIA_RPC_URL) {
   throw new Error("Missing NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC_URL environment variable.");
 }
 export const ARBITRUM_SEPOLIA_EXPLORER_URL = "https://sepolia.arbiscan.io/"; // URL di Arbiscan per Sepolia
+
+// Limite massimo di token ID da controllare per trovare gli NFT dell'utente.
+// Questo è un approccio temporaneo per evitare di scansionare l'intera collezione se è molto grande.
+// La soluzione ideale a lungo termine è un subgraph o un backend indexer.
+export const MAX_TOKEN_ID_TO_CHECK = 100;
+

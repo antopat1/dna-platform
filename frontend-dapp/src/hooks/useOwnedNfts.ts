@@ -2,27 +2,35 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { usePublicClient, useAccount, useChainId } from "wagmi";
-import { Address, getContract, PublicClient } from "viem";
+import { Address, getContract, formatEther, PublicClient } from "viem";
 import {
   SCIENTIFIC_CONTENT_NFT_ABI,
   SCIENTIFIC_CONTENT_NFT_ADDRESS,
   SCIENTIFIC_CONTENT_REGISTRY_ABI,
   SCIENTIFIC_CONTENT_REGISTRY_ADDRESS,
+  SCIENTIFIC_CONTENT_MARKETPLACE_ABI,
+  SCIENTIFIC_CONTENT_MARKETPLACE_ADDRESS,
   ARBITRUM_SEPOLIA_CHAIN_ID,
+  MAX_TOKEN_ID_TO_CHECK,
 } from "@/lib/constants";
-import { resolveIpfsLink } from "@/utils/ipfs"; // Assicurati che esista
+import { resolveIpfsLink } from "@/utils/ipfs";
 
-// Definisco il tipo per i metadati dell'NFT come oggetto.
+// NUOVI TIPI PER STATO NFT
+export type NftStatusInfo =
+  | { type: "inWallet" }
+  | { type: "forSale"; price: string }
+  | { type: "inAuction"; minPrice: string; endTime: number };
+
+// --- INTERFACCE METADATI (invariate) ---
 type ScientificContentNFT_NFTMetadata = {
   contentId: bigint;
   author: Address;
   randomSeed: bigint;
   hasSpecialContent: boolean;
   copyNumber: bigint;
-  metadataURI: string; // Questo è l'URI IPFS che punta al JSON dei metadati dell'NFT
+  metadataURI: string;
 };
 
-// Definisco il tipo per i metadati del contenuto dal Registry
 type ScientificContentRegistry_ContentMetadata = {
   title: string;
   description: string;
@@ -32,36 +40,33 @@ type ScientificContentRegistry_ContentMetadata = {
   registrationTime: bigint;
   maxCopies: bigint;
   mintedCopies: bigint;
-  ipfsHash: string; // Questo è l'IPFS hash del documento scientifico reale
+  ipfsHash: string;
   nftMintPrice: bigint;
 };
 
-// Interfaccia per i metadati NFT esterni (dal JSON IPFS)
 interface ExternalNFTMetadata {
   name: string;
   description: string;
-  image?: string; // URI IPFS per l'immagine di copertina dell'NFT
+  image?: string;
   external_url?: string;
   attributes?: Array<{ trait_type: string; value: any }>;
-  originalDocumentFileCID?: string;
-  previewImageFileCID?: string;
 }
 
+// --- INTERFACCIA NFT AGGIORNATA ---
 export interface NFT {
   tokenId: bigint;
-  owner: Address;
+  owner: Address; // Proprietario attuale (può essere l'utente o il marketplace)
+  status: NftStatusInfo; // Stato dettagliato
   contentId: bigint;
   author: Address;
   randomSeed: bigint;
   hasSpecialContent: boolean;
   copyNumber: bigint;
-  metadataURI: string; // IPFS URI del token NFT (per metadata.json)
-  // Campi aggiunti dal Registry
+  metadataURI: string;
   title?: string;
   description?: string;
-  contentIpfsHash?: string; // IPFS hash del contenuto scientifico reale
-  // Nuovo campo per l'URL dell'immagine di copertina derivato dai metadati NFT
-  imageUrlFromMetadata?: string; // L'URI IPFS dell'immagine
+  contentIpfsHash?: string;
+  imageUrlFromMetadata?: string;
 }
 
 interface UseOwnedNftsResult {
@@ -71,7 +76,7 @@ interface UseOwnedNftsResult {
   refetchOwnedNfts: () => void;
 }
 
-const REFATCH_INTERVAL_MS = 5 * 60 * 1000; // 5 minuti
+const REFATCH_INTERVAL_MS = 5 * 60 * 1000;
 
 export function useOwnedNfts(): UseOwnedNftsResult {
   const { address, isConnected } = useAccount();
@@ -85,167 +90,158 @@ export function useOwnedNfts(): UseOwnedNftsResult {
   const fetchOwnedNfts = useCallback(async () => {
     if (!publicClient || !address || !isConnected || chainId !== ARBITRUM_SEPOLIA_CHAIN_ID) {
       setIsLoadingNfts(false);
-      setFetchError("Connettiti al tuo wallet sulla rete Arbitrum Sepolia.");
-      setOwnedNfts([]);
-      return;
-    }
-
-    const nftContractAddress: Address = SCIENTIFIC_CONTENT_NFT_ADDRESS;
-    const registryContractAddress: Address = SCIENTIFIC_CONTENT_REGISTRY_ADDRESS;
-
-    if (!nftContractAddress || !registryContractAddress) {
-      setIsLoadingNfts(false);
-      setFetchError(`Indirizzi contratto non configurati. Controlla le tue variabili d'ambiente (.env).`);
       setOwnedNfts([]);
       return;
     }
 
     setIsLoadingNfts(true);
     setFetchError(null);
-    setOwnedNfts([]);
 
     try {
+      // --- SETUP CONTRATTI ---
       const nftContract = getContract({
-        address: nftContractAddress,
+        address: SCIENTIFIC_CONTENT_NFT_ADDRESS,
         abi: SCIENTIFIC_CONTENT_NFT_ABI,
-        client: publicClient,
+        client: { public: publicClient },
       });
-
-      const registryContract = getContract({
-        address: registryContractAddress,
+      const marketplaceContract = getContract({
+        address: SCIENTIFIC_CONTENT_MARKETPLACE_ADDRESS,
+        abi: SCIENTIFIC_CONTENT_MARKETPLACE_ABI,
+        client: { public: publicClient },
+      });
+       const registryContract = getContract({
+        address: SCIENTIFIC_CONTENT_REGISTRY_ADDRESS,
         abi: SCIENTIFIC_CONTENT_REGISTRY_ABI,
-        client: publicClient,
+        client: { public: publicClient },
       });
 
-      const totalSupply = (await nftContract.read.totalSupply()) as bigint;
+      const totalSupply = await nftContract.read.totalSupply();
+      const limit = Math.min(Number(totalSupply), MAX_TOKEN_ID_TO_CHECK);
 
-      const tokenIds: bigint[] = [];
-      for (let i = BigInt(1); i <= totalSupply; i++) {
-        tokenIds.push(i);
+      // --- PASSO 1: TROVARE TUTTI GLI NFT RILEVANTI ---
+      const relevantNftsData: { tokenId: bigint; owner: Address; status: NftStatusInfo }[] = [];
+
+      const calls: Promise<any>[] = [];
+      const tokenIdsToCheck = Array.from({ length: limit }, (_, i) => BigInt(i + 1));
+
+      for (const tokenId of tokenIdsToCheck) {
+        calls.push(nftContract.read.ownerOf([tokenId]));
+        calls.push(marketplaceContract.read.fixedPriceListings([tokenId]));
+        calls.push(marketplaceContract.read.auctions([tokenId]));
       }
 
-      const ownerPromises = tokenIds.map(tokenId =>
-        nftContract.read.ownerOf([tokenId]) as Promise<Address>
-      );
-      const owners = await Promise.all(ownerPromises);
+      const results = await Promise.allSettled(calls);
 
-      const ownedTokenIds: bigint[] = [];
-      const nftMetadataCallPromises: Promise<ScientificContentNFT_NFTMetadata | undefined>[] = [];
+      for (let i = 0; i < tokenIdsToCheck.length; i++) {
+        const tokenId = tokenIdsToCheck[i];
+        const ownerRes = results[i * 3];
+        const listingRes = results[i * 3 + 1];
+        const auctionRes = results[i * 3 + 2];
 
-      for (let i = 0; i < tokenIds.length; i++) {
-        const tokenId = tokenIds[i];
-        const owner = owners[i];
+        if (ownerRes.status !== 'fulfilled') continue; // Se non possiamo determinare l'owner, saltiamo
+        const owner = ownerRes.value as Address;
+        
+        let isRelevant = false;
+        let status: NftStatusInfo = { type: 'inWallet' };
 
+        // Caso 1: L'NFT è nel wallet dell'utente
         if (owner.toLowerCase() === address.toLowerCase()) {
-          ownedTokenIds.push(tokenId);
-          nftMetadataCallPromises.push(
-            nftContract.read.getNFTMetadata([tokenId]) as Promise<ScientificContentNFT_NFTMetadata>
-          );
-        } else {
-          nftMetadataCallPromises.push(Promise.resolve(undefined));
+          isRelevant = true;
+          status = { type: 'inWallet' };
+        }
+        // Caso 2: L'NFT è di proprietà del marketplace
+        else if (owner.toLowerCase() === SCIENTIFIC_CONTENT_MARKETPLACE_ADDRESS.toLowerCase()) {
+            // Controlliamo se è in vendita a prezzo fisso dall'utente
+            if (listingRes.status === 'fulfilled') {
+                const listing = listingRes.value as readonly [`0x${string}`, bigint, bigint, boolean, bigint];
+                if (listing[3] && listing[0].toLowerCase() === address.toLowerCase()) { // isActive and seller is user
+                    isRelevant = true;
+                    status = { type: 'forSale', price: formatEther(listing[2]) };
+                }
+            }
+            // Controlliamo se è in asta dall'utente
+            if (auctionRes.status === 'fulfilled' && !isRelevant) { // Check only if not already found
+                const auction = auctionRes.value as readonly [`0x${string}`, bigint, bigint, bigint, `0x${string}`, bigint, bigint, boolean, boolean];
+                const currentTime = Math.floor(Date.now() / 1000);
+                if (auction[7] && Number(auction[6]) > currentTime && auction[0].toLowerCase() === address.toLowerCase()) { // isActive, not ended, and seller is user
+                     isRelevant = true;
+                     status = { type: 'inAuction', minPrice: formatEther(auction[2]), endTime: Number(auction[6]) };
+                }
+            }
+        }
+        
+        if (isRelevant) {
+            relevantNftsData.push({ tokenId, owner, status });
         }
       }
 
-      const allNftMetadataResults = await Promise.all(nftMetadataCallPromises);
-
-      const ownedNftsBaseData: Omit<NFT, 'title' | 'description' | 'contentIpfsHash' | 'imageUrlFromMetadata'>[] = [];
-      const contentIdsToFetch: Map<bigint, bigint> = new Map(); // Mappa tokenId a contentId
-      const externalMetadataPromises: Promise<{ tokenId: bigint; metadata: ExternalNFTMetadata } | undefined>[] = [];
-
-
-      for (let i = 0; i < allNftMetadataResults.length; i++) {
-        const tokenId = tokenIds[i];
-        const nftMetadataResult = allNftMetadataResults[i];
-
-        if (nftMetadataResult) {
-          const contentId = nftMetadataResult.contentId;
-
-          const nftBase: Omit<NFT, 'title' | 'description' | 'contentIpfsHash' | 'imageUrlFromMetadata'> = {
-            tokenId: tokenId,
-            owner: address,
-            contentId: contentId,
-            author: nftMetadataResult.author,
-            randomSeed: nftMetadataResult.randomSeed,
-            hasSpecialContent: nftMetadataResult.hasSpecialContent,
-            copyNumber: nftMetadataResult.copyNumber,
-            metadataURI: nftMetadataResult.metadataURI,
-          };
-          ownedNftsBaseData.push(nftBase);
-
-          if (contentId > BigInt(0)) {
-            contentIdsToFetch.set(tokenId, contentId);
-          }
-
-          // Fetch dei metadati esterni dall'URI IPFS
-          externalMetadataPromises.push(
-            (async () => {
-              try {
-                const resolvedUri = resolveIpfsLink(nftMetadataResult.metadataURI);
-                const response = await fetch(resolvedUri);
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                const metadata = await response.json() as ExternalNFTMetadata;
-                return { tokenId: tokenId, metadata: metadata };
-              } catch (e) {
-                console.warn(`[useOwnedNfts] WARNING: Impossibile recuperare metadati esterni per tokenId ${tokenId}:`, e);
-                return undefined;
-              }
-            })()
-          );
-        } else {
-          externalMetadataPromises.push(Promise.resolve(undefined)); // Placeholder
-        }
+      if (relevantNftsData.length === 0) {
+        setOwnedNfts([]);
+        setIsLoadingNfts(false);
+        return;
       }
 
-      const allExternalMetadataResults = await Promise.all(externalMetadataPromises);
-      const externalMetadataMap = new Map<bigint, ExternalNFTMetadata>();
-      for (const res of allExternalMetadataResults) {
-        if (res) {
-          externalMetadataMap.set(res.tokenId, res.metadata);
+      // --- PASSO 2: RECUPERARE I METADATI PER GLI NFT RILEVANTI ---
+      const nftMetadataPromises = relevantNftsData.map(data => nftContract.read.getNFTMetadata([data.tokenId]));
+      const externalMetadataPromises = relevantNftsData.map(async (data) => {
+        try {
+            const uri = await nftContract.read.tokenURI([data.tokenId]);
+            const resolvedUri = resolveIpfsLink(uri);
+            const response = await fetch(resolvedUri);
+            if (!response.ok) return null;
+            return await response.json() as ExternalNFTMetadata;
+        } catch {
+            return null;
         }
-      }
+      });
 
-      const registryMetadataPromises = Array.from(contentIdsToFetch.values()).map(contentId =>
-        registryContract.read.getContent([contentId]) as Promise<ScientificContentRegistry_ContentMetadata>
-      );
+      const nftMetadataResults = await Promise.all(nftMetadataPromises);
+      const externalMetadataResults = await Promise.all(externalMetadataPromises);
 
+      const contentIdsToFetch = new Map<bigint, bigint>();
+      nftMetadataResults.forEach((meta, i) => {
+        if (meta) {
+            contentIdsToFetch.set(relevantNftsData[i].tokenId, (meta as ScientificContentNFT_NFTMetadata).contentId);
+        }
+      });
+
+      const uniqueContentIds = Array.from(new Set(contentIdsToFetch.values()));
+      const registryMetadataPromises = uniqueContentIds.map(cid => registryContract.read.getContent([cid]));
       const registryMetadataResults = await Promise.allSettled(registryMetadataPromises);
 
-      const contentIdToRegistryMetadataMap: Map<bigint, ScientificContentRegistry_ContentMetadata> = new Map();
-
-      const contentIdsArray = Array.from(contentIdsToFetch.values());
-      for (let i = 0; i < contentIdsArray.length; i++) {
-        const contentId = contentIdsArray[i];
-        const result = registryMetadataResults[i];
-        if (result && result.status === 'fulfilled') {
-          contentIdToRegistryMetadataMap.set(contentId, result.value);
-        } else if (result && result.status === 'rejected') {
-          console.warn(`[useOwnedNfts] WARNING: Impossibile recuperare i metadati dal Registry per contentId ${contentId}. Causa: ${result.reason.shortMessage || result.reason.message || String(result.reason)}`);
+      const registryMetadataMap = new Map<bigint, ScientificContentRegistry_ContentMetadata>();
+      registryMetadataResults.forEach((res, i) => {
+        if (res.status === 'fulfilled') {
+            registryMetadataMap.set(uniqueContentIds[i], res.value as ScientificContentRegistry_ContentMetadata);
         }
-      }
+      });
 
-      const finalOwnedNfts: NFT[] = [];
-      for (const nftBase of ownedNftsBaseData) {
-        const contentRegistryMetadata = contentIdToRegistryMetadataMap.get(nftBase.contentId);
-        const externalNftMetadata = externalMetadataMap.get(nftBase.tokenId);
+      // --- PASSO 3: COSTRUIRE L'ARRAY FINALE DI NFT ---
+      const finalNfts: NFT[] = relevantNftsData.map((data, i) => {
+        const nftMeta = nftMetadataResults[i] as ScientificContentNFT_NFTMetadata;
+        const externalMeta = externalMetadataResults[i];
+        const contentId = contentIdsToFetch.get(data.tokenId);
+        const registryMeta = contentId ? registryMetadataMap.get(contentId) : undefined;
 
-        const finalNft: NFT = { ...nftBase };
+        return {
+            ...data,
+            contentId: nftMeta.contentId,
+            author: nftMeta.author,
+            randomSeed: nftMeta.randomSeed,
+            hasSpecialContent: nftMeta.hasSpecialContent,
+            copyNumber: nftMeta.copyNumber,
+            metadataURI: nftMeta.metadataURI,
+            title: registryMeta?.title || externalMeta?.name,
+            description: registryMeta?.description || externalMeta?.description,
+            contentIpfsHash: registryMeta?.ipfsHash,
+            imageUrlFromMetadata: externalMeta?.image,
+        };
+      });
 
-        if (contentRegistryMetadata) {
-          finalNft.title = contentRegistryMetadata.title;
-          finalNft.description = contentRegistryMetadata.description;
-          finalNft.contentIpfsHash = contentRegistryMetadata.ipfsHash;
-        }
+      setOwnedNfts(finalNfts);
 
-        // Usa l'immagine dai metadati esterni dell'NFT
-        if (externalNftMetadata && externalNftMetadata.image) {
-          finalNft.imageUrlFromMetadata = externalNftMetadata.image;
-        }
-
-        finalOwnedNfts.push(finalNft);
-      }
-
-      setOwnedNfts(finalOwnedNfts);
     } catch (err: any) {
+      console.error("Errore fetch owned NFTs:", err);
       setFetchError(`Errore durante il caricamento degli NFT: ${err.shortMessage || err.message || String(err)}`);
     } finally {
       setIsLoadingNfts(false);
@@ -253,36 +249,15 @@ export function useOwnedNfts(): UseOwnedNftsResult {
   }, [address, isConnected, publicClient, chainId]);
 
   useEffect(() => {
-    let intervalId: NodeJS.Timeout | undefined;
-
     if (isConnected && address && publicClient && chainId === ARBITRUM_SEPOLIA_CHAIN_ID) {
       fetchOwnedNfts();
-
-      intervalId = setInterval(() => {
-        fetchOwnedNfts();
-      }, REFATCH_INTERVAL_MS);
+      const intervalId = setInterval(fetchOwnedNfts, REFATCH_INTERVAL_MS);
+      return () => clearInterval(intervalId);
     } else {
       setIsLoadingNfts(false);
       setOwnedNfts([]);
-      if (!isConnected || !address) {
-          setFetchError("Connetti il tuo wallet.");
-      } else if (chainId !== ARBITRUM_SEPOLIA_CHAIN_ID) {
-          setFetchError("Cambia la tua rete in Arbitrum Sepolia.");
-      } else {
-          setFetchError("Servizio di rete non disponibile (publicClient o altro).");
-      }
-
-      if (intervalId) {
-        clearInterval(intervalId);
-        intervalId = undefined;
-      }
+      setFetchError("Connetti il tuo wallet sulla rete Arbitrum Sepolia.");
     }
-
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
   }, [isConnected, address, publicClient, chainId, fetchOwnedNfts]);
 
   return {
@@ -292,3 +267,4 @@ export function useOwnedNfts(): UseOwnedNftsResult {
     refetchOwnedNfts: fetchOwnedNfts,
   };
 }
+
