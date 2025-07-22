@@ -46,7 +46,7 @@ interface UseMarketplaceNftsResult {
   refetch: () => void;
 }
 
-export function useMarketplaceNfts(): UseMarketplaceNftsResult {
+export const useMarketplaceNfts = (): UseMarketplaceNftsResult => {
   const publicClient = usePublicClient();
   const chainId = useChainId();
 
@@ -67,6 +67,7 @@ export function useMarketplaceNfts(): UseMarketplaceNftsResult {
 
     try {
       const nftContract = getContract({ address: SCIENTIFIC_CONTENT_NFT_ADDRESS, abi: SCIENTIFIC_CONTENT_NFT_ABI, client: { public: publicClient } });
+      const marketplaceContract = getContract({ address: SCIENTIFIC_CONTENT_MARKETPLACE_ADDRESS, abi: SCIENTIFIC_CONTENT_MARKETPLACE_ABI, client: { public: publicClient } });
       const registryContract = getContract({ address: SCIENTIFIC_CONTENT_REGISTRY_ADDRESS, abi: SCIENTIFIC_CONTENT_REGISTRY_ABI, client: { public: publicClient } });
       
       const totalSupply = await nftContract.read.totalSupply();
@@ -81,7 +82,6 @@ export function useMarketplaceNfts(): UseMarketplaceNftsResult {
         { address: SCIENTIFIC_CONTENT_MARKETPLACE_ADDRESS, abi: SCIENTIFIC_CONTENT_MARKETPLACE_ABI, functionName: 'auctions', args: [tokenId] },
       ])).flat();
       
-      // --- SOLUZIONE CHIAVE: Utilizziamo un cast 'any' per forzare la compatibilità ---
       const multicallResults = await publicClient.multicall({ contracts: calls as any, allowFailure: true });
 
       for (let i = 0; i < tokenIdsToCheck.length; i++) {
@@ -155,7 +155,8 @@ export function useMarketplaceNfts(): UseMarketplaceNftsResult {
       await Promise.all(metadataPromises);
       setListedNfts(finalNfts);
 
-    } catch (err: any) {
+    } catch (err: any)
+    {
       console.error("Errore critico durante il fetching del marketplace:", err);
       setError(`Impossibile caricare i dati: ${err.message || 'Errore sconosciuto'}`);
       setListedNfts([]);
@@ -170,3 +171,4 @@ export function useMarketplaceNfts(): UseMarketplaceNftsResult {
 
   return { listedNfts, isLoading, error, refetch: fetchMarketplaceNfts };
 }
+

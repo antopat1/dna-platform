@@ -252,22 +252,10 @@ export const useMarketplaceInteractions = () => {
       }
     } catch (error: any) {
       console.error("Error listing NFT for sale:", error);
-      const fallbackHash = hash || ("0x" + "0".repeat(64)) as `0x${string}`;
-      if (!pendingDetails) {
-        pendingDetails = {
-          transactionHash: fallbackHash,
-          from: address as Address,
-          to: SCIENTIFIC_CONTENT_MARKETPLACE_ADDRESS as Address,
-          value: "0",
-          methodName: "listNFTForSale",
-          contractName: "Marketplace",
-          chainId: chainId!,
-          status: 'pending',
-          metadata: { tokenId: tokenId.toString(), priceEth, saleType: 'fixed-price' },
-        };
+      if(pendingDetails) {
+        const failedDetails = buildFailedTxDetails(pendingDetails, error);
+        await trackTransaction(failedDetails);
       }
-      const failedDetails = buildFailedTxDetails(pendingDetails, error);
-      await trackTransaction(failedDetails);
       toast.error(`Errore durante la messa in vendita: ${error.shortMessage || error.message}`, { id: loadingToastId });
       throw error;
     } finally {
@@ -341,22 +329,10 @@ export const useMarketplaceInteractions = () => {
       }
     } catch (error: any) {
       console.error("Error starting auction:", error);
-      const fallbackHash = hash || ("0x" + "0".repeat(64)) as `0x${string}`;
-      if (!pendingDetails) {
-        pendingDetails = {
-          transactionHash: fallbackHash,
-          from: address as Address,
-          to: SCIENTIFIC_CONTENT_MARKETPLACE_ADDRESS as Address,
-          value: "0",
-          methodName: "startAuction",
-          contractName: "Marketplace",
-          chainId: chainId!,
-          status: 'pending',
-          metadata: { tokenId: tokenId.toString(), minPriceEth, durationSeconds, saleType: 'auction' },
-        };
+      if(pendingDetails) {
+        const failedDetails = buildFailedTxDetails(pendingDetails, error);
+        await trackTransaction(failedDetails);
       }
-      const failedDetails = buildFailedTxDetails(pendingDetails, error);
-      await trackTransaction(failedDetails);
       toast.error(`Errore durante l'avvio dell'asta: ${error.shortMessage || error.message}`, { id: loadingToastId });
       throw error;
     } finally {
@@ -419,24 +395,108 @@ export const useMarketplaceInteractions = () => {
       }
     } catch (error: any) {
       console.error("Error removing NFT from sale:", error);
-      const fallbackHash = hash || ("0x" + "0".repeat(64)) as `0x${string}`;
-      if (!pendingDetails) {
-        pendingDetails = {
-          transactionHash: fallbackHash,
-          from: address as Address,
-          to: SCIENTIFIC_CONTENT_MARKETPLACE_ADDRESS as Address,
-          value: "0",
-          methodName: "removeNFTFromSale",
-          contractName: "Marketplace",
-          chainId: chainId!,
-          status: 'pending',
-          metadata: { tokenId: tokenId.toString(), saleType: 'revoke' },
-        };
+      if(pendingDetails) {
+        const failedDetails = buildFailedTxDetails(pendingDetails, error);
+        await trackTransaction(failedDetails);
       }
-      const failedDetails = buildFailedTxDetails(pendingDetails, error);
-      await trackTransaction(failedDetails);
       toast.error(`Errore durante la revoca della vendita: ${error.shortMessage || error.message}`, { id: loadingToastId });
       throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [walletClient, address, publicClient, chainId]);
+
+  // --- NUOVE FUNZIONI INTEGRATE ---
+
+  const purchaseNFT = useCallback(async (tokenId: bigint, priceEth: string) => {
+    if (!walletClient || !address || !publicClient || !chainId) {
+        toast.error("Wallet o client non disponibili o chainId mancante.");
+        throw new Error("Prerequisiti per l'acquisto non soddisfatti.");
+    }
+    
+    setIsLoading(true);
+    const toastId = toast.loading(`Acquisto NFT ${tokenId} in corso...`);
+    let pendingDetails: TransactionDetails | undefined;
+    let hash: `0x${string}` | undefined;
+    
+    try {
+      const priceWei = parseEther(priceEth);
+      const { request } = await publicClient.simulateContract({
+        account: address,
+        address: SCIENTIFIC_CONTENT_MARKETPLACE_ADDRESS,
+        abi: SCIENTIFIC_CONTENT_MARKETPLACE_ABI,
+        functionName: 'purchaseNFT',
+        args: [tokenId],
+        value: priceWei,
+      });
+      
+      hash = await walletClient.writeContract(request);
+      pendingDetails = buildPendingTxDetails(hash, address, SCIENTIFIC_CONTENT_MARKETPLACE_ADDRESS, priceWei, "purchaseNFT", "Marketplace", chainId, { tokenId: tokenId.toString(), priceEth });
+      await trackTransaction(pendingDetails);
+      toast.loading(`Transazione inviata: ${hash.slice(0, 6)}... In attesa di conferma...`, { id: toastId });
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+      if (receipt.status === 'success') {
+        const confirmedDetails = buildConfirmedTxDetails(pendingDetails, receipt);
+        await trackTransaction(confirmedDetails);
+        toast.success(`NFT ${tokenId} acquistato con successo!`, { id: toastId });
+      } else {
+        throw new Error("Transazione fallita (reverted).");
+      }
+    } catch (err: any) {
+      if(pendingDetails) {
+        const failedDetails = buildFailedTxDetails(pendingDetails, err);
+        await trackTransaction(failedDetails);
+      }
+      toast.error(`Acquisto fallito: ${err.shortMessage || err.message}`, { id: toastId });
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [walletClient, address, publicClient, chainId]);
+
+  const placeBid = useCallback(async (tokenId: bigint, bidAmountEth: string) => {
+    if (!walletClient || !address || !publicClient || !chainId) {
+        toast.error("Wallet o client non disponibili o chainId mancante.");
+        throw new Error("Prerequisiti per l'offerta non soddisfatti.");
+    }
+
+    setIsLoading(true);
+    const toastId = toast.loading(`Invio offerta per NFT ${tokenId}...`);
+    let pendingDetails: TransactionDetails | undefined;
+    let hash: `0x${string}` | undefined;
+
+    try {
+      const bidAmountWei = parseEther(bidAmountEth);
+      const { request } = await publicClient.simulateContract({
+        account: address,
+        address: SCIENTIFIC_CONTENT_MARKETPLACE_ADDRESS,
+        abi: SCIENTIFIC_CONTENT_MARKETPLACE_ABI,
+        functionName: 'placeBid',
+        args: [tokenId],
+        value: bidAmountWei,
+      });
+      
+      hash = await walletClient.writeContract(request);
+      pendingDetails = buildPendingTxDetails(hash, address, SCIENTIFIC_CONTENT_MARKETPLACE_ADDRESS, bidAmountWei, "placeBid", "Marketplace", chainId, { tokenId: tokenId.toString(), bidAmountEth });
+      await trackTransaction(pendingDetails);
+      toast.loading(`Transazione inviata: ${hash.slice(0, 6)}... In attesa di conferma...`, { id: toastId });
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+      if (receipt.status === 'success') {
+        const confirmedDetails = buildConfirmedTxDetails(pendingDetails, receipt);
+        await trackTransaction(confirmedDetails);
+        toast.success(`Offerta per NFT ${tokenId} inviata con successo!`, { id: toastId });
+      } else {
+        throw new Error("Transazione fallita (reverted).");
+      }
+    } catch (err: any) {
+      if(pendingDetails) {
+        const failedDetails = buildFailedTxDetails(pendingDetails, err);
+        await trackTransaction(failedDetails);
+      }
+      toast.error(`Offerta fallita: ${err.shortMessage || err.message}`, { id: toastId });
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -447,6 +507,8 @@ export const useMarketplaceInteractions = () => {
     listForSale,
     startAuction,
     removeFromSale,
+    purchaseNFT,
+    placeBid,
     isLoading,
   };
 };
