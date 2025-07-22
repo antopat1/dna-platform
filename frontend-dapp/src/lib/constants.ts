@@ -1,13 +1,11 @@
-
 // frontend-dapp/src/lib/constants.ts
 
-// Importa le ABI dai tuoi file JSON
-import ScientificContentRegistryABI from './abi/ScientificContentRegistry.json';
-import ScientificContentNFTABI from './abi/ScientificContentNFT.json';
-import GovernanceTokenABI from './abi/GovernanceToken.json';
-import DaoABI from './abi/Dao.json';
-
-import DnAContentMarketplaceABI from './abi/DnAContentMarketplace.json';
+// --- MODIFICA CHIAVE: Importiamo direttamente la proprietà 'abi' e la rinominiamo ---
+import { abi as ScientificContentRegistryABI } from './abi/ScientificContentRegistry.json';
+import { abi as ScientificContentNFTABI } from './abi/ScientificContentNFT.json';
+import { abi as GovernanceTokenABI } from './abi/GovernanceToken.json';
+import { abi as DaoABI } from './abi/Dao.json';
+import { abi as DnAContentMarketplaceABI } from './abi/DnAContentMarketplace.json';
 
 // Esporta gli indirizzi dei contratti, presi dalle variabili d'ambiente
 // Il '!' alla fine indica a TypeScript che la variabile sarà sicuramente definita al runtime.
@@ -25,13 +23,12 @@ export const CHAINLINK_KEYHASH = process.env.NEXT_PUBLIC_CHAINLINK_KEYHASH! as `
 // La Subscription ID deve essere convertita in BigInt per Viem
 export const CHAINLINK_SUBSCRIPTION_ID = BigInt(process.env.NEXT_PUBLIC_CHAINLINK_SUBSCRIPTION_ID || '0');
 
-// Esporta solo la parte 'abi' del JSON importato
-export const SCIENTIFIC_CONTENT_REGISTRY_ABI = ScientificContentRegistryABI.abi;
-export const SCIENTIFIC_CONTENT_NFT_ABI = ScientificContentNFTABI.abi;
-export const GOVERNANCE_TOKEN_ABI = GovernanceTokenABI.abi;
-export const DAO_ABI = DaoABI.abi;
-
-export const SCIENTIFIC_CONTENT_MARKETPLACE_ABI = DnAContentMarketplaceABI.abi;
+// --- Ora le nostre costanti ABI sono direttamente gli array, senza passare da un oggetto intermedio ---
+export const SCIENTIFIC_CONTENT_REGISTRY_ABI = ScientificContentRegistryABI;
+export const SCIENTIFIC_CONTENT_NFT_ABI = ScientificContentNFTABI;
+export const GOVERNANCE_TOKEN_ABI = GovernanceTokenABI;
+export const DAO_ABI = DaoABI;
+export const SCIENTIFIC_CONTENT_MARKETPLACE_ABI = DnAContentMarketplaceABI;
 
 // Configurazione per la rete Arbitrum Sepolia
 export const ARBITRUM_SEPOLIA_CHAIN_ID = 421614; // Chain ID ufficiale di Arbitrum Sepolia
