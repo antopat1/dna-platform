@@ -30,8 +30,8 @@ contract DnAContentMarketplace is Ownable, ReentrancyGuard, IERC721Receiver {
         address highestBidder;
         uint256 startTime;
         uint256 endTime;
-        bool isActive;
-        bool claimed;
+        bool isActive; // Indica se l'asta è attiva (non ancora finalizzata)
+        bool claimed; // Indica se l'asta è stata finalizzata/reclamata
     }
 
     struct BidderInfo {
@@ -53,7 +53,7 @@ contract DnAContentMarketplace is Ownable, ReentrancyGuard, IERC721Receiver {
 
     // Mappings per le aste
     mapping(uint256 => Auction) public auctions;
-    mapping(uint256 => bool) public isTokenInAuction;
+    mapping(uint256 => bool) public isTokenInAuction; // True se il token è in un'asta attiva (non ancora finalizzata/reclamata)
 
     // Mapping per tenere traccia delle offerte per ogni asta
     mapping(uint256 => mapping(address => BidderInfo)) public bidderInfo;
@@ -112,7 +112,7 @@ contract DnAContentMarketplace is Ownable, ReentrancyGuard, IERC721Receiver {
 
     event NFTClaimed(
         uint256 indexed tokenId,
-        address indexed winner,
+        address indexed recipient, // Può essere il vincitore o il venditore se invenduto
         uint256 timestamp
     );
 
@@ -161,7 +161,9 @@ contract DnAContentMarketplace is Ownable, ReentrancyGuard, IERC721Receiver {
     }
 
     modifier auctionExists(uint256 tokenId) {
-        require(auctions[tokenId].isActive, "Auction does not exist or not active");
+        // Un'asta "esiste" se è stata creata e non è ancora stata finalizzata (isActive == true)
+        // La variabile 'claimed' indica lo stato finale, mentre 'isActive' controlla se è ancora 'in gioco'
+        require(auctions[tokenId].isActive, "Auction does not exist or not active (already finalized/claimed)");
         _;
     }
 
@@ -304,7 +306,8 @@ contract DnAContentMarketplace is Ownable, ReentrancyGuard, IERC721Receiver {
         validPrice(minPrice)
         nonReentrant
     {
-        require(duration >= 1 hours, "Auction must last at least 1 hour");
+        // Modifica: durata minima dell'asta a 15 minuti
+        require(duration >= 15 minutes, "Auction must last at least 15 minutes"); 
         require(duration <= 30 days, "Auction cannot last more than 30 days");
 
         // Trasferisce l'NFT al marketplace
@@ -322,8 +325,8 @@ contract DnAContentMarketplace is Ownable, ReentrancyGuard, IERC721Receiver {
             highestBidder: address(0),
             startTime: startTime,
             endTime: endTime,
-            isActive: true,
-            claimed: false
+            isActive: true, // L'asta è attiva finché non viene finalizzata
+            claimed: false // Non ancora reclamata/finalizzata
         });
 
         isTokenInAuction[tokenId] = true;
@@ -379,25 +382,30 @@ contract DnAContentMarketplace is Ownable, ReentrancyGuard, IERC721Receiver {
     }
 
     /**
-     * @dev Finalizza un'asta
+     * @dev Logica interna comune per la finalizzazione di un'asta.
+     * Questa funzione non ha controlli di accesso specifici, in quanto è chiamata
+     * solo da funzioni esterne (endAuction o claimAuction) che implementano tali controlli.
      * @param tokenId ID del token dell'asta da finalizzare
      */
-    function endAuction(uint256 tokenId)
-        external
-        auctionExists(tokenId)
-        auctionExpired(tokenId)
-        nonReentrant
-    {
+    function _finalizeAuction(uint256 tokenId) private {
         Auction storage auction = auctions[tokenId];
+        
+        // Questo è il controllo principale per prevenire doppie finalizzazioni
         require(!auction.claimed, "Auction already claimed");
 
+        // Aggiorna lo stato dell'asta a finalizzata
         auction.isActive = false;
+        auction.claimed = true;
+        isTokenInAuction[tokenId] = false; // Rimuove il token dall'essere "in asta" nel mapping
+
+        address recipient = address(0); // Sarà il vincitore o il venditore
+        uint256 finalBid = 0;
 
         if (auction.highestBidder != address(0)) {
-            // C'è un vincitore
+            // Caso 1: C'è un vincitore
             uint256 winningBid = auction.highestBid;
             address winner = auction.highestBidder;
-
+            
             // Calcola commissioni
             uint256 protocolFee = (winningBid * protocolFeeBps) / 10000;
             uint256 sellerAmount = winningBid - protocolFee;
@@ -411,20 +419,61 @@ contract DnAContentMarketplace is Ownable, ReentrancyGuard, IERC721Receiver {
 
             // Trasferisce l'NFT al vincitore
             nftContract.safeTransferFrom(address(this), winner, tokenId);
+            
+            recipient = winner;
+            finalBid = winningBid;
 
-            // Il vincitore non viene marcato come "rimborsato" qui,
-            // poiché sta ricevendo l'NFT, non un rimborso.
-            auction.claimed = true; // Questo flag indica che l'asta è stata finalizzata/reclamat
-
-            emit AuctionEnded(tokenId, winner, winningBid, block.timestamp);
-            emit NFTClaimed(tokenId, winner, block.timestamp);
         } else {
-            // Nessuna offerta, restituisce l'NFT al venditore
+            // Caso 2: Nessuna offerta, restituisce l'NFT al venditore
             nftContract.safeTransferFrom(address(this), auction.seller, tokenId);
-            emit AuctionEnded(tokenId, address(0), 0, block.timestamp);
+            recipient = auction.seller;
+            // finalBid rimane 0
         }
 
-        isTokenInAuction[tokenId] = false;
+        // Emette gli eventi rilevanti
+        emit AuctionEnded(tokenId, recipient, finalBid, block.timestamp);
+        emit NFTClaimed(tokenId, recipient, block.timestamp);
+    }
+
+    /**
+     * @dev Finalizza un'asta (retrocompatibile - chiunque può chiamarla)
+     * Richiede che l'asta esista e sia scaduta.
+     * @param tokenId ID del token dell'asta da finalizzare
+     */
+    function endAuction(uint256 tokenId)
+        external
+        auctionExists(tokenId) // Controlla isActive
+        auctionExpired(tokenId)
+        nonReentrant
+    {
+        _finalizeAuction(tokenId);
+    }
+
+    /**
+     * @dev Reclama un'asta (solo vincitore o venditore) dopo la scadenza.
+     * Richiede che l'asta esista, sia scaduta e non sia stata ancora reclamata.
+     * I controlli di accesso sono basati sul ruolo dell'utente:
+     * - Se c'è un vincitore, solo il vincitore può reclamare l'NFT.
+     * - Se non ci sono state offerte, solo il venditore può reclamare l'NFT.
+     * @param tokenId ID del token dell'asta da reclamare
+     */
+    function claimAuction(uint256 tokenId)
+        external
+        auctionExists(tokenId) // Controlla isActive
+        auctionExpired(tokenId)
+        nonReentrant
+    {
+        Auction storage auction = auctions[tokenId];
+        
+        if (auction.highestBidder != address(0)) {
+            // Se c'è un vincitore, solo lui può reclamare
+            require(msg.sender == auction.highestBidder, "Claim: Only winner can claim");
+        } else {
+            // Se non ci sono offerte, solo il venditore può reclamare
+            require(msg.sender == auction.seller, "Claim: Only seller can claim if no bids");
+        }
+        
+        _finalizeAuction(tokenId);
     }
 
     /**
@@ -438,8 +487,12 @@ contract DnAContentMarketplace is Ownable, ReentrancyGuard, IERC721Receiver {
         Auction storage auction = auctions[tokenId];
         // L'asta deve essere scaduta per permettere i rimborsi.
         require(block.timestamp > auction.endTime, "Auction still active");
-        
-        // Il vincitore non può reclamare un rimborso
+        // L'asta non deve essere ancora finalizzata dal vincitore/venditore per poter chiedere il rimborso.
+        // Se è stata finalizzata (claimed), il vincitore ha già ricevuto l'NFT e gli altri devono reclamare il rimborso.
+        // Tuttavia, il flag `claimed` assicura che il processo di finalizzazione abbia rimosso l'NFT dal marketplace,
+        // ma non blocca i rimborsi. Il controllo `!bidderData.refunded` è quello chiave qui.
+
+        // Il vincitore non può reclamare un rimborso (riceve l'NFT)
         require(msg.sender != auction.highestBidder, "Winner cannot claim refund"); 
 
         BidderInfo storage bidderData = bidderInfo[tokenId][msg.sender];
@@ -447,7 +500,8 @@ contract DnAContentMarketplace is Ownable, ReentrancyGuard, IERC721Receiver {
         require(!bidderData.refunded, "Already refunded"); 
         
         uint256 refundAmount = bidderData.amount;
-        bidderData.amount = 0; // Azzera l'importo del bid dopo il rimborso
+        // Importante: azzera l'importo prima del trasferimento per prevenire re-entrancy sui rimborsi.
+        bidderData.amount = 0; 
         bidderData.refunded = true; // Marca come rimborsato
 
         (bool success, ) = payable(msg.sender).call{value: refundAmount}("");
@@ -630,7 +684,7 @@ contract DnAContentMarketplace is Ownable, ReentrancyGuard, IERC721Receiver {
         nonReentrant
     {
         require(!isTokenListedForSale[tokenId], "Token is listed for sale");
-        require(!isTokenInAuction[tokenId], "Token is in auction");
+        require(!isTokenInAuction[tokenId], "Token is in auction"); // Assicura che non sia in un'asta attiva
 
         nftContract.safeTransferFrom(address(this), owner(), tokenId);
     }

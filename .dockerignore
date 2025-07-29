@@ -1,0 +1,61 @@
+# flyctl launch added from .gitignore
+**\node_modules
+**\.env
+**\frontend-dapp\.env.local
+**\backend-event-listener\venv
+
+**\venv
+
+# Hardhat files
+cache
+# artifacts
+
+# TypeChain files
+typechain
+typechain-types
+
+# solidity-coverage files
+coverage
+coverage.json
+
+# Hardhat Ignition default folder for deployments against a local node
+**\ignition\deployments\chain-31337
+
+# flyctl launch added from frontend-dapp\.gitignore
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+frontend-dapp\node_modules
+frontend-dapp\.pnp
+frontend-dapp\**\.pnp.js
+frontend-dapp\**\.yarn\install-state.gz
+
+# testing
+frontend-dapp\coverage
+
+# next.js
+frontend-dapp\.next
+frontend-dapp\out
+
+# production
+frontend-dapp\build
+
+# misc
+frontend-dapp\**\.DS_Store
+frontend-dapp\**\*.pem
+
+# debug
+frontend-dapp\**\npm-debug.log*
+frontend-dapp\**\yarn-debug.log*
+frontend-dapp\**\yarn-error.log*
+
+# local env files
+frontend-dapp\**\.env*.local
+
+# vercel
+frontend-dapp\**\.vercel
+
+# typescript
+frontend-dapp\**\*.tsbuildinfo
+frontend-dapp\**\next-env.d.ts
+fly.toml

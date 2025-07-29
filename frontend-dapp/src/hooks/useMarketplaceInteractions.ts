@@ -20,11 +20,23 @@ import {
   TransactionDetails,
 } from '@/utils/trackTransaction';
 
-export type SaleType = 'sale' | 'auction';
+// Definizione dei tipi NftStatusInfo per coerenza
+export type NftAuctionStatusInfo = {
+  type: "inAuction";
+  minPrice: string;
+  highestBid: string;
+  highestBidder: Address;
+  startTime: number;
+  endTime: number;
+  seller: Address;
+  claimed: boolean; // Aggiunto per tracciare lo stato di reclamo
+  currentUserBidInfo?: { amount: string; refunded: boolean; }; // Aggiunto per lo stato di bid dell'utente corrente
+};
 
 export type NftSaleStatus =
   | { type: 'sale'; price: string; seller: Address }
-  | { type: 'auction'; seller: Address; minPrice: string; endTime: number; highestBid: string; highestBidder: Address };
+  | NftAuctionStatusInfo; // Usa il tipo esteso per l'asta
+
 
 export const useMarketplaceInteractions = () => {
   const { address, chainId } = useAccount();
@@ -167,15 +179,20 @@ export const useMarketplaceInteractions = () => {
         args: [tokenId],
       }) as readonly [`0x${string}`, bigint, bigint, bigint, `0x${string}`, bigint, bigint, boolean, boolean];
 
-      const currentTime = Math.floor(Date.now() / 1000);
-      if (auction[7] && Number(auction[6]) > currentTime) { // isActive and endTime > now
+      // `isActive` nel contratto indica se l'asta è ancora nel marketplace e non finalizzata.
+      // `claimed` indica se è stata finalizzata.
+      // Per `getNftStatus`, vogliamo lo stato attuale di un'asta, che include anche quelle scadute
+      // ma non ancora reclamate, per poterle visualizzare correttamente.
+      if (auction[7]) { // isActive == true
         return {
-          type: 'auction',
+          type: 'inAuction',
           seller: auction[0],
           minPrice: formatEther(auction[2]),
-          endTime: Number(auction[6]),
           highestBid: formatEther(auction[3]),
           highestBidder: auction[4],
+          startTime: Number(auction[5]),
+          endTime: Number(auction[6]),
+          claimed: auction[8], // Passa lo stato di 'claimed'
         };
       }
 
@@ -269,6 +286,19 @@ export const useMarketplaceInteractions = () => {
       console.error("Missing prerequisites for startAuction.");
       return;
     }
+
+    // Frontend validation for auction duration (matching contract)
+    const MIN_AUCTION_DURATION_SECONDS = 15 * 60; // 15 minutes
+    const MAX_AUCTION_DURATION_SECONDS = 30 * 24 * 60 * 60; // 30 days
+    if (durationSeconds < MIN_AUCTION_DURATION_SECONDS) {
+        toast.error(`La durata minima dell'asta è di ${MIN_AUCTION_DURATION_SECONDS / 60} minuti.`);
+        throw new Error(`Auction must last at least ${MIN_AUCTION_DURATION_SECONDS / 60} minutes.`);
+    }
+    if (durationSeconds > MAX_AUCTION_DURATION_SECONDS) {
+        toast.error(`La durata massima dell'asta è di ${MAX_AUCTION_DURATION_SECONDS / (24 * 60 * 60)} giorni.`);
+        throw new Error(`Auction cannot last more than ${MAX_AUCTION_DURATION_SECONDS / (24 * 60 * 60)} days.`);
+    }
+
 
     const minPriceWei = parseEther(minPriceEth);
     setIsLoading(true);
@@ -406,7 +436,7 @@ export const useMarketplaceInteractions = () => {
     }
   }, [walletClient, address, publicClient, chainId]);
 
-  // --- NUOVE FUNZIONI INTEGRATE ---
+  // --- FUNZIONI INTEGRATE ---
 
   const purchaseNFT = useCallback(async (tokenId: bigint, priceEth: string) => {
     if (!walletClient || !address || !publicClient || !chainId) {
@@ -502,14 +532,110 @@ export const useMarketplaceInteractions = () => {
     }
   }, [walletClient, address, publicClient, chainId]);
 
+  // --- NUOVE FUNZIONI PER CLAIM E REFUND ---
+
+  const claimAuction = useCallback(async (tokenId: bigint) => {
+    if (!walletClient || !address || !publicClient || !chainId) {
+        toast.error("Wallet o client non disponibili o chainId mancante.");
+        throw new Error("Prerequisiti per il claim non soddisfatti.");
+    }
+
+    setIsLoading(true);
+    const toastId = toast.loading(`Reclamo asta per NFT ${tokenId}...`);
+    let pendingDetails: TransactionDetails | undefined;
+    let hash: `0x${string}` | undefined;
+
+    try {
+      const { request } = await publicClient.simulateContract({
+        account: address,
+        address: SCIENTIFIC_CONTENT_MARKETPLACE_ADDRESS,
+        abi: SCIENTIFIC_CONTENT_MARKETPLACE_ABI,
+        functionName: 'claimAuction',
+        args: [tokenId],
+      });
+      
+      hash = await walletClient.writeContract(request);
+      pendingDetails = buildPendingTxDetails(hash, address, SCIENTIFIC_CONTENT_MARKETPLACE_ADDRESS, BigInt(0), "claimAuction", "Marketplace", chainId, { tokenId: tokenId.toString() });
+      await trackTransaction(pendingDetails);
+      toast.loading(`Transazione inviata: ${hash.slice(0, 6)}... In attesa di conferma...`, { id: toastId });
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+      if (receipt.status === 'success') {
+        const confirmedDetails = buildConfirmedTxDetails(pendingDetails, receipt);
+        await trackTransaction(confirmedDetails);
+        toast.success(`Asta per NFT ${tokenId} reclamata con successo!`, { id: toastId });
+      } else {
+        throw new Error("Transazione fallita (reverted).");
+      }
+    } catch (err: any) {
+      if(pendingDetails) {
+        const failedDetails = buildFailedTxDetails(pendingDetails, err);
+        await trackTransaction(failedDetails);
+      }
+      toast.error(`Reclamo fallito: ${err.shortMessage || err.message}`, { id: toastId });
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [walletClient, address, publicClient, chainId]);
+
+  const claimRefund = useCallback(async (tokenId: bigint) => {
+    if (!walletClient || !address || !publicClient || !chainId) {
+        toast.error("Wallet o client non disponibili o chainId mancante.");
+        throw new Error("Prerequisiti per il rimborso non soddisfatti.");
+    }
+
+    setIsLoading(true);
+    const toastId = toast.loading(`Richiesta rimborso per NFT ${tokenId}...`);
+    let pendingDetails: TransactionDetails | undefined;
+    let hash: `0x${string}` | undefined;
+
+    try {
+      const { request } = await publicClient.simulateContract({
+        account: address,
+        address: SCIENTIFIC_CONTENT_MARKETPLACE_ADDRESS,
+        abi: SCIENTIFIC_CONTENT_MARKETPLACE_ABI,
+        functionName: 'claimRefund',
+        args: [tokenId],
+      });
+      
+      hash = await walletClient.writeContract(request);
+      pendingDetails = buildPendingTxDetails(hash, address, SCIENTIFIC_CONTENT_MARKETPLACE_ADDRESS, BigInt(0), "claimRefund", "Marketplace", chainId, { tokenId: tokenId.toString() });
+      await trackTransaction(pendingDetails);
+      toast.loading(`Transazione inviata: ${hash.slice(0, 6)}... In attesa di conferma...`, { id: toastId });
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+      if (receipt.status === 'success') {
+        const confirmedDetails = buildConfirmedTxDetails(pendingDetails, receipt);
+        await trackTransaction(confirmedDetails);
+        toast.success(`Rimborso per NFT ${tokenId} processato con successo!`, { id: toastId });
+      } else {
+        throw new Error("Transazione fallita (reverted).");
+      }
+    } catch (err: any) {
+      if(pendingDetails) {
+        const failedDetails = buildFailedTxDetails(pendingDetails, err);
+        await trackTransaction(failedDetails);
+      }
+      toast.error(`Richiesta rimborso fallita: ${err.shortMessage || err.message}`, { id: toastId });
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [walletClient, address, publicClient, chainId]);
+
   return {
+    isLoading, 
+    checkAllowance, 
+    approveMarketplace, 
     getNftStatus,
     listForSale,
     startAuction,
     removeFromSale,
-    purchaseNFT,
-    placeBid,
-    isLoading,
+    purchaseNFT, 
+    placeBid, 
+    claimAuction, 
+    claimRefund, 
   };
 };
 

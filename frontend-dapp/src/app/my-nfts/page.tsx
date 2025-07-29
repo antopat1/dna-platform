@@ -48,6 +48,9 @@ type NftFilter = "all" | "sale" | "auction";
 const PLACEHOLDER_IMAGE_URL = "https://placehold.co/80x80/333333/ffffff?text=No+Img";
 const ITEMS_PER_PAGE = 10;
 
+// Costante per la durata minima dell'asta in minuti (per frontend)
+const MIN_AUCTION_DURATION_MINUTES_FRONTEND = 15; 
+
 // --- COMPONENTI UI (Spinner, Toggle, Modal) ---
 
 const LoadingSpinner = () => (
@@ -70,7 +73,7 @@ const ToggleSwitch = ({ isAuction, onToggle }: { isAuction: boolean; onToggle: (
 const SellAuctionModal = ({ nft, isOpen, onClose, onConfirmSale }: { nft: NFT | null; isOpen: boolean; onClose: () => void; onConfirmSale: (tokenId: bigint, saleType: SaleType, price: string, duration?: number) => void; }) => {
   const [isAuction, setIsAuction] = useState(false);
   const [price, setPrice] = useState("");
-  const [duration, setDuration] = useState("24");
+  const [duration, setDuration] = useState("24"); // Default in hours
   const [priceError, setPriceError] = useState("");
   const [durationError, setDurationError] = useState("");
 
@@ -83,18 +86,35 @@ const SellAuctionModal = ({ nft, isOpen, onClose, onConfirmSale }: { nft: NFT | 
   };
 
   const validateDuration = (value: string) => {
-    const numericValue = parseInt(value);
-    if (isNaN(numericValue)) { setDurationError("Inserisci una durata valida"); return false; }
-    if (numericValue < 1) { setDurationError("Durata minima 1 ora"); return false; }
-    if (numericValue > 720) { setDurationError("Durata massima 720 ore (30 giorni)"); return false; }
-    setDurationError(""); return true;
+    const numericValue = parseFloat(value); // Usa parseFloat per gestire i decimali
+    const durationInSeconds = numericValue * 3600; // Converte l'input (ore) in secondi
+    const minDurationInSeconds = MIN_AUCTION_DURATION_MINUTES_FRONTEND * 60; // 15 minuti in secondi
+    const maxDurationInSeconds = 30 * 24 * 3600; // 30 giorni in secondi
+
+    if (isNaN(numericValue) || numericValue <= 0) { 
+      setDurationError("Inserisci una durata valida e positiva."); 
+      return false; 
+    }
+    if (durationInSeconds < minDurationInSeconds) { 
+      setDurationError(`Durata minima ${MIN_AUCTION_DURATION_MINUTES_FRONTEND} minuti (${(MIN_AUCTION_DURATION_MINUTES_FRONTEND / 60).toFixed(2)} ore)`); 
+      return false; 
+    }
+    if (durationInSeconds > maxDurationInSeconds) { // Compares hours input with max hours
+      setDurationError("Durata massima 720 ore (30 giorni)"); 
+      return false; 
+    }
+    setDurationError(""); 
+    return true;
   };
 
   const handleStartSale = () => {
     if (!nft || !price || !validatePrice(price)) { toast.error("Inserisci un prezzo valido tra 0.005 e 5 ETH"); return; }
-    if (isAuction && (!duration || !validateDuration(duration))) { toast.error("Inserisci una durata valida tra 1 e 720 ore"); return; }
+    if (isAuction && (!duration || !validateDuration(duration))) { toast.error("Inserisci una durata valida per l'asta."); return; }
+    
     const saleType: SaleType = isAuction ? "auction" : "sale";
-    const durationSeconds = isAuction ? parseInt(duration) * 3600 : undefined;
+    // Converte la durata in secondi e la arrotonda per difetto prima di convertirla in BigInt
+    const durationSeconds = isAuction ? Math.floor(parseFloat(duration) * 3600) : undefined;
+    
     onConfirmSale(nft.tokenId, saleType, price, durationSeconds);
     handleClose();
   };
@@ -118,7 +138,8 @@ const SellAuctionModal = ({ nft, isOpen, onClose, onConfirmSale }: { nft: NFT | 
             {isAuction && (
                 <div className="mb-6">
                     <label className="block text-sm font-medium text-gray-300 mb-2">Durata dell'asta (ore)</label>
-                    <Input type="number" min="1" max="720" placeholder="es. 24" value={duration} onChange={(e) => { setDuration(e.target.value); if(e.target.value) validateDuration(e.target.value); }} className="bg-gray-700 text-white border border-gray-500 rounded-md p-3 text-sm focus:border-purple-400 focus:ring-purple-400" />
+                    {/* AGGIUNTO step="0.01" per consentire valori decimali */}
+                    <Input type="number" step="0.01" min="0.25" max="720" placeholder="es. 24 (min. 0.25)" value={duration} onChange={(e) => { setDuration(e.target.value); if(e.target.value) validateDuration(e.target.value); }} className="bg-gray-700 text-white border border-gray-500 rounded-md p-3 text-sm focus:border-purple-400 focus:ring-purple-400" />
                     {durationError && <p className="text-red-400 text-xs mt-1">{durationError}</p>}
                 </div>
             )}
@@ -169,8 +190,14 @@ export default function MyNFTsPage() {
   const filteredNfts = useMemo(() => {
     const displayable = allMyNfts.filter(nft => nft.title && nft.description && nft.imageUrlFromMetadata);
     if (activeFilter === "all") return displayable;
+    // Per "sale" e "auction", vogliamo mostrare solo gli NFT che sono in vendita
+    // o in asta E che sono ancora attivi/non reclamati nel marketplace per l'utente corrente
     if (activeFilter === "sale") return displayable.filter(nft => nft.status.type === "forSale");
-    if (activeFilter === "auction") return displayable.filter(nft => nft.status.type === "inAuction");
+    if (activeFilter === "auction") return displayable.filter(nft => {
+      // Includi le aste se sono in corso o se sono scadute ma non ancora reclamate
+      // E l'utente connesso è il venditore (o il vincitore se dovesse essere visualizzato qui)
+      return nft.status.type === "inAuction" && !nft.status.claimed;
+    });
     return [];
   }, [allMyNfts, activeFilter]);
   
@@ -194,13 +221,14 @@ export default function MyNFTsPage() {
     try {
       if (saleType === "sale") await listForSale(tokenId, price);
       else {
-        if (!duration) throw new Error("Durata asta mancante");
+        if (duration === undefined) throw new Error("Durata asta mancante"); // Check for undefined, not just falsy
         await startAuction(tokenId, price, duration);
       }
       toast.success("Operazione completata! La lista si aggiornerà a breve.");
       setTimeout(refetchOwnedNfts, 1500);
     } catch (err: any) {
-      toast.error(`Errore: ${err.message}`);
+      console.error("Errore nell'operazione di vendita/asta:", err);
+      toast.error(`Errore: ${err.shortMessage || err.message}`);
     }
   }, [listForSale, startAuction, refetchOwnedNfts]);
 
@@ -210,7 +238,8 @@ export default function MyNFTsPage() {
       toast.success("Vendita revocata! La lista si aggiornerà a breve.");
       setTimeout(refetchOwnedNfts, 1500);
     } catch (err: any) {
-      toast.error(`Errore revoca: ${err.message}`);
+      console.error("Errore revoca vendita:", err);
+      toast.error(`Errore revoca: ${err.shortMessage || err.message}`);
     }
   }, [removeFromSale, refetchOwnedNfts]);
 
@@ -218,7 +247,7 @@ export default function MyNFTsPage() {
     const nftIdString = nft.tokenId.toString();
     const recipient = transferAddressInput.get(nftIdString);
     if (!recipient || !isAddress(recipient)) { toast.error("Indirizzo Ethereum non valido."); return; }
-    if (!walletClient || !address || !publicClient || !chainId) return;
+    if (!walletClient || !address || !publicClient || !chainId) { toast.error("Wallet o client non disponibili per il trasferimento."); return; }
     
     setIsTransferring(prev => new Map(prev).set(nftIdString, true));
     const toastId = toast.loading(`Trasferimento NFT ID ${nftIdString}...`);
@@ -247,7 +276,11 @@ export default function MyNFTsPage() {
           throw new Error("Transazione fallita (reverted).");
       }
     } catch (err: any) {
-      const failedDetails = buildFailedTxDetails({ transactionHash: "0x", from: address, to: SCIENTIFIC_CONTENT_NFT_ADDRESS, value: "0", methodName: "safeTransferFrom", contractName: "ScientificContentNFT", chainId }, err);
+      console.error("Errore nel trasferimento:", err);
+      // Fallback per hash se non definito, per evitare TypeErrors in buildFailedTxDetails
+      const fallbackHash = (hash || ("0x" + "0".repeat(64))) as `0x${string}`;
+      const fallbackPendingDetails = pendingDetails || { transactionHash: fallbackHash, from: address as Address, to: SCIENTIFIC_CONTENT_NFT_ADDRESS as Address, value: "0", methodName: "safeTransferFrom", contractName: "ScientificContentNFT", chainId: chainId!, status: 'pending', metadata: { tokenId: nft.tokenId.toString(), recipient } };
+      const failedDetails = buildFailedTxDetails(fallbackPendingDetails, err);
       await trackTransaction(failedDetails);
       toast.error(`Errore nel trasferimento: ${err.shortMessage || err.message}`, { id: toastId });
     } finally {
@@ -289,8 +322,11 @@ export default function MyNFTsPage() {
                         const isCurrentlyTransferring = isTransferring.get(nftIdString) || false;
                         const canSell = nft.status.type === 'inWallet';
                         const canRevoke = nft.status.type === 'forSale';
-                        const canTransfer = nft.status.type === 'inWallet';
-                        
+                        // Aggiungo una condizione per isTokenInAuction per determinare canTransfer
+                        const isTokenInAuction = nft.status.type === 'inAuction' && !nft.status.claimed;
+                        const canTransfer = nft.status.type === 'inWallet' || nft.status.type === 'forSale' && !canRevoke; // Puoi trasferire se in wallet, o se listato a prezzo fisso ma non puoi revocare (es. non sei più il seller)
+
+
                         return (
                           <TableRow key={nftIdString} className="hover:bg-gray-700/80 transition-colors cursor-pointer" onClick={() => { window.location.href = `/nft-details/${nftIdString}`; }}>
                             <TableCell className="px-3 py-4 font-mono text-purple-300">{nftIdString}</TableCell>
@@ -299,7 +335,7 @@ export default function MyNFTsPage() {
                                 <p className="text-sm text-gray-400 max-w-xs truncate">{nft.description}</p>
                             </TableCell>
                             <TableCell className="px-3 py-4"><Image src={resolveIpfsLink(nft.imageUrlFromMetadata!)} alt={nft.title!} width={64} height={64} className="rounded-md object-cover" onError={(e) => { e.currentTarget.src = PLACEHOLDER_IMAGE_URL; }}/></TableCell>
-                            <TableCell className="px-3 py-4 text-sm"> {/* NUOVA CELLA CON DETTAGLI */}
+                            <TableCell className="px-3 py-4 text-sm">
                               {(() => {
                                 const status = nft.status;
                                 switch (status.type) {
@@ -307,11 +343,24 @@ export default function MyNFTsPage() {
                                   case 'forSale': return <span className="text-green-400 font-semibold">{status.price} ETH</span>;
                                   case 'inAuction':
                                     const timeLeft = status.endTime * 1000 - Date.now();
-                                    const hoursLeft = Math.ceil(timeLeft / (1000 * 60 * 60));
+                                    // Calcola ore e minuti per una visualizzazione più precisa anche per brevi durate
+                                    const totalMinutesLeft = Math.ceil(timeLeft / (1000 * 60));
+                                    const hoursLeft = Math.floor(totalMinutesLeft / 60);
+                                    const minutesLeft = totalMinutesLeft % 60;
+
+                                    let timeString = '';
+                                    if (totalMinutesLeft <= 0) {
+                                      timeString = 'Terminata';
+                                    } else if (hoursLeft > 0) {
+                                      timeString = `~${hoursLeft}h ${minutesLeft}m rimaste`;
+                                    } else {
+                                      timeString = `~${minutesLeft}m rimasti`;
+                                    }
+                                    
                                     return (
                                       <div className="text-orange-400">
                                         <p className="font-semibold">Min: {status.minPrice} ETH</p>
-                                        <p className="text-xs">{timeLeft > 0 ? `~${hoursLeft} ore rimaste` : 'Terminata'}</p>
+                                        <p className="text-xs">{timeString}</p>
                                       </div>
                                     );
                                   default: return null;
@@ -323,8 +372,8 @@ export default function MyNFTsPage() {
                                 <div className="flex flex-col space-y-2 items-center">
                                     {canSell && <Button onClick={() => handleSellAuctionClick(nft)} disabled={isMarketplaceLoading} className="bg-green-600 hover:bg-green-700 w-full text-xs">Vendi / Asta</Button>}
                                     {canRevoke && <Button onClick={() => handleRevokeSale(nft)} disabled={isMarketplaceLoading} className="bg-red-600 hover:bg-red-700 w-full text-xs">Revoca Vendita</Button>}
-                                    {nft.status.type === 'inAuction' && <Button disabled className="bg-gray-500 w-full text-xs cursor-not-allowed">In Asta</Button>}
-                                    {canTransfer && (
+                                    {isTokenInAuction && <Button disabled className="bg-gray-500 w-full text-xs cursor-not-allowed">In Asta</Button>}
+                                    {canTransfer && ( // Mostra l'opzione di trasferimento solo se l'NFT è "trasferibile"
                                         <div className="flex items-center space-x-2 pt-2 w-full">
                                             <Input type="text" placeholder="Indirizzo" value={transferAddressInput.get(nftIdString) || ""} onChange={(e) => setTransferAddressInput(prev => new Map(prev).set(nftIdString, e.target.value))} className="bg-gray-700 text-xs p-1 h-8 flex-grow" />
                                             <Button onClick={() => handleTransfer(nft)} disabled={isCurrentlyTransferring || !isAddress(transferAddressInput.get(nftIdString) || '')} className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-500 text-xs px-2 h-8"> {isCurrentlyTransferring ? "..." : "Trasferisci"} </Button>
@@ -356,4 +405,6 @@ export default function MyNFTsPage() {
     </div>
   );
 }
+
+
 
