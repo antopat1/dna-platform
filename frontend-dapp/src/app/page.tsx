@@ -1,6 +1,7 @@
 // frontend-dapp/src/app/page.tsx
 // Importa il tuo componente di test
 import ContractTestViem from '../components/ContractTestViem';
+import EventFeed from '../components/EventFeed';
 
 export default function Home() {
   return (
@@ -8,6 +9,7 @@ export default function Home() {
       <h1 style={{ marginBottom: '30px', fontSize: '2.5em', color: '#0056b3' }}>
         Benvenuto nella Piattaforma DnA
       </h1>
+      <EventFeed />
       {/* Includi il componente di test qui */}
       <ContractTestViem />
     </main>
