@@ -11,7 +11,7 @@ export default function Home() {
       </h1>
       <EventFeed />
       {/* Includi il componente di test qui */}
-      <ContractTestViem />
+      {/* <ContractTestViem /> */}
     </main>
   );
 }

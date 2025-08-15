@@ -1,45 +1,23 @@
 // frontend-dapp/src/lib/wagmiConfig.ts
-
-import { http, createConfig } from 'wagmi';
 import { arbitrumSepolia } from 'wagmi/chains';
-// Assicurati che 'metaMask' e 'walletConnect' (se lo usi) siano importati
-import { metaMask, walletConnect } from 'wagmi/connectors'; // HO RIMOSSO 'injected' QUI
+import { getDefaultConfig } from '@rainbow-me/rainbowkit';
 
-import { ARBITRUM_SEPOLIA_RPC_URL } from '@/lib/constants';
+// IMPORTANTE: Ottieni il tuo Project ID da https://cloud.walletconnect.com/
+// e aggiungilo al tuo file .env: NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID="YOUR_PROJECT_ID"
+const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
 
-export const config = createConfig({
-  chains: [arbitrumSepolia],
-  connectors: [
-    // Preferiamo usare il connettore specifico per MetaMask
-    // Rimuovendo 'injected()' eviti che altri wallet iniettati (come Kepler)
-    // possano sovrascrivere o essere l'unica opzione visualizzata.
-    metaMask(),
-    // Se vuoi supportare WalletConnect, assicurati di avere il tuo Project ID nel .env
-    // e decommenta la riga qui sotto:
-    // walletConnect({ projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '' }),
-  ],
-  transports: {
-    [arbitrumSepolia.id]: http(ARBITRUM_SEPOLIA_RPC_URL),
-  },
+if (!projectId) {
+  throw new Error("NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID non è definito nel file .env. Verrà mostrato un errore nell'interfaccia se non lo si imposta.");
+}
+
+export const config = getDefaultConfig({
+  appName: 'DnA Platform', // Il nome della tua DApp
+  projectId,
+  chains: [arbitrumSepolia],
+  ssr: true, // Importante per l'App Router di Next.js
 });
 
 
-// // frontend-dapp/src/lib/wagmiConfig.ts
 
-// import { http, createConfig } from 'wagmi';
-// import { arbitrumSepolia } from 'wagmi/chains';
-// import { injected, walletConnect, metaMask } from 'wagmi/connectors';
-// import { ARBITRUM_SEPOLIA_RPC_URL } from '@/lib/constants';
-
-// export const config = createConfig({
-//   chains: [arbitrumSepolia],
-//   connectors: [
-//     injected(),
-//     metaMask(),
-//   ],
-//   transports: {
-//     [arbitrumSepolia.id]: http(ARBITRUM_SEPOLIA_RPC_URL),
-//   },
-// });
 
 

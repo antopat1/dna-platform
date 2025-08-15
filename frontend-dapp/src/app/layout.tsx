@@ -1,14 +1,16 @@
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import "@rainbow-me/rainbowkit/styles.css";
+import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
+import { Providers } from "./providers";
 
-// frontend-dapp/src/app/layout.tsx
-// Questo è un Server Component di default. Non ha bisogno di 'use client'.
+const inter = Inter({ subsets: ["latin"] });
 
-import './globals.css'; // Assicurati che il percorso del CSS sia corretto
-import { Providers } from './providers'; // Importa il componente Providers
-import '@rainbow-me/rainbowkit/styles.css'; // IMPORTO GLI STILI DI RAINBOWKIT GLOBALMENTE
-
-export const metadata = {
-  title: "Scientific Content Platform",
-  description: "Decentralized platform for scientific content publishing and NFTs",
+export const metadata: Metadata = {
+  title: "DnA Platform",
+  description: "A scientific content NFT platform.",
 };
 
 export default function RootLayout({
@@ -17,40 +19,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body>
+    <html lang="en" className="h-full">
+      <body className={`${inter.className} h-full bg-gray-100 m-0 p-0 overflow-x-hidden`}> 
         <Providers>
-          {children}
+          <div className="min-h-full w-full bg-gray-100 flex flex-col">
+            <Navbar />
+            <main className="flex-1 w-full bg-gray-100">
+              {children}
+            </main>
+            <Footer />
+          </div>
         </Providers>
       </body>
     </html>
   );
 }
-
-
-// // frontend-dapp/src/app/layout.tsx
-// // Questo è un Server Component di default. Non ha bisogno di 'use client'.
-
-// import './globals.css'; // Assicurati che il percorso del CSS sia corretto
-// import { Providers } from './providers'; // Importa il componente Providers
-
-// export const metadata = {
-//   title: "Scientific Content Platform",
-//   description: "Decentralized platform for scientific content publishing and NFTs",
-// };
-
-// export default function RootLayout({
-//   children,
-// }: Readonly<{
-//   children: React.ReactNode;
-// }>) {
-//   return (
-//     <html lang="en">
-//       <body>
-//         <Providers>
-//           {children}
-//         </Providers>
-//       </body>
-//     </html>
-//   );
-// }

@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Reset completo per eliminare margin/padding di default */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
 :root {
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 214, 219, 220;
@@ -21,8 +28,6 @@
     text-wrap: balance;
   }
 }
-
-
 
 @layer base {
   :root {
@@ -52,6 +57,7 @@
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
   }
+  
   .dark {
     --background: 0 0% 3.9%;
     --foreground: 0 0% 98%;
@@ -80,13 +86,65 @@
   }
 }
 
-
-
+/* Reset fondamentale per html, body e contenitori Next.js */
 @layer base {
   * {
     @apply border-border;
   }
+  
+  html {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: rgb(243, 244, 246) !important; /* bg-gray-100 */
+    overflow-x: hidden; /* Previene scroll orizzontale */
+  }
+  
   body {
-    @apply bg-background text-foreground;
+    height: 100vh !important; /* Forza altezza viewport */
+    width: 100vw !important; /* Forza larghezza viewport */
+    min-height: 100vh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background-color: rgb(243, 244, 246) !important; /* bg-gray-100 */
+    overflow-x: hidden !important; /* Previene scroll orizzontale */
+    position: relative;
+  }
+  
+  /* Contenitori Next.js */
+  #__next {
+    height: 100%;
+    width: 100%;
+    background-color: rgb(243, 244, 246) !important;
+  }
+  
+  /* Override per NextUI che potrebbe interferire */
+  .nextui-provider {
+    height: 100% !important;
+    width: 100% !important;
+    background-color: transparent !important;
+  }
+  
+  /* Override per RainbowKit modals/overlays */
+  [data-rk] {
+    background-color: transparent !important;
   }
 }
+
+/* Fix specifici per componenti che potrebbero causare problemi */
+@layer components {
+  /* Assicura che tutti i contenitori principali rispettino le dimensioni */
+  .main-container {
+    min-height: 100vh;
+    width: 100%;
+    background-color: rgb(243, 244, 246);
+  }
+  
+  /* Override per eventuali stili di NextUI che interferiscono */
+  .nextui-c-PJLV .nextui-c-PJLV-css {
+    background-color: transparent !important;
+  }
+}
+
+
