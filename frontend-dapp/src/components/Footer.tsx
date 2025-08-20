@@ -7,7 +7,7 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-gray-900 text-white mt-auto border-t border-gray-800">
+    <footer className="bg-gray-500 text-white mt-auto border-t border-gray-400">
       {/* Main Footer Content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -82,7 +82,7 @@ export default function Footer() {
       </div>
 
       {/* Bottom Bar */}
-      <div className="border-t border-gray-800 bg-gray-950">
+      <div className="border-t border-gray-400 bg-gray-600">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0">
             

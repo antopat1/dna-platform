@@ -5,7 +5,7 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 export default function Navbar() {
   return (
-    <nav className="flex justify-between items-center bg-gray-900 text-white p-4 shadow-md sticky top-0 z-50 w-full shrink-0">
+    <nav className="flex justify-between items-center bg-gray-500 text-white p-4 shadow-md sticky top-0 z-50 w-full shrink-0">
       <div className="flex items-center space-x-4">
         <Link href="/" className="text-2xl font-bold text-purple-400 hover:text-purple-300 transition-colors">
           DnA Platform

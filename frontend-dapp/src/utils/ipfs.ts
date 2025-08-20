@@ -39,27 +39,3 @@ export function resolveIpfsLink(ipfsUri: string | undefined | null): string {
   return `${IPFS_GATEWAY_BASE_URL}${ipfsHash}`;
 }
 
-
-// // frontend-dapp/src/utils/ipfs.ts
-
-// const PINATA_GATEWAY_SUBDOMAIN = process.env.NEXT_PUBLIC_PINATA_GATEWAY_SUBDOMAIN;
-
-// export const resolveIpfsLink = (ipfsUri: string): string => {
-//   if (!ipfsUri) return "";
-
-//   let cid: string;
-//   if (ipfsUri.startsWith("ipfs://")) {
-//     cid = ipfsUri.replace("ipfs://", "");
-//   } else {
-//     cid = ipfsUri;
-//   }
-
-//   if (PINATA_GATEWAY_SUBDOMAIN) {
-//     return `https://${PINATA_GATEWAY_SUBDOMAIN}.mypinata.cloud/ipfs/${cid}`;
-//   } else {
-//     console.warn(
-//       "NEXT_PUBLIC_PINATA_GATEWAY_SUBDOMAIN non è impostato. Utilizzo un gateway IPFS pubblico di fallback."
-//     );
-//     return `https://ipfs.io/ipfs/${cid}`;
-//   }
-// };

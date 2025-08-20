@@ -29,6 +29,11 @@ export default function AdminLayout({
                 Register & Mint
               </Link>
             </li>
+            <li className="mb-2">
+              <Link href=".." className="block p-2 rounded hover:bg-gray-700">
+                Ritira commissioni
+              </Link>
+            </li>
           </ul>
         </nav>
       </aside>

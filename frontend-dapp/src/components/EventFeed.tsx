@@ -302,7 +302,7 @@ const EventFeed = () => {
 
     return (
         <div className="w-full max-w-md mx-auto bg-white shadow-lg rounded-lg overflow-hidden my-4">
-            <h2 className="text-xl font-bold p-4 bg-blue-600 text-white">Eventi della Piattaforma</h2>
+            <h2 className="text-xl font-bold p-4 bg-blue-600 text-white">Eventi di trasferimento , asta o vendita</h2>
             <ul className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
                 {displayedEvents.map((event: EventData, index: number) => {
                     let eventNameToDisplay: string | undefined;
