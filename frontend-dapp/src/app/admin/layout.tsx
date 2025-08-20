@@ -30,7 +30,7 @@ export default function AdminLayout({
               </Link>
             </li>
             <li className="mb-2">
-              <Link href=".." className="block p-2 rounded hover:bg-gray-700">
+              <Link href="/admin/withdraw-funds" className="block p-2 rounded hover:bg-gray-700">
                 Ritira commissioni
               </Link>
             </li>
