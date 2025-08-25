@@ -9,8 +9,8 @@ export default function Home() {
       <h1 style={{ marginBottom: '30px', fontSize: '2.5em', color: '#0056b3' }}>
         Benvenuto nella Piattaforma DnA
       </h1>
-      <EventFeed />
-      {/* Includi il componente di test qui */}
+      {/* <EventFeed /> */}
+      
       {/* <ContractTestViem /> */}
     </main>
   );
