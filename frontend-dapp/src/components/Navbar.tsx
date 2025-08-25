@@ -12,9 +12,9 @@ export default function Navbar() {
         </Link>
         <div className="space-x-4 text-lg">
           <Link href="/registered-content" className="hover:text-purple-300 transition-colors">
-            Contenuti
+            Contenuti Registrati
           </Link>
-          <Link href="/admin/templates" className="hover:text-purple-300 transition-colors">
+          <Link href="/admin" className="hover:text-purple-300 transition-colors">
             Admin
           </Link>
         </div>

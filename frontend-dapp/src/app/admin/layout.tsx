@@ -25,7 +25,7 @@ export default function AdminLayout({
               </Link>
             </li>
             <li className="mb-2">
-              <Link href="/admin/register-content" className="block p-2 rounded hover:bg-gray-700">
+              <Link href="/register-content" className="block p-2 rounded hover:bg-gray-700">
                 Register & Mint
               </Link>
             </li>

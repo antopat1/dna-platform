@@ -22,10 +22,10 @@ export default function Home() {
           Benvenuto su DnA, il marketplace che trasforma la ricerca scientifica in asset digitali unici e verificabili.
         </p>
         <div className="flex flex-col sm:flex-row justify-center gap-4">
-          <Link href="/explore" className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-8 rounded-full transition-colors shadow-lg">
+          <Link href="/marketplace" className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-8 rounded-full transition-colors shadow-lg">
             Esplora il Marketplace
           </Link>
-          <Link href="/create" className="bg-transparent border-2 border-gray-400 hover:border-blue-400 text-gray-300 hover:text-blue-400 font-semibold py-3 px-8 rounded-full transition-colors">
+          <Link href="/register-content" className="bg-transparent border-2 border-gray-400 hover:border-blue-400 text-gray-300 hover:text-blue-400 font-semibold py-3 px-8 rounded-full transition-colors">
             Crea il tuo NFT
           </Link>
         </div>

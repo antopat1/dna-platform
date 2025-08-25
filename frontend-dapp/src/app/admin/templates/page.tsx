@@ -85,7 +85,7 @@ export default function NftTemplatesPage() {
       {error && <p className="text-red-500 mb-4">{error}</p>}
 
       <div className="bg-white p-6 rounded shadow-md mb-8">
-        <h2 className="text-2xl font-semibold mb-4">Create New Template</h2>
+        <h2 className="text-2xl font-semibold mb-4  text-gray-500">Create New Template</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700">Name</label>
@@ -176,7 +176,7 @@ export default function NftTemplatesPage() {
       </div>
 
       <div className="bg-white p-6 rounded shadow-md">
-        <h2 className="text-2xl font-semibold mb-4">Existing NFT Templates</h2>
+        <h2 className="text-2xl font-semibold mb-4 text-gray-500">Existing NFT Templates</h2>
         {loading ? (
           <p>Loading templates...</p>
         ) : templates.length === 0 ? (
