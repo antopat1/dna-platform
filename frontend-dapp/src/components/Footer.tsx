@@ -16,8 +16,7 @@ export default function Footer() {
           <div className="space-y-4">
             <h3 className="text-xl font-bold text-purple-400">DnA Platform</h3>
             <p className="text-gray-300 text-sm leading-relaxed">
-              A cutting-edge scientific content NFT platform enabling researchers 
-              to tokenize, share, and monetize their intellectual contributions.
+              Una piattaforma NFT di contenuti scientifici all'avanguardia che consente ai ricercatori di tokenizzare, condividere e monetizzare i propri contributi intellettuali.
             </p>
             <div className="flex items-center space-x-2 text-purple-300">
               <Zap className="w-4 h-4" />

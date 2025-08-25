@@ -3,41 +3,41 @@
 import React, { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { toast } from 'react-hot-toast';
-import { formatEther } from 'viem'; // Importazione corretta
+import { formatEther } from 'viem';
 
 interface TransactionEvent {
     _id: string;
-    event?: string; // Es. 'ApprovalForAll', 'AuctionStarted' (se log raw)
+    event?: string;
     transactionHash: string;
-    address?: string; // Indirizzo del contratto che ha emesso l'evento
+    address?: string;
     blockNumber?: number;
     chainId?: number;
     contractName?: string;
-    createdAt?: string; // Data di creazione del record nel DB
+    createdAt?: string;
     errorMessage?: string;
-    from?: string; // Indirizzo 'from' della transazione (root level)
-    to?: string; // Indirizzo 'to' della transazione (root level)
+    from?: string;
+    to?: string;
     gasPrice?: string;
     gasUsed?: string;
     logIndex?: number;
     transactionIndex?: number;
-    methodName?: string; // Il nome del metodo chiamato sulla blockchain (es. 'purchaseNFT')
+    methodName?: string;
     source?: string;
     status?: 'pending' | 'success' | 'failed';
-    timestamp?: string; // Timestamp della transazione (root level, stringa ISO)
-    timestamp_processed?: { $date: string }; // Timestamp di processazione (formato MongoDB Date)
-    value?: string; // Valore ETH della transazione (root level, stringa "0.005")
-    args?: { // Argomenti dell'evento, se presenti (potrebbero non esserci per i tx_status)
+    timestamp?: string;
+    timestamp_processed?: { $date: string };
+    value?: string;
+    args?: {
         [key: string]: any;
         tokenId?: number;
         seller?: string;
         buyer?: string;
-        price?: { $numberLong: string }; // Per i prezzi in wei come oggetto di MongoDB
+        price?: { $numberLong: string };
         bidder?: string;
         winner?: string;
         from?: string;
         to?: string;
-        author?: string; // Per NFTMinted
+        author?: string;
         operator?: string;
         owner?: string;
         approved?: boolean;
@@ -49,11 +49,11 @@ interface TransactionEvent {
         newReceiver?: string;
         newFee?: number;
         recipient?: string;
-        amount?: string; // per RefundProcessed
+        amount?: string;
     };
-    metadata_frontend_tx?: { // Metadati aggiunti dal frontend
+    metadata_frontend_tx?: {
         tokenId?: string;
-        priceEth?: string; // Prezzo in ETH come stringa (es. "0.005")
+        priceEth?: string;
         contentId?: string;
         type?: string;
         recipient?: string;
@@ -61,26 +61,14 @@ interface TransactionEvent {
     };
 }
 
-type QueryType = 'all' | 'purchases' | 'sales' | 'auctions' | 'transfers';
+type QueryType = 'all' | 'purchases' | 'minting' | 'sales' | 'auctions' | 'transfers';
 
 export default function MyTransactionHistoryPage() {
     const { address: connectedAddress, isConnected } = useAccount();
     const [transactions, setTransactions] = useState<TransactionEvent[]>([]);
     const [isLoading, setIsLoading] = useState(false);
-    const [selectedQuery, setSelectedQuery] = useState<QueryType>('purchases'); // Default: acquisti
+    const [selectedQuery, setSelectedQuery] = useState<QueryType>('purchases');
     const [fetchError, setFetchError] = useState<string | null>(null);
-
-    const renderDebugInfo = () => (
-        <div style={{ backgroundColor: '#ffeebb', padding: '15px', border: '1px solid #ffcc00', borderRadius: '8px', marginBottom: '20px', color: '#333', overflowWrap: 'break-word' }}>
-            <h3 style={{ color: '#cc9900', marginTop: '0' }}>ℹ️ Informazioni di Debug (visibili in sviluppo)</h3>
-            <p><strong>Utente Connesso:</strong> {connectedAddress || 'Nessuno'}</p>
-            <p><strong>Stato Connessione:</strong> {isConnected ? 'Connesso ✅' : 'Non Connesso ❌'}</p>
-            <p><strong>Query Selezionata:</strong> {selectedQuery}</p>
-            {isLoading && <p><strong>Stato Caricamento:</strong> Caricamento dati dal backend...</p>}
-            {fetchError && <p style={{ color: 'red' }}><strong>Errore Fetch API:</strong> {fetchError}</p>}
-            {transactions.length === 0 && !isLoading && <p><strong>Risultati:</strong> Nessuna transazione trovata per i criteri selezionati.</p>}
-        </div>
-    );
 
     const fetchTransactions = async (queryType: QueryType) => {
         setFetchError(null);
@@ -92,23 +80,22 @@ export default function MyTransactionHistoryPage() {
         setIsLoading(true);
         try {
             const url = `/api/transaction-history?address=${connectedAddress}&queryType=${queryType}`;
-            console.log(`[Frontend] Chiamata API per storico: ${url}`);
             const response = await fetch(url);
             
             if (!response.ok) {
                 const errorData = await response.json();
                 const errorMessage = errorData.error || `Errore HTTP ${response.status} nel recupero dello storico.`;
-                console.error(`[Frontend] API Response Error:`, response.status, errorMessage);
                 setFetchError(errorMessage);
                 throw new Error(errorMessage);
             }
             
             const data: TransactionEvent[] = await response.json();
             setTransactions(data);
-            console.log(`[Frontend] Dati caricati: ${data.length} transazioni.`);
+            if (data.length === 0) {
+                setFetchError('Nessuna transazione trovata per questa query.');
+            }
 
         } catch (error: any) {
-            console.error('[Frontend] Errore durante fetchTransactions:', error);
             toast.error(`Impossibile caricare lo storico: ${error.message || 'Errore generico'}.`);
         } finally {
             setIsLoading(false);
@@ -126,9 +113,8 @@ export default function MyTransactionHistoryPage() {
 
     const formatAddress = (address?: string) => {
         if (!address) return 'N/D';
-        // Gestisci indirizzi zero o troppo corti
         if (address === '0x0000000000000000000000000000000000000000') return 'Indirizzo Zero';
-        if (address.length < 10) return address; // Indirizzi troppo corti per troncamento
+        if (address.length < 10) return address;
         return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
     };
 
@@ -139,22 +125,18 @@ export default function MyTransactionHistoryPage() {
         const tokenId = metadata.tokenId || args.tokenId || 'N/D';
         
         let priceDisplay = 'N/D ETH';
-        // Prioritizza il prezzo da metadata_frontend_tx, poi da args, poi dal value root
         if (metadata.priceEth) {
             priceDisplay = `${metadata.priceEth} ETH`;
         } else if (args.price?.$numberLong) {
             try {
                 priceDisplay = `${formatEther(BigInt(args.price.$numberLong))} ETH`;
             } catch (e) {
-                console.error("Errore nel formattare args.price.$numberLong:", args.price.$numberLong, e);
                 priceDisplay = `Errore Prezzo`;
             }
-        } else if (tx.value && tx.value !== '0') { // tx.value è una stringa in ETH, non in wei, quindi la usiamo direttamente
+        } else if (tx.value && tx.value !== '0') {
             priceDisplay = `${tx.value} ETH`;
         }
 
-
-        // Indirizzi rilevanti dalla transazione (root) o dagli args
         const fromAddr = formatAddress(tx.from || args.from);
         const toAddr = formatAddress(tx.to || args.to);
         const authorAddr = formatAddress(args.author);
@@ -168,21 +150,19 @@ export default function MyTransactionHistoryPage() {
         const previousOwnerAddr = formatAddress(args.previousOwner);
         const recipientAddr = formatAddress(args.recipient);
 
-
-        // Prioritizza methodName per la descrizione, altrimenti event
         const mainIdentifier = tx.methodName || tx.event;
 
         switch (mainIdentifier) {
             case 'purchaseNFT':
-                return `Acquisto ${tokenId} per ${priceDisplay} (da: ${fromAddr})`;
+                return `Acquisto NFT id ${tokenId} per ${priceDisplay} (da: ${fromAddr})`;
             case 'listNFTForSale':
-                return `Messa in vendita ${tokenId} per ${priceDisplay} (da: ${fromAddr})`;
+                return `Messa in vendita NFT id ${tokenId} per ${priceDisplay} (da: ${fromAddr})`;
             case 'mintNFT':
-                return `Minting ${tokenId} (da: ${fromAddr})`;
+                return `Minting Contenuto ${tokenId} (da: ${fromAddr})`;
             case 'safeTransferFrom':
-                return `Trasferimento ${tokenId} da ${fromAddr} a ${toAddr}`;
+                return `Trasferimento NFT id ${tokenId} da ${fromAddr} a ${toAddr}`;
             case 'AuctionStarted':
-                return `Asta iniziata per ${tokenId} (min. ${priceDisplay}) da ${sellerAddr}`;
+                return `Asta iniziata per NFT id ${tokenId} (min. ${priceDisplay}) da ${sellerAddr}`;
             case 'NewBid':
                 return `Nuova offerta per ${tokenId} di ${priceDisplay} (da: ${bidderAddr})`;
             case 'AuctionEnded':
@@ -243,7 +223,6 @@ export default function MyTransactionHistoryPage() {
     return (
         <div className="container mx-auto p-8">
             <h1 className="text-3xl font-bold mb-6 text-gray-800">Storico Transazioni</h1>
-            {renderDebugInfo()}
 
             <div className="mb-6">
                 <label htmlFor="query-selector" className="block text-sm font-medium text-gray-700 mb-2">Filtra per tipo di evento:</label>
@@ -253,8 +232,9 @@ export default function MyTransactionHistoryPage() {
                     onChange={(e) => setSelectedQuery(e.target.value as QueryType)}
                     className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm"
                 >
-                    <option value="purchases">Acquisti (Default)</option>
                     <option value="all">Tutti gli eventi</option>
+                    <option value="purchases">Acquisti*</option>
+                    <option value="minting">Minting</option>
                     <option value="sales">NFT messi in vendita</option>
                     <option value="auctions">Eventi Asta</option>
                     <option value="transfers">Trasferimenti</option>
