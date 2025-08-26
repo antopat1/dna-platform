@@ -2,11 +2,48 @@
 
 import Link from 'next/link';
 import { Code, Zap } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
   const [isHovered, setIsHovered] = useState(false);
+
+  // Auto-scroll quando il footer si espande
+  useEffect(() => {
+    if (isHovered) {
+      // Aspetta che l'animazione CSS sia completata
+      const timer = setTimeout(() => {
+        // Prova prima con scrollTo verso il massimo
+        const maxScroll = Math.max(
+          document.body.scrollHeight,
+          document.body.offsetHeight,
+          document.documentElement.clientHeight,
+          document.documentElement.scrollHeight,
+          document.documentElement.offsetHeight
+        );
+        
+        window.scrollTo({
+          top: maxScroll,
+          behavior: 'smooth'
+        });
+        
+        // Fallback - se non funziona, prova con scrollIntoView
+        setTimeout(() => {
+          const footer = document.querySelector('footer');
+          if (footer) {
+            footer.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'end',
+              inline: 'nearest'
+            });
+          }
+        }, 100);
+        
+      }, 300); // Delay maggiore per aspettare l'animazione completa
+
+      return () => clearTimeout(timer);
+    }
+  }, [isHovered]);
 
   return (
     <footer 
@@ -115,5 +152,6 @@ export default function Footer() {
     </footer>
   );
 }
+
 
 
