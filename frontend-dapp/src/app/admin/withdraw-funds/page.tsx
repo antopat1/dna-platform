@@ -137,7 +137,7 @@ export default function WithdrawFundsPage() {
             
             {isConnected && isContractOwner && (
                 <div className="bg-white p-6 rounded-lg shadow-md">
-                    <h2 className="text-2xl font-semibold mb-4">Stato dei Fondi</h2>
+                    <h2 className="text-2xl font-semibold mb-4 text-gray-800">Stato dei Fondi</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                         <div className="bg-gray-50 p-4 rounded-md shadow-inner">
                             <h3 className="text-lg font-medium text-gray-900">NFT Contract</h3>
@@ -155,7 +155,7 @@ export default function WithdrawFundsPage() {
                         </div>
                     </div>
 
-                    <h2 className="text-2xl font-semibold mb-4">Ritira Tutti i Fondi</h2>
+                    <h2 className="text-2xl font-semibold mb-4  text-gray-800">Ritira Tutti i Fondi</h2>
                     <p className="mb-4 text-gray-700">
                         Clicca sul pulsante qui sotto per avviare il prelievo delle commissioni accumulate. Sarà richiesta una transazione per ogni contratto con fondi da ritirare.
                     </p>

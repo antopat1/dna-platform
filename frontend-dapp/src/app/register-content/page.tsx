@@ -198,7 +198,7 @@ export default function RegisterContentPage() {
               <input
                 type="text"
                 id={`metadata-${key}`}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-200 text-gray-900"
                 value={metadataInputs[key] || ""}
                 onChange={(e) =>
                   setMetadataInputs({
@@ -214,7 +214,7 @@ export default function RegisterContentPage() {
               <input
                 type="number"
                 id={`metadata-${key}`}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-200 text-gray-900"
                 value={metadataInputs[key] || ""}
                 onChange={(e) =>
                   setMetadataInputs({
@@ -407,7 +407,7 @@ export default function RegisterContentPage() {
                       <input
                         type="text"
                         id="contentTitle"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 disabled:bg-gray-100 disabled:text-gray-500"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 text-gray-900 disabled:bg-gray-100 disabled:text-gray-500"
                         value={contentTitle}
                         onChange={(e) => setContentTitle(e.target.value)}
                         required
@@ -425,7 +425,7 @@ export default function RegisterContentPage() {
                       <textarea
                         id="contentDescription"
                         rows={4}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 disabled:bg-gray-100 disabled:text-gray-500"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 text-gray-900 disabled:bg-gray-100 disabled:text-gray-500" 
                         value={contentDescription}
                         onChange={(e) => setDescriptionContent(e.target.value)}
                         required
@@ -443,7 +443,7 @@ export default function RegisterContentPage() {
                       <input
                         type="number"
                         id="maxCopies"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 disabled:bg-gray-100 disabled:text-gray-500"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 text-gray-900 disabled:bg-gray-100 disabled:text-gray-500"
                         value={maxCopies}
                         onChange={(e) =>
                           setMaxCopies(
@@ -478,7 +478,7 @@ export default function RegisterContentPage() {
                       </label>
                       <select
                         id="templateSelect"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 bg-white disabled:bg-gray-100 disabled:text-gray-500"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 bg-white text-gray-900 disabled:bg-gray-100 disabled:text-gray-500"
                         value={selectedTemplateId}
                         onChange={(e) => setSelectedTemplateId(e.target.value)}
                         required

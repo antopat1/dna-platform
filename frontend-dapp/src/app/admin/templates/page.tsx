@@ -94,7 +94,7 @@ export default function NftTemplatesPage() {
               id="name"
               value={newTemplate.name}
               onChange={(e) => setNewTemplate({ ...newTemplate, name: e.target.value })}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+              className="mt-1 block w-full border text-gray-700 border-gray-300 rounded-md shadow-sm p-2"
               required
             />
           </div>
@@ -105,7 +105,7 @@ export default function NftTemplatesPage() {
               value={newTemplate.description}
               onChange={(e) => setNewTemplate({ ...newTemplate, description: e.target.value })}
               rows={3}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+              className="mt-1 block w-full border text-gray-700 border-gray-300 rounded-md shadow-sm p-2"
               required
             ></textarea>
           </div>
@@ -116,7 +116,7 @@ export default function NftTemplatesPage() {
               value={newTemplate.metadataSchema}
               onChange={(e) => setNewTemplate({ ...newTemplate, metadataSchema: e.target.value })}
               rows={5}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono"
+              className="mt-1 block w-full border text-gray-700 border-gray-300 rounded-md shadow-sm p-2 font-mono"
               placeholder='E.g., {"type": "object", "properties": {"subject": {"type": "string"}, "year": {"type": "number"}}}'
               required
             ></textarea>
@@ -133,7 +133,7 @@ export default function NftTemplatesPage() {
               onChange={(e) => setNewTemplate({ ...newTemplate, royaltyPercentage: parseFloat(e.target.value) })}
               min="0"
               max="100"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+              className="mt-1 block w-full border border-gray-300 text-gray-700 rounded-md shadow-sm p-2"
               required
             />
           </div>
@@ -144,7 +144,7 @@ export default function NftTemplatesPage() {
               id="saleOptions"
               value={newTemplate.saleOptions}
               onChange={(e) => setNewTemplate({ ...newTemplate, saleOptions: e.target.value as SaleOption })}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+              className="mt-1 block w-full border border-gray-300 text-gray-700 rounded-md shadow-sm p-2"
               required
             >
               <option value="fixed_price">Fixed Price</option>
@@ -161,7 +161,7 @@ export default function NftTemplatesPage() {
               value={newTemplate.maxCopies}
               onChange={(e) => setNewTemplate({ ...newTemplate, maxCopies: parseInt(e.target.value, 10) })}
               min="1"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+              className="mt-1 block w-full border border-gray-300 text-gray-700 rounded-md shadow-sm p-2"
               required
             />
           </div>
