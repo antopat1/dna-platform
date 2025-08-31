@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-contract ScientificContentRegistry is Ownable {
+contract ScientificContentRegistry is AccessControl {
     using Strings for string;
 
     struct Content {
@@ -27,6 +27,8 @@ contract ScientificContentRegistry is Ownable {
     uint256 private _contentCounter;
     address public nftContract;
 
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+
     event ContentRegistered(
         uint256 indexed contentId,
         address indexed author,
@@ -44,7 +46,11 @@ contract ScientificContentRegistry is Ownable {
     event AuthorRemovedFromWhitelist(address indexed author);
 
     constructor() {
-        // Imposta l'owner come autore whitelisted di default
+        // Imposta il deployer come primo ADMIN
+        _grantRole(ADMIN_ROLE, msg.sender);
+        _setRoleAdmin(ADMIN_ROLE, ADMIN_ROLE);
+        
+        // Imposta l'admin come autore whitelisted di default
         isAuthorWhitelisted[msg.sender] = true;
         emit AuthorWhitelisted(msg.sender);
     }
@@ -63,14 +69,32 @@ contract ScientificContentRegistry is Ownable {
         return _contentCounter + 1;
     }
 
-    function setNFTContract(address _nftContract) external onlyOwner {
+    // === Funzioni Gestione Admin ===
+    
+    /**
+     * @dev Aggiunge un nuovo amministratore. Solo un admin esistente può chiamare questa funzione.
+     */
+    function addAdmin(address account) external onlyRole(ADMIN_ROLE) {
+        grantRole(ADMIN_ROLE, account);
+    }
+
+    /**
+     * @dev Rimuove un amministratore. Solo un admin esistente può chiamare questa funzione.
+     */
+    function removeAdmin(address account) external onlyRole(ADMIN_ROLE) {
+        revokeRole(ADMIN_ROLE, account);
+    }
+
+    // === Funzioni Amministrative ===
+
+    function setNFTContract(address _nftContract) external onlyRole(ADMIN_ROLE) {
         require(_nftContract != address(0), "Invalid address");
         require(nftContract == address(0), "NFT contract already set");
         nftContract = _nftContract;
         emit NFTContractSet(_nftContract);
     }
 
-    function addAuthorToWhitelist(address _authorAddress) external onlyOwner {
+    function addAuthorToWhitelist(address _authorAddress) external onlyRole(ADMIN_ROLE) {
         require(_authorAddress != address(0), "Invalid address");
         require(!isAuthorWhitelisted[_authorAddress], "Author already whitelisted");
         
@@ -78,13 +102,15 @@ contract ScientificContentRegistry is Ownable {
         emit AuthorWhitelisted(_authorAddress);
     }
 
-    function removeAuthorFromWhitelist(address _authorAddress) external onlyOwner {
+    function removeAuthorFromWhitelist(address _authorAddress) external onlyRole(ADMIN_ROLE) {
         require(_authorAddress != address(0), "Invalid address");
         require(isAuthorWhitelisted[_authorAddress], "Author not whitelisted");
         
         isAuthorWhitelisted[_authorAddress] = false;
         emit AuthorRemovedFromWhitelist(_authorAddress);
     }
+
+    // === Funzioni Pubbliche / Autori ===
 
     function registerContent(
         string memory title,

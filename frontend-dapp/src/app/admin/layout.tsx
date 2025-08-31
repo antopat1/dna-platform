@@ -33,6 +33,9 @@ export default function AdminLayout({
               <Link href="/admin/withdraw-funds" className="block p-2 rounded hover:bg-gray-700">
                 Ritira commissioni
               </Link>
+              <Link href="/admin/grant-role" className="block p-2 rounded hover:bg-gray-700">
+                Eleggi Amministratore Piattaforma
+              </Link>
             </li>
           </ul>
         </nav>

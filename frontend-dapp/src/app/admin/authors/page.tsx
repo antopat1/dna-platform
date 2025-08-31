@@ -218,7 +218,7 @@ export default function WhitelistedAuthorsPage() {
                                 id="address"
                                 value={authorAddress}
                                 onChange={(e) => setAuthorAddress(e.target.value)}
-                                className="w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                className="w-full border border-gray-300 text-gray-600 rounded-md shadow-sm p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                                 placeholder="0x..."
                                 required
                             />

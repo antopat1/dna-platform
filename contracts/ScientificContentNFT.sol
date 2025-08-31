@@ -4,9 +4,10 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
 import "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol"; 
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./ScientificContentRegistry.sol";
 
-contract ScientificContentNFT is ERC721Enumerable, VRFConsumerBaseV2Plus {
+contract ScientificContentNFT is ERC721Enumerable, VRFConsumerBaseV2Plus, AccessControl {
     using Strings for uint256;
 
     IVRFCoordinatorV2Plus private immutable COORDINATOR;
@@ -21,6 +22,8 @@ contract ScientificContentNFT is ERC721Enumerable, VRFConsumerBaseV2Plus {
     uint256 private constant AUTHOR_ROYALTY_PERCENTAGE = 3;
     
     address public protocolFeeReceiver;
+
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     
     string private _baseTokenURI;
     
@@ -71,6 +74,8 @@ contract ScientificContentNFT is ERC721Enumerable, VRFConsumerBaseV2Plus {
         require(_subscriptionId != 0, "Invalid subscription ID");
         
         protocolFeeReceiver = msg.sender;
+        _grantRole(ADMIN_ROLE, msg.sender);
+        _setRoleAdmin(ADMIN_ROLE, ADMIN_ROLE);
         
         contentRegistry = ScientificContentRegistry(_contentRegistry);
         COORDINATOR = IVRFCoordinatorV2Plus(_vrfCoordinator);
@@ -151,34 +156,27 @@ contract ScientificContentNFT is ERC721Enumerable, VRFConsumerBaseV2Plus {
         uint256 contentId,
         uint256 randomWord,
         string memory nftMetadataURI,
-        uint256 /* paidAmount */ // Questo parametro non viene più usato direttamente qui dopo l'ottimizzazione del `copyNumber`
+        uint256 /* paidAmount */
     ) external {
         require(msg.sender == address(this), "Internal call only");
         
         uint256 newTokenId = totalSupply() + 1;
         _safeMint(minter, newTokenId);
 
-        // LEGGI IL CONTENUTO PRIMA DI INCREMENTARE
-        // Questo `content` conterrà il valore di `mintedCopies` *prima* dell'incremento che stiamo per eseguire.
-        // Lo useremo per il `author` e altri dati non dipendenti dall'incremento attuale.
         ScientificContentRegistry.Content memory oldContentState = contentRegistry.getContent(contentId);
         bool hasSpecialContent = randomWord % 10 == 0;
 
-        // ESEGUI L'INCREMENTO NEL REGISTRY
-        // Questa chiamata aggiorna il contatore 'mintedCopies' nel contratto ScientificContentRegistry.
         bool success = contentRegistry.incrementMintedCopies(contentId);
         require(success, "Failed to increment minted copies");
 
-        // RILEGGI IL CONTENUTO PER OTTENERE IL VALORE *AGGIORNATO* DI mintedCopies
-        // È fondamentale fare questa seconda lettura per avere il valore post-incremento.
         ScientificContentRegistry.Content memory updatedContentState = contentRegistry.getContent(contentId);
 
         _nftMetadata[newTokenId] = NFTMetadata({
             contentId: contentId,
-            author: oldContentState.author, // Autore rimane lo stesso
+            author: oldContentState.author,
             randomSeed: randomWord,
             hasSpecialContent: hasSpecialContent,
-            copyNumber: updatedContentState.mintedCopies, // USA IL VALORE AGGIORNATO QUI!
+            copyNumber: updatedContentState.mintedCopies,
             metadataURI: nftMetadataURI
         });
 
@@ -187,12 +185,22 @@ contract ScientificContentNFT is ERC721Enumerable, VRFConsumerBaseV2Plus {
             contentId, 
             minter, 
             hasSpecialContent, 
-            updatedContentState.mintedCopies, // USA IL VALORE AGGIORNATO QUI!
+            updatedContentState.mintedCopies,
             nftMetadataURI
         );
     }
 
-    function withdrawProtocolFees() external onlyOwner {
+    // === Funzioni Gestione Admin ===
+    
+    function addAdmin(address account) external onlyRole(ADMIN_ROLE) {
+        grantRole(ADMIN_ROLE, account);
+    }
+
+    function removeAdmin(address account) external onlyRole(ADMIN_ROLE) {
+        revokeRole(ADMIN_ROLE, account);
+    }
+
+    function withdrawProtocolFees() external onlyRole(ADMIN_ROLE) {
         uint256 balance = address(this).balance;
         require(balance > 0, "No fees to withdraw");
 
@@ -202,12 +210,36 @@ contract ScientificContentNFT is ERC721Enumerable, VRFConsumerBaseV2Plus {
         emit ProtocolFeesWithdrawn(protocolFeeReceiver, balance);
     }
     
-    function setProtocolFeeReceiver(address newReceiver) external onlyOwner {
+    function setProtocolFeeReceiver(address newReceiver) external onlyRole(ADMIN_ROLE) {
         require(newReceiver != address(0), "New receiver cannot be zero address");
         address oldReceiver = protocolFeeReceiver;
         protocolFeeReceiver = newReceiver;
         emit ProtocolFeeReceiverUpdated(oldReceiver, newReceiver);
     }
+
+    function setBaseURI(string memory newBaseURI) external onlyRole(ADMIN_ROLE) {
+        _baseTokenURI = newBaseURI;
+        emit BaseURIUpdated(newBaseURI);
+    }
+
+    // === INIZIO CODICE AGGIUNTO PER RISOLVERE L'ERRORE ===
+    /**
+     * @dev VEDI {IERC165-supportsInterface}.
+     * Risolve il conflitto di override tra ERC721Enumerable e AccessControl.
+     */
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(ERC721Enumerable, AccessControl)
+        returns (bool)
+    {
+        return ERC721Enumerable.supportsInterface(interfaceId) || AccessControl.supportsInterface(interfaceId);
+    }
+    // === FINE CODICE AGGIUNTO ===
+
+
+    // === Funzioni di Vista ===
 
     function getContractBalance() external view returns (uint256) {
         return address(this).balance;
@@ -227,11 +259,6 @@ contract ScientificContentNFT is ERC721Enumerable, VRFConsumerBaseV2Plus {
         return _baseTokenURI;
     }
 
-    function setBaseURI(string memory newBaseURI) external onlyOwner {
-        _baseTokenURI = newBaseURI;
-        emit BaseURIUpdated(newBaseURI);
-    }
-
     function getNFTMetadata(uint256 tokenId) external view returns (NFTMetadata memory) {
         require(_exists(tokenId), "Token does not exist");
         return _nftMetadata[tokenId];
@@ -242,9 +269,6 @@ contract ScientificContentNFT is ERC721Enumerable, VRFConsumerBaseV2Plus {
         return content.nftMintPrice;
     }
 
-    /**
-     * @dev Funzioni getter per variabili immutable per debugging e frontend
-     */
     function getVRFCoordinator() external view returns (address) {
         return address(COORDINATOR);
     }
@@ -257,9 +281,6 @@ contract ScientificContentNFT is ERC721Enumerable, VRFConsumerBaseV2Plus {
         return subscriptionId;
     }
 
-    /**
-     * @dev Funzione helper per ottenere tutte le configurazioni VRF in una sola chiamata
-     */
     function getVRFConfig() external view returns (
         address coordinator,
         bytes32 vrfKeyHash,
