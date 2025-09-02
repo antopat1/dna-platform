@@ -8,9 +8,16 @@ import { toast } from 'react-hot-toast';
 // ABI per le funzioni necessarie
 const SCIENTIFIC_CONTENT_REGISTRY_ABI = [
     {
+        "inputs": [{"internalType": "bytes32", "name": "role", "type": "bytes32"}, {"internalType": "address", "name": "account", "type": "address"}],
+        "name": "hasRole",
+        "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
         "inputs": [],
-        "name": "owner",
-        "outputs": [{"internalType": "address", "name": "", "type": "address"}],
+        "name": "ADMIN_ROLE",
+        "outputs": [{"internalType": "bytes32", "name": "", "type": "bytes32"}],
         "stateMutability": "view",
         "type": "function"
     },
@@ -49,27 +56,54 @@ const SCIENTIFIC_CONTENT_REGISTRY_ABI = [
     }
 ] as const;
 
-const SCIENTIFIC_CONTENT_REGISTRY_ADDRESS = '0x43c175ec5b9fd5c80596a5556a2e79eed73d421e' as `0x${string}`;
+const contractAddress = process.env.NEXT_PUBLIC_SCIENTIFIC_CONTENT_REGISTRY_ADDRESS;
+
+// Debug log
+console.log("Indirizzo del contratto letto da .env.local:", contractAddress);
+
+// Controllo di validità
+if (!contractAddress || contractAddress === "") {
+    throw new Error(
+        "Errore: NEXT_PUBLIC_SCIENTIFIC_CONTENT_REGISTRY_ADDRESS non è definito. " +
+        "Assicurati che sia presente in .env.local e di aver riavviato il server di sviluppo."
+    );
+}
+
+const SCIENTIFIC_CONTENT_REGISTRY_ADDRESS = contractAddress as `0x${string}`;
 
 export default function WhitelistedAuthorsPage() {
     const { address: connectedAddress, isConnected } = useAccount();
     const [authorAddress, setAuthorAddress] = useState('');
 
-    // Legge l'indirizzo dell'owner del contratto
+    // Legge il valore di ADMIN_ROLE dal contratto
     const { 
-        data: contractOwner, 
-        isLoading: isOwnerLoading, 
-        error: ownerError
+        data: adminRoleHash, 
+        isLoading: isAdminRoleLoading,
+        error: adminRoleError
     } = useReadContract({
         abi: SCIENTIFIC_CONTENT_REGISTRY_ABI,
         address: SCIENTIFIC_CONTENT_REGISTRY_ADDRESS,
-        functionName: 'owner',
+        functionName: 'ADMIN_ROLE',
+    });
+
+    // Controlla se l'utente connesso ha il ruolo di admin
+    const { 
+        data: hasAdminRole, 
+        isLoading: isAdminCheckLoading, 
+        error: adminCheckError,
+        refetch: refetchAdminRole
+    } = useReadContract({
+        abi: SCIENTIFIC_CONTENT_REGISTRY_ABI,
+        address: SCIENTIFIC_CONTENT_REGISTRY_ADDRESS,
+        functionName: 'hasRole',
+        args: adminRoleHash && connectedAddress ? [adminRoleHash, connectedAddress] : undefined,
     });
 
     // Controlla se un indirizzo è whitelisted
     const { 
         data: isWhitelisted, 
-        refetch: refetchWhitelisted 
+        refetch: refetchWhitelisted,
+        isLoading: isWhitelistCheckLoading
     } = useReadContract({
         abi: SCIENTIFIC_CONTENT_REGISTRY_ABI,
         address: SCIENTIFIC_CONTENT_REGISTRY_ADDRESS,
@@ -77,8 +111,7 @@ export default function WhitelistedAuthorsPage() {
         args: authorAddress && isAddress(authorAddress) ? [authorAddress as `0x${string}`] : undefined,
     });
 
-    const isContractOwner = connectedAddress && contractOwner && 
-        connectedAddress.toLowerCase() === contractOwner.toLowerCase();
+    const isAdmin = Boolean(hasAdminRole);
 
     // Hook per la scrittura del contratto
     const { 
@@ -90,7 +123,11 @@ export default function WhitelistedAuthorsPage() {
     } = useWriteContract({
         mutation: {
             onError: (error) => {
+                console.error('Write contract error:', error);
                 toast.error(`Transazione fallita: ${error.message}`);
+            },
+            onSuccess: (hash) => {
+                console.log('Transaction hash:', hash);
             }
         }
     });
@@ -115,13 +152,15 @@ export default function WhitelistedAuthorsPage() {
             return;
         }
 
-        if (!isContractOwner) {
-            toast.error('Solo l\'owner può eseguire questa azione.');
+        if (!isAdmin) {
+            toast.error('Solo gli amministratori possono eseguire questa azione.');
             return;
         }
 
         try {
             resetWrite();
+            
+            console.log('Adding author to whitelist:', authorAddress);
             
             writeContract({
                 abi: SCIENTIFIC_CONTENT_REGISTRY_ABI,
@@ -130,6 +169,7 @@ export default function WhitelistedAuthorsPage() {
                 args: [authorAddress as `0x${string}`],
             });
         } catch (error) {
+            console.error('Error in handleAddAuthor:', error);
             toast.error('Errore nella preparazione della transazione.');
         }
     };
@@ -145,13 +185,15 @@ export default function WhitelistedAuthorsPage() {
             return;
         }
 
-        if (!isContractOwner) {
-            toast.error('Solo l\'owner può eseguire questa azione.');
+        if (!isAdmin) {
+            toast.error('Solo gli amministratori possono eseguire questa azione.');
             return;
         }
 
         try {
             resetWrite();
+            
+            console.log('Removing author from whitelist:', authorAddress);
             
             writeContract({
                 abi: SCIENTIFIC_CONTENT_REGISTRY_ABI,
@@ -160,6 +202,7 @@ export default function WhitelistedAuthorsPage() {
                 args: [authorAddress as `0x${string}`],
             });
         } catch (error) {
+            console.error('Error in handleRemoveAuthor:', error);
             toast.error('Errore nella preparazione della transazione.');
         }
     };
@@ -168,24 +211,36 @@ export default function WhitelistedAuthorsPage() {
     useEffect(() => {
         if (isConfirmed && txHash) {
             toast.success('Operazione completata con successo!');
-            setAuthorAddress('');
             
             // Aggiorna lo stato della whitelist
-            if (isAddress(authorAddress)) {
+            setTimeout(() => {
                 refetchWhitelisted();
-            }
+                refetchAdminRole();
+            }, 1000);
         }
         
         if (receiptError) {
+            console.error('Transaction receipt error:', receiptError);
             toast.error('Errore nella conferma della transazione.');
         }
-    }, [isConfirmed, receiptError, txHash, authorAddress, refetchWhitelisted]);
+    }, [isConfirmed, receiptError, txHash, refetchWhitelisted, refetchAdminRole]);
 
-    const isLoading = isOwnerLoading || isWritePending || isConfirming;
+    // Debug logs
+    useEffect(() => {
+        console.log('Connected address:', connectedAddress);
+        console.log('Admin role hash:', adminRoleHash);
+        console.log('Has admin role:', hasAdminRole);
+        console.log('Is admin:', isAdmin);
+        console.log('Admin check error:', adminCheckError);
+        console.log('Admin role error:', adminRoleError);
+    }, [connectedAddress, adminRoleHash, hasAdminRole, isAdmin, adminCheckError, adminRoleError]);
+
+    const isLoading = isAdminRoleLoading || isAdminCheckLoading || isWritePending || isConfirming;
+    const hasErrors = adminRoleError || adminCheckError;
 
     return (
         <div className="container mx-auto p-4">
-            <h1 className="text-3xl font-bold mb-6 text-gray-800">Whitelisted Authors Management</h1>
+            <h1 className="text-3xl font-bold mb-6 text-gray-800">Gestione Autori Autorizzati</h1>
             
             {!isConnected && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -193,25 +248,36 @@ export default function WhitelistedAuthorsPage() {
                 </div>
             )}
 
-            {isConnected && !isOwnerLoading && !isContractOwner && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-                    <p>Solo l'owner del contratto può gestire la whitelist.</p>
-                </div>
-            )}
-
-            {ownerError && (
+            {hasErrors && (
                 <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
-                    <p>Errore nel caricamento delle informazioni del contratto. Riprova più tardi.</p>
+                    <p>Errore nel caricamento delle informazioni del contratto:</p>
+                    {adminRoleError && <p className="text-sm mt-1">Admin Role Error: {adminRoleError.message}</p>}
+                    {adminCheckError && <p className="text-sm mt-1">Admin Check Error: {adminCheckError.message}</p>}
                 </div>
             )}
 
-            {isConnected && isContractOwner && (
+            {isConnected && !isAdminCheckLoading && !hasErrors && !isAdmin && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                    <p>Solo gli amministratori del contratto possono gestire la whitelist degli autori.</p>
+                    <p className="text-sm mt-1">Il tuo indirizzo: {connectedAddress}</p>
+                    <p className="text-sm">Stato admin: {hasAdminRole ? 'Amministratore' : 'Non amministratore'}</p>
+                </div>
+            )}
+
+            {isConnected && isAdmin && !hasErrors && (
+                <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+                    <p>✓ Sei connesso come amministratore del contratto.</p>
+                    <p className="text-sm mt-1">Il tuo indirizzo: {connectedAddress}</p>
+                </div>
+            )}
+
+            {isConnected && isAdmin && !hasErrors && (
                 <div className="bg-white p-6 rounded-lg shadow-md">
-                    <h2 className="text-2xl font-semibold mb-4 text-gray-800">Gestisci Autori Whitelistati</h2>
+                    <h2 className="text-2xl font-semibold mb-4 text-gray-800">Gestisci Autori Autorizzati</h2>
                     <div className="space-y-4">
                         <div>
                             <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-2">
-                                Indirizzo Ethereum
+                                Indirizzo Ethereum dell'Autore
                             </label>
                             <input
                                 type="text"
@@ -223,14 +289,25 @@ export default function WhitelistedAuthorsPage() {
                                 required
                             />
                             {authorAddress && isAddress(authorAddress) && (
-                                <p className="mt-2 text-sm text-gray-600">
-                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                        isWhitelisted 
-                                            ? 'bg-green-100 text-green-800' 
-                                            : 'bg-red-100 text-red-800'
-                                    }`}>
-                                        {isWhitelisted ? '✓ Whitelisted' : '✗ Non whitelisted'}
-                                    </span>
+                                <div className="mt-2">
+                                    {isWhitelistCheckLoading ? (
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                            Controllo in corso...
+                                        </span>
+                                    ) : (
+                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                            isWhitelisted 
+                                                ? 'bg-green-100 text-green-800' 
+                                                : 'bg-red-100 text-red-800'
+                                        }`}>
+                                            {isWhitelisted ? '✓ Autorizzato' : '✗ Non autorizzato'}
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+                            {authorAddress && !isAddress(authorAddress) && (
+                                <p className="mt-2 text-sm text-red-600">
+                                    Formato indirizzo non valido
                                 </p>
                             )}
                         </div>
@@ -238,7 +315,7 @@ export default function WhitelistedAuthorsPage() {
                         <div className="flex space-x-4">
                             <button
                                 onClick={handleAddAuthor}
-                                disabled={isLoading || !isAddress(authorAddress) || !isConnected}
+                                disabled={isLoading || !isAddress(authorAddress) || !isConnected || isWhitelisted}
                                 className="flex-1 inline-flex justify-center items-center py-3 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors duration-200"
                             >
                                 {isWritePending || isConfirming ? (
@@ -250,12 +327,12 @@ export default function WhitelistedAuthorsPage() {
                                         Elaborazione...
                                     </>
                                 ) : (
-                                    'Aggiungi Autore'
+                                    'Autorizza Autore'
                                 )}
                             </button>
                             <button
                                 onClick={handleRemoveAuthor}
-                                disabled={isLoading || !isAddress(authorAddress) || !isConnected}
+                                disabled={isLoading || !isAddress(authorAddress) || !isConnected || !isWhitelisted}
                                 className="flex-1 inline-flex justify-center items-center py-3 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors duration-200"
                             >
                                 {isWritePending || isConfirming ? (
@@ -267,9 +344,19 @@ export default function WhitelistedAuthorsPage() {
                                         Elaborazione...
                                     </>
                                 ) : (
-                                    'Rimuovi Autore'
+                                    'Rimuovi Autorizzazione'
                                 )}
                             </button>
+                        </div>
+
+                        <div className="text-sm text-gray-600">
+                            <p><strong>Nota:</strong></p>
+                            <ul className="list-disc list-inside mt-1 space-y-1">
+                                <li>Solo gli amministratori del contratto possono gestire le autorizzazioni</li>
+                                <li>Gli autori autorizzati possono registrare contenuti sulla piattaforma</li>
+                                <li>Il bottone "Autorizza" è disabilitato se l'autore è già autorizzato</li>
+                                <li>Il bottone "Rimuovi" è disabilitato se l'autore non è autorizzato</li>
+                            </ul>
                         </div>
 
                         {txHash && (
@@ -282,13 +369,47 @@ export default function WhitelistedAuthorsPage() {
                                     </div>
                                     <div className="ml-3">
                                         <h3 className="text-sm font-medium text-blue-800">
-                                            Transazione in corso
+                                            Stato Transazione
                                         </h3>
                                         <div className="mt-2 text-sm text-blue-700">
-                                            <p>Hash: <code className="bg-blue-100 px-2 py-1 rounded text-xs">{txHash}</code></p>
+                                            <p>Hash: <code className="bg-blue-100 px-2 py-1 rounded text-xs font-mono">{txHash}</code></p>
                                             <p className="mt-1">
-                                                {isConfirming ? 'In attesa di conferma...' : isConfirmed ? 'Confermata ✓' : 'In elaborazione...'}
+                                                {isConfirming ? (
+                                                    <>
+                                                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-700 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                        </svg>
+                                                        In attesa di conferma...
+                                                    </>
+                                                ) : isConfirmed ? (
+                                                    <>
+                                                        <span className="text-green-700">✓ Transazione confermata</span>
+                                                    </>
+                                                ) : (
+                                                    'Transazione inviata...'
+                                                )}
                                             </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {writeError && (
+                            <div className="bg-red-50 border border-red-200 rounded-md p-4">
+                                <div className="flex">
+                                    <div className="flex-shrink-0">
+                                        <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                        </svg>
+                                    </div>
+                                    <div className="ml-3">
+                                        <h3 className="text-sm font-medium text-red-800">
+                                            Errore nella Transazione
+                                        </h3>
+                                        <div className="mt-2 text-sm text-red-700">
+                                            <p>{writeError.message}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -297,7 +418,18 @@ export default function WhitelistedAuthorsPage() {
                     </div>
                 </div>
             )}
+
+            {(isAdminCheckLoading || isAdminRoleLoading) && (
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+                    <div className="flex items-center">
+                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span className="text-blue-800">Verifica dei permessi in corso...</span>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
-

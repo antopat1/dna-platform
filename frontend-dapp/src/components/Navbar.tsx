@@ -20,7 +20,7 @@ export default function Navbar() {
     connectedLinks.push({ href: "/admin", label: "Pannello Admin" });
   }
   if (isAuthor) {
-    connectedLinks.push({ href: "/register-content", label: "Crea Contenuto" });
+    connectedLinks.push({ href: "/dashboard/register-content", label: "Crea Contenuto" });
   }
 
   // Testo dinamico che appare al centro solo quando l'utente è connesso
