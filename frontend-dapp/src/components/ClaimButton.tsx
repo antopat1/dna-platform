@@ -8,11 +8,20 @@ import { useHasNfts } from "@/hooks/useHasNfts";
 import { ClaimGovernanceModal } from "./ClaimGovernanceModal";
 
 export const ClaimButton = () => {
-  const { hasNfts, nftCount, isLoading } = useHasNfts();
+  const { 
+    hasNfts, 
+    nftCount, 
+    governanceTokenBalance, 
+    canClaim, 
+    isLoading 
+  } = useHasNfts();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Non mostrare il bottone se l'utente non ha NFT o sta caricando
-  if (isLoading || !hasNfts) {
+  // Non mostrare il bottone se:
+  // - Sta caricando
+  // - L'utente non ha NFT
+  // - L'utente non può fare claim (ha già governance token)
+  if (isLoading || !hasNfts || !canClaim) {
     return null;
   }
 
@@ -20,28 +29,28 @@ export const ClaimButton = () => {
     <>
       <button
         onClick={() => setIsModalOpen(true)}
-        className="relative group flex items-center space-x-2 px-4 py-2 rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-yellow-500/50 animate-pulse-glow"
+        className="relative group flex items-center space-x-1 px-3 py-1 rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-yellow-500/50 animate-pulse-glow"
       >
         {/* Icona principale */}
         <div className="relative">
-          <FaStar className="w-4 h-4 text-white animate-spin-slow" />
-          <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping"></div>
+          <FaStar className="w-3 h-3 text-white animate-spin-slow" />
+          <div className="absolute -top-1 -right-1 w-1.5 h-1.5 bg-red-500 rounded-full animate-ping"></div>
         </div>
         
         {/* Testo */}
-        <span className="text-white font-bold text-sm whitespace-nowrap hidden sm:inline">
+        <span className="text-white font-bold text-xs whitespace-nowrap hidden sm:inline">
           Diritto al Claim!
         </span>
         
         {/* Badge con numero NFT */}
-        <div className="absolute -top-2 -right-2 bg-purple-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold animate-bounce">
+        <div className="absolute -top-2 -right-2 bg-purple-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold animate-bounce">
           {nftCount}
         </div>
 
         {/* Effetti sparkle */}
         <div className="absolute inset-0 overflow-hidden rounded-full">
-          <div className="absolute top-1 left-2 w-1 h-1 bg-white rounded-full animate-twinkle"></div>
-          <div className="absolute bottom-2 right-3 w-1 h-1 bg-white rounded-full animate-twinkle animation-delay-500"></div>
+          <div className="absolute top-1 left-2 w-0.5 h-0.5 bg-white rounded-full animate-twinkle"></div>
+          <div className="absolute bottom-2 right-3 w-0.5 h-0.5 bg-white rounded-full animate-twinkle animation-delay-500"></div>
           <div className="absolute top-3 right-1 w-0.5 h-0.5 bg-white rounded-full animate-twinkle animation-delay-1000"></div>
         </div>
 
@@ -53,6 +62,9 @@ export const ClaimButton = () => {
               <span>Early Adopter Reward</span>
             </div>
             <div className="text-gray-300">Clicca per il tuo airdrop!</div>
+            <div className="text-gray-400 text-xs mt-1">
+              NFT: {nftCount} | Gov Token: {governanceTokenBalance}
+            </div>
           </div>
           <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-black"></div>
         </div>
@@ -62,15 +74,16 @@ export const ClaimButton = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         nftCount={nftCount}
+        governanceTokenBalance={governanceTokenBalance}
       />
 
       <style jsx>{`
         @keyframes pulse-glow {
           0%, 100% {
-            box-shadow: 0 0 20px rgba(234, 179, 8, 0.5);
+            box-shadow: 0 0 10px rgba(234, 179, 8, 0.5);
           }
           50% {
-            box-shadow: 0 0 30px rgba(234, 179, 8, 0.8);
+            box-shadow: 0 0 15px rgba(234, 179, 8, 0.8);
           }
         }
         

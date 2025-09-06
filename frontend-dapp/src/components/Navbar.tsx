@@ -36,7 +36,7 @@ export default function Navbar() {
     if (isAuthor) {
       return "Benvenuto Autore";
     }
-    return "  Benvenuto StandardUser";
+    return "Benvenuto StandardUser";
   };
   
   return (
@@ -67,11 +67,11 @@ export default function Navbar() {
       {/* Sezione centrale con testo utente e bottone claim */}
       <div className="flex-1 flex items-center justify-center space-x-6">
         {/* Testo centrale, visibile solo quando l'utente è connesso */}
-        <div className="font-semibold text-lg hidden md:block">
+        <div className="font-semibold text-lg hidden md:block whitespace-nowrap">
           {userRoleText()}
         </div>
         
-        {/* Bottone Claim - visibile solo se l'utente possiede NFT */}
+        {/* Bottone Claim - visibile solo se l'utente possiede NFT e non ha governance token */}
         <ClaimButton />
       </div>
 
@@ -94,8 +94,3 @@ export default function Navbar() {
     </nav>
   );
 }
-
-
-
-
-

@@ -44,3 +44,37 @@ export const ARBITRUM_SEPOLIA_EXPLORER_URL = "https://sepolia.arbiscan.io/"; // 
 // La soluzione ideale a lungo termine è un subgraph o un backend indexer.
 export const MAX_TOKEN_ID_TO_CHECK = 100;
 
+// --- COSTANTI AGGIUNTIVE PER IL CLAIM ---
+
+// Quantità di governance token da airdroppare agli early adopter
+export const GOVERNANCE_TOKEN_AIRDROP_AMOUNT = 100;
+
+// Informazioni sui contratti per il frontend developer
+export const CONTRACT_INFO = {
+  GOVERNANCE_TOKEN: {
+    address: GOVERNANCE_TOKEN_ADDRESS,
+    abi: GOVERNANCE_TOKEN_ABI,
+    functions: {
+      // Funzioni principali del GovernanceToken
+      balanceOf: "balanceOf", // per vedere i token dell'utente
+      mint: "mint", // per l'airdrop (solo owner)
+      buyTokens: "buyTokens", // per comprare token
+      transfer: "transfer", // per trasferire token
+      approve: "approve", // per approvare spese
+      allowance: "allowance", // per vedere allowance
+    }
+  },
+  DAO: {
+    address: DAO_ADDRESS,
+    abi: DAO_ABI,
+    functions: {
+      // Funzioni principali del DAO
+      createProposal: "createProposal",
+      vote: "vote",
+      executeProposal: "executeProposal",
+      getProposal: "getProposal",
+    }
+  },
+  NETWORK: "arbitrumSepolia"
+};
+

@@ -10,27 +10,44 @@ interface ClaimGovernanceModalProps {
   isOpen: boolean;
   onClose: () => void;
   nftCount: number;
+  governanceTokenBalance: number;
 }
 
-export const ClaimGovernanceModal = ({ isOpen, onClose, nftCount }: ClaimGovernanceModalProps) => {
+export const ClaimGovernanceModal = ({ 
+  isOpen, 
+  onClose, 
+  nftCount, 
+  governanceTokenBalance 
+}: ClaimGovernanceModalProps) => {
   const [isClaiming, setIsClaiming] = useState(false);
   const [hasClaimed, setHasClaimed] = useState(false);
 
   const handleClaim = async () => {
     setIsClaiming(true);
     
-    // Qui implementerai la logica per il claim effettivo
-    // Per ora simulo un delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    setIsClaiming(false);
-    setHasClaimed(true);
-    
-    // Chiudi il modale dopo 3 secondi
-    setTimeout(() => {
-      setHasClaimed(false);
-      onClose();
-    }, 3000);
+    try {
+      // Qui implementerai la logica per il claim effettivo
+      // Per esempio, chiamata al contratto DAO per l'airdrop
+      // await claimGovernanceTokens();
+      
+      // Per ora simulo un delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      setIsClaiming(false);
+      setHasClaimed(true);
+      
+      // Chiudi il modale dopo 3 secondi
+      setTimeout(() => {
+        setHasClaimed(false);
+        onClose();
+        // Potresti anche voler aggiornare i balance qui
+        // refreshBalances();
+      }, 3000);
+    } catch (error) {
+      console.error("Errore durante il claim:", error);
+      setIsClaiming(false);
+      // Gestisci l'errore (toast, alert, etc.)
+    }
   };
 
   if (!isOpen) return null;
@@ -72,10 +89,14 @@ export const ClaimGovernanceModal = ({ isOpen, onClose, nftCount }: ClaimGoverna
             governance della piattaforma!
           </p>
           
-          <div className="bg-gray-700/50 rounded-lg p-4 mb-4">
+          <div className="bg-gray-700/50 rounded-lg p-4 mb-4 space-y-2">
             <div className="flex items-center justify-center space-x-2 text-sm text-gray-400">
               <FaCoins className="text-yellow-400" />
               <span>NFT posseduti: <span className="text-purple-400 font-semibold">{nftCount}</span></span>
+            </div>
+            <div className="flex items-center justify-center space-x-2 text-sm text-gray-400">
+              <FaGift className="text-green-400" />
+              <span>Governance Token attuali: <span className="text-green-400 font-semibold">{governanceTokenBalance}</span></span>
             </div>
           </div>
 
