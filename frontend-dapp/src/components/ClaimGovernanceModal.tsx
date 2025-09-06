@@ -1,10 +1,18 @@
-// frontend-dapp/src/components/ClaimGovernanceModal.tsx
-
 "use client";
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FaTimes, FaCoins, FaGift } from "react-icons/fa";
+import { useAccount } from "wagmi";
+import { createPublicClient, createWalletClient, http } from "viem";
+import { arbitrumSepolia } from "viem/chains";
+import { privateKeyToAccount } from "viem/accounts";
+import { toast } from "react-hot-toast";
+import { 
+  GOVERNANCE_TOKEN_ABI,
+  GOVERNANCE_TOKEN_ADDRESS,
+  GOVERNANCE_TOKEN_AIRDROP_AMOUNT
+} from "@/lib/constants";
 
 interface ClaimGovernanceModalProps {
   isOpen: boolean;
@@ -12,6 +20,114 @@ interface ClaimGovernanceModalProps {
   nftCount: number;
   governanceTokenBalance: number;
 }
+
+// CLASSE PER GESTIONE SICURA DELLA MEMORIA (invariata)
+class SecureMemory {
+  private data: ArrayBuffer | null = null;
+  private isValid: boolean = true;
+
+  constructor(privateKey: string) {
+    const encoder = new TextEncoder();
+    this.data = encoder.encode(privateKey).buffer.slice();
+  }
+
+  async use<T>(callback: (key: string) => Promise<T>): Promise<T> {
+    if (!this.isValid || !this.data) {
+      throw new Error('SecureMemory: Data non valida');
+    }
+
+    const decoder = new TextDecoder();
+    const key = decoder.decode(this.data);
+    
+    try {
+      return await callback(key);
+    } finally {
+      this.destroy();
+    }
+  }
+
+  destroy() {
+    if (this.data) {
+      const view = new Uint8Array(this.data);
+      crypto.getRandomValues(view);
+      this.data = null;
+    }
+    this.isValid = false;
+  }
+
+  isDestroyed(): boolean {
+    return !this.isValid;
+  }
+}
+
+// DECIFRATURA CON GESTIONE SICURA
+const decryptPrivateKeySecurely = async (phrase: string): Promise<SecureMemory | null> => {
+  console.log('[DEBUG] Inizio decifratura con passphrase:', phrase.substring(0, 5) + '...');
+  try {
+    const ENCRYPTED_PRIVATE_KEY = process.env.NEXT_PUBLIC_ENCRYPTED_PRIVATE_KEY as string;
+    
+    if (!ENCRYPTED_PRIVATE_KEY) {
+      console.error('[DEBUG] Chiave cifrata non configurata');
+      throw new Error('Chiave cifrata non configurata');
+    }
+
+    const encryptedData = Uint8Array.from(atob(ENCRYPTED_PRIVATE_KEY), c => c.charCodeAt(0));
+    const salt = encryptedData.slice(0, 16);
+    const iv = encryptedData.slice(16, 28);
+    const authTag = encryptedData.slice(28, 44);
+    const ciphertext = encryptedData.slice(44);
+
+    console.log('[DEBUG] Lunghezze: Salt:', salt.length, 'IV:', iv.length, 'AuthTag:', authTag.length, 'Ciphertext:', ciphertext.length);
+
+    const passwordKey = await crypto.subtle.importKey(
+      'raw', 
+      new TextEncoder().encode(phrase), 
+      'PBKDF2', 
+      false, 
+      ['deriveKey']
+    );
+    
+    const derivedKey = await crypto.subtle.deriveKey(
+      { 
+        name: 'PBKDF2', 
+        salt, 
+        iterations: 100000,
+        hash: 'SHA-256' 
+      },
+      passwordKey,
+      { name: 'AES-GCM', length: 256 },
+      true,
+      ['decrypt']
+    );
+
+    const dataToDecrypt = new Uint8Array(ciphertext.length + authTag.length);
+    dataToDecrypt.set(ciphertext, 0);
+    dataToDecrypt.set(authTag, ciphertext.length);
+
+    const decrypted = await crypto.subtle.decrypt(
+      { 
+        name: 'AES-GCM', 
+        iv: iv
+      }, 
+      derivedKey, 
+      dataToDecrypt
+    );
+    
+    const privateKey = new TextDecoder().decode(decrypted);
+    console.log('[DEBUG] Decifratura completata con successo');
+    
+    if (!privateKey.match(/^(0x)?[a-fA-F0-9]{64}$/)) {
+      console.error('[DEBUG] Formato chiave non valido');
+      throw new Error('Formato chiave privata non valido');
+    }
+
+    return new SecureMemory(privateKey);
+    
+  } catch (error) {
+    console.error('[DEBUG] Errore decifratura dettagliato:', error);
+    return null;
+  }
+};
 
 export const ClaimGovernanceModal = ({ 
   isOpen, 
@@ -21,33 +137,114 @@ export const ClaimGovernanceModal = ({
 }: ClaimGovernanceModalProps) => {
   const [isClaiming, setIsClaiming] = useState(false);
   const [hasClaimed, setHasClaimed] = useState(false);
+  const [isReloading, setIsReloading] = useState(false);
+  const { address: userAddress, isConnected } = useAccount();
+
+  // Funzione per ricaricare completamente la pagina
+  const reloadPage = () => {
+    setIsReloading(true);
+    // Forza un reload completo della pagina
+    if (typeof window !== 'undefined') {
+      window.location.reload();
+    }
+  };
 
   const handleClaim = async () => {
+    console.log('[DEBUG] handleClaim avviato');
+    if (!isConnected || !userAddress) {
+      console.warn('[DEBUG] Wallet non connesso');
+      toast.error('Connetti il wallet per procedere al claim');
+      return;
+    }
+
     setIsClaiming(true);
     
     try {
-      // Qui implementerai la logica per il claim effettivo
-      // Per esempio, chiamata al contratto DAO per l'airdrop
-      // await claimGovernanceTokens();
+      console.log('[DEBUG] Controllo ENV');
+      const passphrase = process.env.NEXT_PUBLIC_FOR_CLAIM as string;
+      if (!passphrase) {
+        throw new Error('Passphrase non configurata (NEXT_PUBLIC_FOR_CLAIM mancante)');
+      }
+      if (!process.env.NEXT_PUBLIC_ENCRYPTED_PRIVATE_KEY) {
+        throw new Error('Chiave cifrata non configurata (NEXT_PUBLIC_ENCRYPTED_PRIVATE_KEY mancante)');
+      }
+
+      console.log('[DEBUG] Decifratura in corso...');
+      const secureKey = await decryptPrivateKeySecurely(passphrase);
       
-      // Per ora simulo un delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      setIsClaiming(false);
+      if (!secureKey) {
+        throw new Error('Errore nella decifratura della chiave (passphrase errata o formato invalido)');
+      }
+
+      console.log('[DEBUG] Chiave decifrata con successo, setup clients...');
+      const result = await secureKey.use(async (privateKey) => {
+        const account = privateKeyToAccount(`0x${privateKey.replace('0x', '')}`);
+        const publicClient = createPublicClient({ 
+          chain: arbitrumSepolia, 
+          transport: http() 
+        });
+        const walletClient = createWalletClient({ 
+          account, 
+          chain: arbitrumSepolia, 
+          transport: http() 
+        });
+
+        // Verifica il balance dell'account decifrato
+        console.log('[DEBUG] Verifica balance sender...');
+        const senderBalance = await publicClient.readContract({
+          address: GOVERNANCE_TOKEN_ADDRESS,
+          abi: GOVERNANCE_TOKEN_ABI,
+          functionName: "balanceOf",
+          args: [account.address],
+        }) as bigint;
+
+        const amount = BigInt(GOVERNANCE_TOKEN_AIRDROP_AMOUNT);
+
+        if (senderBalance < amount) {
+          throw new Error(`Balance insufficiente sull'account sender (${account.address}): ${senderBalance} < ${amount}`);
+        }
+        console.log('[DEBUG] Balance sender sufficiente:', senderBalance.toString());
+
+        console.log('[DEBUG] Invio transazione transfer a:', userAddress, 'amount:', amount.toString());
+        const hash = await walletClient.writeContract({
+          address: GOVERNANCE_TOKEN_ADDRESS,
+          abi: GOVERNANCE_TOKEN_ABI,
+          functionName: "transfer",
+          args: [userAddress, amount],
+        });
+
+        console.log('[DEBUG] Transazione inviata, hash:', hash);
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        
+        if (receipt.status !== 'success') {
+          throw new Error(`Transazione di transfer fallita (status: ${receipt.status})`);
+        }
+
+        console.log('[DEBUG] Transazione confermata! Procedendo con il reload...');
+        return hash;
+      });
+
+      // Claim completato con successo
+      toast.success(`🎉 Claim completato! Hash: ${result}`);
       setHasClaimed(true);
       
-      // Chiudi il modale dopo 3 secondi
+      // Attendi 3 secondi per mostrare il messaggio di successo, poi ricarica la pagina
       setTimeout(() => {
-        setHasClaimed(false);
-        onClose();
-        // Potresti anche voler aggiornare i balance qui
-        // refreshBalances();
+        console.log('[DEBUG] Ricaricamento pagina in corso...');
+        reloadPage();
       }, 3000);
+
     } catch (error) {
-      console.error("Errore durante il claim:", error);
-      setIsClaiming(false);
-      // Gestisci l'errore (toast, alert, etc.)
+      console.error('[DEBUG] Errore durante il claim:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
+      if (errorMessage.includes('insufficient allowance') || errorMessage.includes('transfer amount exceeds balance')) {
+        toast.error('Errore: Balance insufficiente o allowance mancante. Rifornisci l\'account sender.');
+      } else {
+        toast.error(`Errore durante il claim: ${errorMessage}`);
+      }
+      setIsClaiming(false); // Reset solo in caso di errore
     }
+    // Non resettiamo setIsClaiming(false) qui perché vogliamo mantenere lo stato fino al reload
   };
 
   if (!isOpen) return null;
@@ -57,18 +254,20 @@ export const ClaimGovernanceModal = ({
       {/* Overlay */}
       <div 
         className="absolute inset-0 bg-black bg-opacity-70 backdrop-blur-sm" 
-        onClick={onClose} 
+        onClick={!isClaiming && !hasClaimed ? onClose : undefined} // Disabilita chiusura durante claim/reload
       />
       
       {/* Modal Content */}
       <div className="relative bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-2xl p-8 w-full max-w-md mx-4 border-2 border-purple-500 animate-pulse-border">
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
-        >
-          <FaTimes className="w-5 h-5" />
-        </button>
+        {/* Close Button - disabilitato durante claim e reload */}
+        {!isClaiming && !hasClaimed && !isReloading && (
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+          >
+            <FaTimes className="w-5 h-5" />
+          </button>
+        )}
 
         {/* Header */}
         <div className="text-center mb-6">
@@ -106,8 +305,13 @@ export const ClaimGovernanceModal = ({
                 ✅ Claim completato con successo!
               </p>
               <p className="text-green-300 text-sm mt-1">
-                I token sono stati aggiunti al tuo wallet
+                {isReloading ? 'Ricaricamento pagina...' : 'I token sono stati aggiunti al tuo wallet'}
               </p>
+              {isReloading && (
+                <div className="flex items-center justify-center mt-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-400"></div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -140,10 +344,17 @@ export const ClaimGovernanceModal = ({
             </Button>
           ) : (
             <Button
-              onClick={onClose}
-              className="w-full py-3 px-6 rounded-lg font-bold text-lg bg-green-600 hover:bg-green-700"
+              disabled={true}
+              className="w-full py-3 px-6 rounded-lg font-bold text-lg bg-green-600 cursor-not-allowed opacity-75"
             >
-              ✨ Fantastico! Chiudi
+              {isReloading ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  <span>Ricaricamento...</span>
+                </div>
+              ) : (
+                '✨ Claim completato!'
+              )}
             </Button>
           )}
         </div>
@@ -153,6 +364,11 @@ export const ClaimGovernanceModal = ({
           <p className="text-xs text-gray-500">
             * I token di governance ti permetteranno di partecipare alle decisioni della piattaforma
           </p>
+          {hasClaimed && (
+            <p className="text-xs text-green-400 mt-1">
+              La pagina si ricaricherà automaticamente per aggiornare i dati...
+            </p>
+          )}
         </div>
       </div>
 

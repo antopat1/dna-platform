@@ -47,7 +47,7 @@ export const MAX_TOKEN_ID_TO_CHECK = 100;
 // --- COSTANTI AGGIUNTIVE PER IL CLAIM ---
 
 // Quantità di governance token da airdroppare agli early adopter
-export const GOVERNANCE_TOKEN_AIRDROP_AMOUNT = 100;
+export const GOVERNANCE_TOKEN_AIRDROP_AMOUNT = 100000000000000000000n;
 
 // Informazioni sui contratti per il frontend developer
 export const CONTRACT_INFO = {
