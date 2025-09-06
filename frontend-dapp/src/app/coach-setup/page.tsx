@@ -7,7 +7,7 @@ import { createPublicClient, createWalletClient, http, parseAbi } from 'viem';
 import { arbitrumSepolia } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 import { toast } from 'react-hot-toast';
-import { useCoachAuth } from '@/hooks/useCoachAuth';
+import { useCoachAuth } from '@/context/CoachAuthProvider';
 import { FaSignOutAlt, FaShieldAlt, FaSpinner } from 'react-icons/fa';
 
 import {
@@ -93,7 +93,6 @@ export default function SecureCoachSetupPage() {
   // Handler per logout coach
   const handleCoachLogout = () => {
     logout();
-    router.push('/');
   };
 
   // CLASSE PER GESTIONE SICURA DELLA MEMORIA
@@ -402,6 +401,18 @@ export default function SecureCoachSetupPage() {
       logSecurityEvent('SETUP_COMPLETED_SUCCESSFULLY');
       toast.success('Setup completato con successo!');
 
+      // Dopo 3 secondi, mostra un messaggio finale e ricarica la pagina
+      setTimeout(() => {
+        toast.success('🎉 Tutti i privilegi sono stati assegnati! La pagina verrà aggiornata.', {
+          duration: 2000,
+        });
+        
+        // Ricarica la pagina dopo altri 2 secondi
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      }, 3000);
+
     } catch (error: any) {
       logSecurityEvent('SETUP_ERROR', { error: error.message });
       toast.error(`Errore durante setup: ${error.message}`);
@@ -459,7 +470,7 @@ export default function SecureCoachSetupPage() {
       {/* Contenuto principale */}
       <div className="container mx-auto p-4 max-w-4xl">
         <h2 className="text-3xl font-bold mb-6 text-white">
-          Setup Coach Sicuro
+          Setup Coach Sicuro − Richiedi assegnazione di tutti i privilegi Autore e Admin dei contratti
         </h2>
         
         {/* Controllo connessione wallet */}

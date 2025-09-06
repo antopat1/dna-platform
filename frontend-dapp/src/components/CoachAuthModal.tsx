@@ -146,7 +146,7 @@ export const CoachAuthModal: React.FC<CoachAuthModalProps> = ({
         {/* Security Notice */}
         <div className="mt-6 p-3 bg-yellow-900/30 border border-yellow-500/50 rounded-lg">
           <p className="text-yellow-300 text-xs text-center">
-            ⚠️ Accesso riservato esclusivamente al personale autorizzato
+            ⚠️ Accesso riservato esclusivamente al personale autorizzato <br /> ( attendere qualche secondo dopo il login per il reindirizzamento)
           </p>
         </div>
       </div>

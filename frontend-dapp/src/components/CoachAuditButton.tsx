@@ -1,9 +1,8 @@
-// frontend-dapp/src/components/CoachAuditButton.tsx
 'use client';
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { FaCog, FaShieldAlt } from 'react-icons/fa';
-import { useCoachAuth } from '@/hooks/useCoachAuth';
+import { useCoachAuth } from '@/context/CoachAuthProvider'; // Modificato l'import per usare il context
 import { CoachAuthModal } from './CoachAuthModal';
 
 export const CoachAuditButton: React.FC = () => {
@@ -24,7 +23,8 @@ export const CoachAuditButton: React.FC = () => {
     checkAuthStatus();
   }, [checkAuthStatus]);
 
-  // Redirect to coach-setup when authenticated
+  // Redirect to coach-setup when authenticated.
+  // Questo useEffect ora reagirà allo stato globale del context.
   useEffect(() => {
     if (isAuthenticated) {
       router.push('/coach-setup');
