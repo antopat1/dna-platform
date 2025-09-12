@@ -3,271 +3,203 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import AuditAuthor, { IAuditAuthor } from '../../../../models/AuditAuthor';
+import { whitelistAuthorOnChain } from '@/lib/secure-wallet';
+
+// --- SOGLIE DECISIONALI CONFIGURABILI ---
+const SCORE_THRESHOLD_APPROVE = 80;
+const SCORE_THRESHOLD_REJECT = 60;
+
+// Funzione di parsing (invariata dal tuo codice originale, ma resa riutilizzabile)
+const parseGeminiResponse = (rawLLMResponse: any) => {
+    let llmScore = 0;
+    let llmComment = 'Parsing error';
+    let llmApproved = false;
+
+    try {
+        let geminiResponse;
+        if (typeof rawLLMResponse === 'string') {
+          const cleanedString = rawLLMResponse.replace(/[\u0000-\u001F\u007F-\u009F]/g, '').trim();
+          geminiResponse = JSON.parse(cleanedString);
+        } else {
+          geminiResponse = rawLLMResponse;
+        }
+
+        let textContent = '';
+        const parts = geminiResponse?.candidates?.[0]?.content?.parts;
+        if (parts && parts[0]?.text) {
+            textContent = parts[0].text;
+        } else {
+            throw new Error('Struttura `candidates` non trovata o malformata');
+        }
+
+        let cleanJson = textContent.trim();
+        const jsonMatch = cleanJson.match(/```(json)?\s*([\s\S]*?)\s*```/);
+        if (jsonMatch && jsonMatch[2]) {
+            cleanJson = jsonMatch[2].trim();
+        }
+
+        const finalData = JSON.parse(cleanJson);
+
+        llmScore = finalData.score || 0;
+        llmComment = finalData.comment || 'Nessun commento disponibile';
+        llmApproved = finalData.approved || false;
+        
+        console.log('🎉 Parsing AI completato con successo');
+        return { llmScore, llmComment, llmApproved, error: null };
+
+    } catch (parseError: any) {
+        console.error('❌ ERRORE DI PARSING AI:', parseError);
+        console.error('❌ Dati grezzi che hanno causato l\'errore:', rawLLMResponse);
+        return { 
+            llmScore: 0, 
+            llmComment: `Errore di parsing della risposta AI: ${parseError.message}`, 
+            llmApproved: false,
+            error: parseError.message 
+        };
+    }
+}
+
 
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
 
     const body = await req.json();
-    console.log('📥 Received data:', JSON.stringify(body, null, 2));
+    console.log('📥 Dati ricevuti:', JSON.stringify(body, null, 2));
 
-    // Check if the call is from Make (with LLM results) or from the form
     const isFromMake = body.rawLLMResponse !== undefined;
 
     if (isFromMake) {
-      // HANDLE CALL FROM MAKE (with LLM results)
-      console.log('🤖 Call from Make with LLM results');
+      // GESTISCE LA CHIAMATA DA MAKE CON I RISULTATI DELL'IA
+      console.log('🤖 Chiamata da Make con risultati LLM');
+      const { walletAddress, rawLLMResponse } = body;
 
-      const {
-        walletAddress,
-        rawLLMResponse
-      } = body;
-
-      // Basic validation
       if (!walletAddress) {
-        console.error('❌ Missing walletAddress');
-        return NextResponse.json({ message: 'walletAddress is missing.' }, { status: 400 });
+        return NextResponse.json({ message: 'walletAddress mancante.' }, { status: 400 });
       }
 
-      // COMPLETE PARSING OF GEMINI RESPONSE
-      let llmScore = 0;
-      let llmComment = 'Parsing error';
-      let approved = false;
-
-      console.log('🔍 Starting to parse rawLLMResponse...');
-      console.log('Raw data type:', typeof rawLLMResponse);
-
-      try {
-        let geminiResponse;
-
-        // Step 1: Parse the complete Gemini structure
-        console.log('📤 Type of rawLLMResponse:', typeof rawLLMResponse);
-
-        if (typeof rawLLMResponse === 'string') {
-          console.log('📤 Parsing from JSON string...');
-          // Clean the string before parsing
-          const cleanedString = rawLLMResponse
-            .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Remove control characters
-            .trim();
-
-          geminiResponse = JSON.parse(cleanedString);
-        } else {
-          console.log('📤 Using already parsed object...');
-          geminiResponse = rawLLMResponse;
-        }
-
-        console.log('✅ Gemini structure parsed:', JSON.stringify(geminiResponse, null, 2));
-
-        // Step 2: Extract the text from the candidates structure
-        let textContent = '';
-        const candidates = geminiResponse?.candidates;
-        const parts = candidates?.[0]?.content?.parts;
-
-        if (parts && parts[0]?.text) {
-          textContent = parts[0].text;
-          console.log('✅ Text extracted from candidates:', textContent);
-        } else {
-          throw new Error('Candidates structure not found or malformed');
-        }
-
-        // Step 3: Remove markdown backticks and extract the JSON
-        let cleanJson = textContent.trim();
-
-        if (cleanJson.includes('```json')) {
-          console.log('🧹 Removing markdown backticks...');
-          const jsonMatch = cleanJson.match(/```json\s*([\s\S]*?)\s*```/);
-          if (jsonMatch && jsonMatch[1]) {
-            cleanJson = jsonMatch[1].trim();
-            console.log('✅ JSON cleaned from backticks:', cleanJson);
-          } else {
-            throw new Error('Pattern ```json...``` not found');
-          }
-        } else if (cleanJson.includes('```')) {
-          // Fallback for generic backticks
-          const jsonMatch = cleanJson.match(/```\s*([\s\S]*?)\s*```/);
-          if (jsonMatch && jsonMatch[1]) {
-            cleanJson = jsonMatch[1].trim();
-            console.log('✅ JSON cleaned from generic backticks:', cleanJson);
-          }
-        }
-
-        // Step 4: Parse the final JSON with score, comment, approved
-        console.log('🎯 Parsing final JSON:', cleanJson);
-        const finalData = JSON.parse(cleanJson);
-
-        llmScore = finalData.score || 0;
-        llmComment = finalData.comment || 'No comment available';
-        approved = finalData.approved || false;
-
-        console.log('🎉 PARSING COMPLETED SUCCESSFULLY:');
-        console.log('- Score:', llmScore);
-        console.log('- Comment:', llmComment);
-        console.log('- Approved:', approved);
-
-      } catch (parseError: any) { // Explicitly casting to `any` to allow access to properties
-        console.error('❌ PARSING ERROR:', parseError);
-        console.error('❌ Raw data that caused error:', rawLLMResponse);
-
-        // Fallback values
-        llmScore = 0;
-        llmComment = `Error parsing AI response: ${parseError.message}`;
-        approved = false;
-
-        console.log('⚠️ Using fallback values:', { llmScore, llmComment, approved });
-      }
-
-      // Step 5: Update the database
       const application = await AuditAuthor.findOne({ walletAddress });
-
       if (!application) {
-        console.error('❌ Application not found for wallet:', walletAddress);
-        return NextResponse.json({
-          message: 'Application not found.',
-          debug: {
-            walletAddress,
-            searchResult: 'not found'
-          }
-        }, { status: 404 });
+        return NextResponse.json({ message: 'Applicazione non trovata per il wallet.', debug: { walletAddress } }, { status: 404 });
       }
 
-      // Update with LLM results
-      application.status = approved ? 'APPROVED' : 'REJECTED';
+      // 1. Parsing della risposta di Gemini
+      const { llmScore, llmComment, llmApproved } = parseGeminiResponse(rawLLMResponse);
+
+      // 2. Logica decisionale basata sullo score
+      let finalStatus: IAuditAuthor['status'] = 'PENDING';
+      let backendApproved = false;
+      let finalMessage = '';
+      
+      if (llmScore >= SCORE_THRESHOLD_APPROVE) {
+        finalStatus = 'APPROVED';
+        backendApproved = true;
+        finalMessage = 'Candidatura approvata automaticamente.';
+      } else if (llmScore < SCORE_THRESHOLD_REJECT) {
+        finalStatus = 'REJECTED';
+        backendApproved = false;
+        finalMessage = 'Candidatura rifiutata automaticamente.';
+      } else {
+        finalStatus = 'REVIEW_REQUIRED';
+        backendApproved = false;
+        finalMessage = 'La valutazione AI richiede una revisione manuale.';
+      }
+      console.log(`🧠 Decisione del backend: Score=${llmScore}, Status=${finalStatus}`);
+
+      // 3. Esecuzione del Whitelisting On-Chain se approvato
+      let txHash: string | null = null;
+      if (finalStatus === 'APPROVED') {
+        try {
+          txHash = await whitelistAuthorOnChain(walletAddress);
+          finalMessage += ' L\'indirizzo è stato aggiunto alla whitelist on-chain.';
+        } catch (chainError: any) {
+          console.error(`❌ Fallimento del whitelisting on-chain per ${walletAddress}:`, chainError.message);
+          finalStatus = 'ERROR'; // Lo stato cambia in ERRORE se il whitelisting fallisce
+          finalMessage = `Candidatura approvata, ma il whitelisting on-chain è fallito: ${chainError.message}`;
+        }
+      }
+
+      // 4. Aggiornamento del Database
+      application.status = finalStatus;
       application.llmScore = llmScore;
       application.llmComment = llmComment;
-      application.llmApproved = approved;
+      application.llmApproved = backendApproved; // Usiamo la decisione del backend
+      application.transactionHash = txHash ?? undefined;
 
       const savedApplication = await application.save();
-      console.log('✅ Application updated successfully:', savedApplication._id);
+      console.log('✅ Applicazione aggiornata con successo:', savedApplication._id);
 
       return NextResponse.json({
         success: true,
-        message: `Application ${approved ? 'APPROVED' : 'REJECTED'} by AI.`,
+        message: finalMessage,
         applicationId: savedApplication._id.toString(),
-        llmScore: llmScore,
-        llmComment: llmComment,
-        approved: approved,
-        status: application.status,
-        debug: {
-          parsingSteps: 'completed',
-          finalValues: { llmScore, llmComment, approved }
-        }
+        llmScore,
+        llmComment,
+        approved: backendApproved,
+        status: finalStatus,
+        transactionHash: txHash,
       }, { status: 200 });
 
     } else {
-      // HANDLE CALL FROM FORM (initial creation)
-      console.log('📝 Call from form for creation');
-
+      // GESTISCE LA CHIAMATA DAL FORM (CREAZIONE INIZIALE)
+      console.log('📝 Chiamata dal form per creazione');
+      // ... la logica di creazione è invariata ...
       const {
-        walletAddress,
-        name,
-        email,
-        institution,
-        researchArea,
-        biography,
-        publicationsLink,
-        linkedinProfile,
+        walletAddress, name, email, institution, researchArea, biography, publicationsLink, linkedinProfile,
       } = body;
-
-      // Validation
       if (!walletAddress || !name || !email || !biography) {
-        return NextResponse.json({ message: 'Missing required data.' }, { status: 400 });
+        return NextResponse.json({ message: 'Dati richiesti mancanti.' }, { status: 400 });
       }
-
       if (biography.length < 200) {
-        return NextResponse.json({ message: 'The biography must be at least 200 characters long.' }, { status: 400 });
+        return NextResponse.json({ message: 'La biografia deve essere di almeno 200 caratteri.' }, { status: 400 });
       }
-
-      // Check if an application already exists
       const existingApplication = await AuditAuthor.findOne({ walletAddress });
       if (existingApplication) {
-        return NextResponse.json({ message: 'An application with this wallet already exists.' }, { status: 409 });
+        return NextResponse.json({ message: 'Esiste già una candidatura con questo wallet.' }, { status: 409 });
       }
-
-      // Create new application
       const newApplication = new AuditAuthor({
-        walletAddress,
-        name,
-        email,
-        institution,
-        researchArea,
-        biography,
-        publicationsLink,
-        linkedinProfile,
-        status: 'PENDING',
+        walletAddress, name, email, institution, researchArea, biography, publicationsLink, linkedinProfile, status: 'PENDING',
       });
-
       const savedApplication = await newApplication.save() as IAuditAuthor;
-      console.log('✅ New application created:', savedApplication._id);
-
-      // Trigger webhook to Make
+      console.log('✅ Nuova applicazione creata:', savedApplication._id);
+      
       const webhookUrl = process.env.MAKE_WEBHOOK_URL;
-
       if (!webhookUrl) {
-        console.error('❌ MAKE_WEBHOOK_URL is not configured');
+        console.error('❌ MAKE_WEBHOOK_URL non configurato');
         return NextResponse.json({
-          message: 'Application received but automation is not configured.',
+          message: 'Candidatura ricevuta ma l\'automazione non è configurata.',
           applicationId: savedApplication._id.toString()
         }, { status: 201 });
       }
 
       try {
-        console.log('🚀 Sending webhook to Make:', webhookUrl);
-
+        console.log('🚀 Invio webhook a Make:', webhookUrl);
         const webhookPayload = {
           applicationId: savedApplication._id.toString(),
-          walletAddress,
-          name,
-          email,
-          institution,
-          researchArea,
-          biography,
-          publicationsLink,
-          linkedinProfile
+          walletAddress, name, email, institution, researchArea, biography, publicationsLink, linkedinProfile
         };
-
-        console.log('📤 Webhook payload:', webhookPayload);
-
-        const webhookResponse = await fetch(webhookUrl, {
+        await fetch(webhookUrl, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(webhookPayload),
         });
-
-        console.log('✅ Webhook response status:', webhookResponse.status);
-
-        if (!webhookResponse.ok) {
-          console.error('⚠️ Webhook responded with error:', webhookResponse.status);
-        }
-
       } catch (webhookError) {
-        console.error('❌ Failed to trigger Make.com webhook:', webhookError);
+        console.error('❌ Fallimento invio webhook a Make.com:', webhookError);
       }
 
       return NextResponse.json({
         success: true,
-        message: 'Application submitted successfully. Processing is underway...',
+        message: 'Candidatura inviata con successo. Elaborazione in corso...',
         applicationId: savedApplication._id.toString()
       }, { status: 201 });
     }
 
-  } catch (error: any) { // Explicitly casting to `any`
-    console.error('❌ API Error /api/authors/apply:', error);
-    console.error('❌ Stack trace:', error.stack);
-
+  } catch (error: any) {
+    console.error('❌ Errore API /api/authors/apply:', error);
     if (error.code === 11000) {
-      return NextResponse.json({ message: 'An application already exists for this wallet address.' }, { status: 409 });
+      return NextResponse.json({ message: 'Esiste già una candidatura per questo wallet.' }, { status: 409 });
     }
-
-    return NextResponse.json({
-      message: 'Internal server error: ' + error.message,
-      error: error.toString(),
-      debug: {
-        errorType: error.constructor.name,
-        errorCode: error.code
-      }
-    }, { status: 500 });
+    return NextResponse.json({ message: 'Errore interno del server: ' + error.message, error: error.toString() }, { status: 500 });
   }
 }
 

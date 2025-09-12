@@ -29,6 +29,7 @@ export async function GET(
       llmScore: application.llmScore,
       llmComment: application.llmComment,
       llmApproved: application.llmApproved,
+      transactionHash: application.transactionHash, // Campo aggiunto
       createdAt: application.createdAt,
       updatedAt: application.updatedAt
     });

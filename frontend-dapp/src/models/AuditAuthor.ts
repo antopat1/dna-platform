@@ -11,9 +11,11 @@ export interface IAuditAuthor extends Document {
   biography: string;
   publicationsLink?: string;
   linkedinProfile?: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'ERROR';
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'REVIEW_REQUIRED' | 'ERROR';
   llmScore?: number;
   llmComment?: string;
+  llmApproved?: boolean; // Aggiunto per coerenza con il codice API
+  transactionHash?: string; // Aggiunto per il whitelisting
   createdAt: Date;
   updatedAt: Date;
 }
@@ -67,7 +69,7 @@ const AuditAuthorSchema = new Schema<IAuditAuthor>({
   },
   status: {
     type: String,
-    enum: ['PENDING', 'APPROVED', 'REJECTED', 'ERROR'],
+    enum: ['PENDING', 'APPROVED', 'REJECTED', 'REVIEW_REQUIRED', 'ERROR'],
     default: 'PENDING'
   },
   llmScore: {
@@ -78,6 +80,13 @@ const AuditAuthorSchema = new Schema<IAuditAuthor>({
   llmComment: {
     type: String,
     maxlength: 1000
+  },
+  llmApproved: { // Campo aggiunto
+    type: Boolean
+  },
+  transactionHash: { // Campo aggiunto
+    type: String,
+    trim: true,
   }
 }, {
   timestamps: true
@@ -89,3 +98,4 @@ AuditAuthorSchema.index({ status: 1 });
 AuditAuthorSchema.index({ createdAt: -1 });
 
 export default mongoose.models.AuditAuthor || mongoose.model<IAuditAuthor>('AuditAuthor', AuditAuthorSchema);
+
