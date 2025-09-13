@@ -27,7 +27,7 @@ interface SubmissionResult {
 }
 
 const ARBISCAN_URL = "https://sepolia.arbiscan.io/tx/";
-const ADMIN_EMAIL = "admin@tuodominio.com"; // SOSTITUISCI CON LA TUA EMAIL
+const ADMIN_EMAIL = "antopat1@gmail.com";
 
 // --- NUOVO COMPONENTE PER LA SCHERMATA DI CARICAMENTO ---
 const PollingScreen = ({ applicationId }: { applicationId: string | null }) => {
@@ -269,6 +269,7 @@ export default function ApplyForWhitelist() {
               )}
             </div>
           )}
+
           {result.status === "REJECTED" && (
             <div className="text-sm text-gray-600 mb-4">
               <p>
@@ -287,21 +288,15 @@ export default function ApplyForWhitelist() {
               </a>
             </div>
           )}
+
           {result.status === "REVIEW_REQUIRED" && (
             <div className="text-sm text-gray-600 mb-4">
               <p>
-                La valutazione dell'IA non è stata conclusiva. Un membro del
+                La valutazione dell'IA non è certa dunque non Agente non puo'
+                accreditare autonomamente il candidato. Consigliamo di compilare
+                il form raggiunbile dal link sotto indicato; un membro del
                 nostro team esaminerà la tua candidatura al più presto.
               </p>
-              <p className="mt-2">
-                Se non ricevi notizie entro 48 ore, puoi contattare il supporto.
-              </p>
-              <a
-                href={`mailto:${ADMIN_EMAIL}?subject=Info su Candidatura in Revisione: ${result.applicationId}`}
-                className="mt-4 inline-block px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600"
-              >
-                Contatta il Supporto
-              </a>
             </div>
           )}
 
@@ -310,12 +305,42 @@ export default function ApplyForWhitelist() {
               ID Applicazione: {result.applicationId}
             </p>
           )}
-          <Link
-            href="/"
-            className="px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-          >
-            Torna alla Home
-          </Link>
+
+          {/* Pulsanti differenziati per ogni caso */}
+          {result.status === "APPROVED" && (
+            <Link
+              href="/"
+              className="px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+            >
+              🏠 Torna alla Home
+            </Link>
+          )}
+
+          {result.status === "REJECTED" && (
+            <Link
+              href="/"
+              className="px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+            >
+              🏠 Torna alla Home
+            </Link>
+          )}
+
+          {result.status === "REVIEW_REQUIRED" && (
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <Link
+                href="/"
+                className="px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+              >
+                🏠 Torna alla Home
+              </Link>
+              <Link
+                href="/dashboard/register-content"
+                className="px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition-colors"
+              >
+                📋 Invia form al Team per controllo umano
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -354,7 +379,7 @@ export default function ApplyForWhitelist() {
             </h1>
             <p className="mt-2 text-sm text-gray-600">
               Compila questo modulo per avviare il processo di verifica
-              automatica con AI.
+              automatica con AI. Se la candidatura ha un livello di credibilità maggiore di 80/100, l'agente avvierà autonomamente la Transazione on-chain per l'aggiunta del address del tuo wallet alla whitelist dello SmartContract.
             </p>
             <div className="mt-4 p-3 bg-blue-50 rounded-md text-sm text-blue-800">
               <strong>Wallet connesso:</strong>{" "}

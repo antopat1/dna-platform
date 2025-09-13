@@ -84,9 +84,10 @@ export default function Home() {
           Pronto a Rivoluzionare la Ricerca?
         </h2>
         <p className="text-lg text-gray-400 mb-6">
-          Unisciti a noi e contribuisci a costruire un futuro della scienza aperto e accessibile a tutti.
+          Unisciti a noi e contribuisci a costruire un futuro della scienza aperto e accessibile a tutti.<br/>
+          Richiedi l accredito immediato tramite agente AI o invia form al nostro Team per registrare contenuti scientifici <br/>disponibili per il Minting in NFT unici
         </p>
-        <Link href="/explore" className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-8 rounded-full transition-colors shadow-lg">
+        <Link href="/dashboard/register-content" className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-8 rounded-full transition-colors shadow-lg">
           Inizia Ora
         </Link>
       </section>
