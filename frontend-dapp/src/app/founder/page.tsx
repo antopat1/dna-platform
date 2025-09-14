@@ -3,14 +3,10 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TypeAnimation } from "react-type-animation";
-import { Tooltip } from "react-tooltip"; 
+import { Tooltip } from "react-tooltip";
 
 // Import Icone
-import {
-  BiDownload,
-  BiX,
-  BiCode,
-} from "react-icons/bi";
+import { BiDownload, BiX, BiCode } from "react-icons/bi";
 import {
   FaGraduationCap,
   FaBuilding,
@@ -29,16 +25,16 @@ import {
   FaDumbbell,
   FaBrain,
   FaBullhorn,
-  FaReact, 
+  FaReact,
 } from "react-icons/fa";
 import {
   SiDjango,
   SiMongodb,
   SiSolidity,
   SiRedis,
-  SiNextdotjs, 
-  SiTypescript, 
-  SiTailwindcss, 
+  SiNextdotjs,
+  SiTypescript,
+  SiTailwindcss,
 } from "react-icons/si";
 
 // Tipi per i dati (invariati)
@@ -254,15 +250,24 @@ export default function FounderProfilePage() {
       <Tooltip id="tech-tooltip" />
 
       {/* ======================================== */}
-      {/* HERO SECTION - ALTEZZA MODIFICATA       */}
+      {/* HERO SECTION - TESTO CENTRATO, ICONE LATERALI */}
       {/* ======================================== */}
-      {/* Ho rimosso h-screen e ho usato min-h-[600px] con padding verticale */}
-      <section className="relative min-h-[100px] flex items-center justify-center md:justify-start py-20 overflow-hidden bg-gradient-to-br from-gray-900 to-indigo-900/50">
+      <section className="relative min-h-[50px] flex items-center py-20 overflow-hidden bg-gradient-to-br from-gray-900 to-indigo-900/50">
         <div className="absolute inset-0 bg-black/30"></div>
         <div className="relative z-10 container mx-auto px-4">
-          <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
+          {/* 
+      LAYOUT PRINCIPALE:
+      - Mobile (default): Flexbox a colonna, tutto centrato e impilato.
+      - Desktop (md:): CSS Grid a 3 colonne per un controllo preciso.
+    */}
+          <div className="flex flex-col items-center gap-8 md:grid md:grid-cols-3 md:items-center md:gap-12">
+            {/* 
+        COLONNA 1: ICONE SOCIAL
+        - Su desktop (md:), sono una colonna verticale e si posizionano nella prima colonna della griglia.
+        - Su mobile, sono una riga orizzontale e vanno sotto il testo (grazie a order-2).
+      */}
             <motion.div
-              className="flex md:flex-col gap-6 order-2 md:order-1"
+              className="flex flex-row md:flex-col gap-6 order-2 md:order-1"
               initial={{ x: -50, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.8 }}
@@ -280,9 +285,15 @@ export default function FounderProfilePage() {
               ))}
             </motion.div>
 
-            <div className="text-center md:text-left order-1 md:order-2">
+            {/* 
+        COLONNA 2: BLOCCO TESTO
+        - Su desktop (md:), viene forzato nella colonna centrale della griglia con "md:col-start-2".
+        - Su mobile, va sopra le icone (grazie a order-1).
+        - Il testo è sempre centrato con "text-center".
+      */}
+            <div className="text-center order-1 md:order-2 md:col-start-2">
               <motion.h1
-                className="text-5xl md:text-7xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500"
+                className="text-3xl md:text-5xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 whitespace-nowrap"
                 initial={{ y: 50, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ duration: 0.5 }}
@@ -308,6 +319,8 @@ export default function FounderProfilePage() {
                 />
               </div>
             </div>
+
+            {/* La terza colonna della griglia su desktop rimane volutamente vuota, garantendo la centratura del testo. */}
           </div>
         </div>
       </section>
@@ -328,12 +341,7 @@ export default function FounderProfilePage() {
               ABOUT ME
             </h2>
             <p className="text-lg text-gray-300 max-w-3xl mx-auto leading-relaxed">
-              Conclusi gli studi in Ingegneria e dopo 14 anni nel settore TLC,
-              prima come analista tecnico e poi come Project Manager per reti
-              FTTH, ho deciso post-COVID di seguire le mie passioni per le
-              tecnologie informatiche e la Blockchain. L'opportunità di lavorare
-              come Assistente Tecnico e docente di Coding e Robotica mi permette
-              di conciliare lavoro e studio, arricchito dal percorso con{" "}
+              Conclusi gli studi in Ingegneria e dopo 14 anni di esperienza nelle settore delle TLC prima come consulente presso operatori ISP in qualità di analista tecnico di reportistica e monitoraggio traffico dati su diversi Time Frame, poi come Project Manager e Controller contabile nei cantieri di realizzazione rete di accesso FTTH progetto BUL, ho deciso a seguito di una profonda riflessione personale e professionale post COVID, di alimentare le mie passioni nel campo delle tecnologie informatiche, registri ditribuiti e sistemi/processi economici decentralizzati basati su Blockchain. L'opportunità di lavorare presso Istituti comprensivi di scuola secondaria di primo grado in qualità di Assistente Tecnico informatico e docente corsi di Coding e Robotica, rappresenta per me oggi una combinazione perfetta per conciliare lavoro e studio personale grazie al percorso proposto da{" "}
               <a
                 href="https://www.start2impact.it/"
                 target="_blank"
