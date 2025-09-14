@@ -81,14 +81,14 @@ export default function MyTransactionHistoryPage() {
         try {
             const url = `/api/transaction-history?address=${connectedAddress}&queryType=${queryType}`;
             const response = await fetch(url);
-            
+           
             if (!response.ok) {
                 const errorData = await response.json();
                 const errorMessage = errorData.error || `Errore HTTP ${response.status} nel recupero dello storico.`;
                 setFetchError(errorMessage);
                 throw new Error(errorMessage);
             }
-            
+           
             const data: TransactionEvent[] = await response.json();
             setTransactions(data);
             if (data.length === 0) {
@@ -123,7 +123,7 @@ export default function MyTransactionHistoryPage() {
         const metadata = tx.metadata_frontend_tx || {};
 
         const tokenId = metadata.tokenId || args.tokenId || 'N/D';
-        
+       
         let priceDisplay = 'N/D ETH';
         if (metadata.priceEth) {
             priceDisplay = `${metadata.priceEth} ETH`;
@@ -221,47 +221,70 @@ export default function MyTransactionHistoryPage() {
     );
 
     return (
-        <div className="container mx-auto p-8">
-            <h1 className="text-3xl font-bold mb-6 text-gray-800">Storico Transazioni</h1>
+        <div className="min-h-screen bg-gray-50">
+            <div className="container mx-auto p-8">
+                <h1 className="text-3xl font-bold mb-6 text-gray-800">Storico Transazioni</h1>
+               
+                <div className="mb-6">
+                    <label htmlFor="query-selector" className="block text-sm font-medium text-gray-700 mb-2">Filtra per tipo di evento:</label>
+                    <select
+                        id="query-selector"
+                        value={selectedQuery}
+                        onChange={(e) => setSelectedQuery(e.target.value as QueryType)}
+                        className="mt-1 block w-full pl-3 pr-10 py-2 text-base text-gray-700 border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm"
+                    >
+                        <option value="all">Tutti gli eventi</option>
+                        <option value="purchases">Acquisti*</option>
+                        <option value="minting">Minting</option>
+                        <option value="sales">NFT messi in vendita</option>
+                        <option value="auctions">Eventi Asta</option>
+                        <option value="transfers">Trasferimenti</option>
+                    </select>
+                   
+                </div>
 
-            <div className="mb-6">
-                <label htmlFor="query-selector" className="block text-sm font-medium text-gray-700 mb-2">Filtra per tipo di evento:</label>
-                <select
-                    id="query-selector"
-                    value={selectedQuery}
-                    onChange={(e) => setSelectedQuery(e.target.value as QueryType)}
-                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base  text-gray-700 border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm"
-                >
-                    <option value="all">Tutti gli eventi</option>
-                    <option value="purchases">Acquisti*</option>
-                    <option value="minting">Minting</option>
-                    <option value="sales">NFT messi in vendita</option>
-                    <option value="auctions">Eventi Asta</option>
-                    <option value="transfers">Trasferimenti</option>
-                </select>
+                <div className="min-h-[60vh]">
+                    {!isConnected ? (
+                        <div className="text-center p-10 bg-white rounded-lg shadow-md">
+                            <div className="max-w-md mx-auto">
+                                <div className="mb-4">
+                                    <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                    </svg>
+                                </div>
+                                <h3 className="text-lg font-medium text-gray-900 mb-2">Wallet non connesso</h3>
+                                <p className="text-gray-600">Connetti il tuo wallet per visualizzare lo storico delle tue transazioni.</p>
+                            </div>
+                        </div>
+                    ) : isLoading ? (
+                        <div className="flex items-center justify-center p-20">
+                            <svg className="animate-spin -ml-1 mr-3 h-8 w-8 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <p className="text-gray-600">Caricamento storico...</p>
+                        </div>
+                    ) : transactions.length > 0 ? (
+                        <div className="space-y-4">
+                            {transactions.map(tx => renderEventCard(tx))}
+                        </div>
+                    ) : (
+                        <div className="text-center p-20 bg-white rounded-lg shadow-md">
+                            <div className="max-w-md mx-auto">
+                                <div className="mb-4">
+                                    <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                </div>
+                                <h3 className="text-lg font-medium text-gray-900 mb-2">Nessuna transazione trovata</h3>
+                                <p className="text-gray-500 mb-4">Non sono state trovate transazioni per il tuo indirizzo per questo tipo di evento.</p>
+                                <p className="text-sm text-gray-400">Prova a selezionare un filtro diverso o effettua alcune transazioni sulla piattaforma.</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
-
-            {!isConnected ? (
-                <div className="text-center p-10 bg-gray-100 rounded-lg shadow-md">
-                    <p className="text-gray-600">Connetti il tuo wallet per visualizzare lo storico delle tue transazioni.</p>
-                </div>
-            ) : isLoading ? (
-                <div className="flex items-center justify-center p-10">
-                    <svg className="animate-spin -ml-1 mr-3 h-8 w-8 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <p className="text-gray-600">Caricamento storico...</p>
-                </div>
-            ) : transactions.length > 0 ? (
-                <div>
-                    {transactions.map(tx => renderEventCard(tx))}
-                </div>
-            ) : (
-                <div className="text-center p-10 bg-gray-100 rounded-lg shadow-md">
-                    <p className="text-gray-500">Nessuna transazione trovata per il tuo indirizzo per questo tipo di evento.</p>
-                </div>
-            )}
         </div>
     );
 }
+
