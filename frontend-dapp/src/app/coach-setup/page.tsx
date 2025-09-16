@@ -103,7 +103,9 @@ export default function SecureCoachSetupPage() {
     constructor(privateKey: string) {
       // Converte la stringa in ArrayBuffer per gestione sicura
       const encoder = new TextEncoder();
-      this.data = encoder.encode(privateKey).buffer.slice();
+      // this.data = encoder.encode(privateKey).buffer.slice();
+      const buffer = encoder.encode(privateKey).buffer.slice();
+      this.data = buffer instanceof ArrayBuffer ? buffer : buffer as ArrayBuffer;
     }
 
     // Recupera temporaneamente la chiave - ora corretto come async
