@@ -36,7 +36,8 @@
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
     "viem": "^2.31.3",
-    "wagmi": "^2.15.4"
+    "wagmi": "^2.15.4",
+    "ethers": "^6.13.0"
   },
   "devDependencies": {
     "@types/form-data": "^2.5.2",
