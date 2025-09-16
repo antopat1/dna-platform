@@ -165,7 +165,8 @@ export default function MarketplacePage() {
             const isSeller = isConnected && currentUserAddress?.toLowerCase() === nft.seller?.toLowerCase();
             const bidInput = bidInputs.get(nft.tokenId.toString());
             const auctionStatus = nft.status.type === 'inAuction' ? nft.status : undefined;
-            const isHighestBidder = isConnected && auctionStatus?.highestBidder.toLowerCase() === currentUserAddress?.toLowerCase() && auctionStatus.highestBidder !== `0x${'0'.repeat(40)}`;
+            // const isHighestBidder = isConnected && auctionStatus?.highestBidder.toLowerCase() === currentUserAddress?.toLowerCase() && auctionStatus.highestBidder !== `0x${'0'.repeat(40)}`;
+            const isHighestBidder = isConnected && auctionStatus?.highestBidder.toLowerCase() === currentUserAddress?.toLowerCase() && auctionStatus?.highestBidder !== `0x${'0'.repeat(40)}`;
             const hasCurrentUserBid = auctionStatus?.currentUserBidInfo && parseFloat(auctionStatus.currentUserBidInfo.amount) > 0;
             const hasCurrentUserRefunded = auctionStatus?.currentUserBidInfo?.refunded;
 
