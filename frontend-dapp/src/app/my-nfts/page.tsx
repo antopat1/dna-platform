@@ -746,10 +746,11 @@ export default function MyNFTsPage() {
                             </TableCell>
                             <TableCell className="px-3 py-4 text-center">
                               {nft.hasSpecialContent && (
-                                <Star
-                                  className="w-5 h-5 inline-block text-yellow-400 fill-yellow-400"
-                                  title="Contenuto Speciale"
-                                />
+                                // <Star
+                                //   className="w-5 h-5 inline-block text-yellow-400 fill-yellow-400"
+                                //   title="Contenuto Speciale"
+                                // />
+                                <span title="Contenuto Speciale"><Star className="w-5 h-5 inline-block text-yellow-400 fill-yellow-400" /></span>
                               )}
                             </TableCell>
                             <TableCell
