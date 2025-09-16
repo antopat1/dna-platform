@@ -4,7 +4,7 @@
 import { abi as ScientificContentRegistryABI } from './abi/ScientificContentRegistry.json';
 import { abi as ScientificContentNFTABI } from './abi/ScientificContentNFT.json';
 import { abi as GovernanceTokenABI } from './abi/GovernanceToken.json';
-import { abi as DaoABI } from './abi/DAO.json'; // 🔴 Cambiato da Dao.json a DAO.json
+import { abi as DaoABI } from './abi/Dao.json';
 import { abi as DnAContentMarketplaceABI } from './abi/DnAContentMarketplace.json';
 
 // Esporta gli indirizzi dei contratti, presi dalle variabili d'ambiente
