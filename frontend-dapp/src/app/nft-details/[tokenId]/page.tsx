@@ -2,12 +2,12 @@
 
 "use client"; // Questo è importante per usare gli hook React e Wagmi
 
-import { useEffect, useState, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation'; // Hook per accedere ai parametri dell'URL e navigare
-import { usePublicClient, useAccount } from 'wagmi'; // Per interagire con la blockchain e ottenere l'account connesso
-import { toast, Toaster } from 'react-hot-toast'; // Per notifiche
-import Image from 'next/image'; // Per visualizzare l'immagine dell'NFT
-import { Address, getContract } from 'viem'; // Importa Address e getContract da viem
+import { useEffect, useState, useCallback } from "react";
+import { useParams, useRouter } from "next/navigation"; // Hook per accedere ai parametri dell'URL e navigare
+import { usePublicClient, useAccount } from "wagmi"; // Per interagire con la blockchain e ottenere l'account connesso
+import { toast, Toaster } from "react-hot-toast"; // Per notifiche
+import Image from "next/image"; // Per visualizzare l'immagine dell'NFT
+import { Address, getContract } from "viem"; // Importa Address e getContract da viem
 
 import {
   Card,
@@ -51,19 +51,20 @@ interface NFTMetadata {
 // Definire un tipo per i metadati del contenuto dal Registry,
 // per essere sicuri che la destrutturazione sia corretta
 type ScientificContentRegistry_ContentMetadata = {
-    title: string;
-    description: string;
-    author: Address;
-    contentHash: Address; // O string, a seconda del tipo di hash
-    isAvailable: boolean;
-    registrationTime: bigint;
-    maxCopies: bigint;
-    mintedCopies: bigint;
-    ipfsHash: string; // Questo è l'IPFS hash del documento scientifico reale
-    nftMintPrice: bigint;
+  title: string;
+  description: string;
+  author: Address;
+  contentHash: Address; // O string, a seconda del tipo di hash
+  isAvailable: boolean;
+  registrationTime: bigint;
+  maxCopies: bigint;
+  mintedCopies: bigint;
+  ipfsHash: string; // Questo è l'IPFS hash del documento scientifico reale
+  nftMintPrice: bigint;
 };
 
-const PLACEHOLDER_IMAGE_URL = "https://placehold.co/300x300/333333/ffffff?text=No+Image";
+const PLACEHOLDER_IMAGE_URL =
+  "https://placehold.co/300x300/333333/ffffff?text=No+Image";
 
 export default function NftDetailsPage() {
   const params = useParams();
@@ -84,7 +85,10 @@ export default function NftDetailsPage() {
       return;
     }
 
-    if (!SCIENTIFIC_CONTENT_NFT_ADDRESS || !SCIENTIFIC_CONTENT_REGISTRY_ADDRESS) {
+    if (
+      !SCIENTIFIC_CONTENT_NFT_ADDRESS ||
+      !SCIENTIFIC_CONTENT_REGISTRY_ADDRESS
+    ) {
       setError("Indirizzi dei contratti NFT o Registry non configurati.");
       setIsLoading(false);
       return;
@@ -101,15 +105,23 @@ export default function NftDetailsPage() {
       });
 
       // 1. Recupera l'owner dell'NFT prima di tutto
-      const owner = await nftContract.read.ownerOf([BigInt(tokenId)]) as Address;
+      const owner = (await nftContract.read.ownerOf([
+        BigInt(tokenId),
+      ])) as Address;
       setNftOwner(owner);
 
       // 2. Verifica se l'utente connesso è il proprietario
-      const userIsOwner = !!(isConnected && connectedAddress && owner.toLowerCase() === connectedAddress.toLowerCase());
+      const userIsOwner = !!(
+        isConnected &&
+        connectedAddress &&
+        owner.toLowerCase() === connectedAddress.toLowerCase()
+      );
       setIsOwner(userIsOwner);
 
       // 3. Recupera l'URI dei metadati on-chain (tokenURI)
-      const tokenURI = await nftContract.read.tokenURI([BigInt(tokenId)]) as string;
+      const tokenURI = (await nftContract.read.tokenURI([
+        BigInt(tokenId),
+      ])) as string;
 
       if (!tokenURI) {
         throw new Error("Impossibile recuperare il tokenURI per questo NFT.");
@@ -123,13 +135,17 @@ export default function NftDetailsPage() {
       // 4. Recupera i metadati completi dal JSON esterno (off-chain)
       const response = await fetch(resolvedTokenURI);
       if (!response.ok) {
-        throw new Error(`Errore nel recupero dei metadati: ${response.statusText}`);
+        throw new Error(
+          `Errore nel recupero dei metadati: ${response.statusText}`
+        );
       }
       const metadata: NFTMetadata = await response.json();
       setFullMetadata({ ...metadata, tokenId });
 
       // 5. Recupera i metadati specifici on-chain dal NFT contract (getNFTMetadata)
-      const nftContractMetadata = await nftContract.read.getNFTMetadata([BigInt(tokenId)]) as {
+      const nftContractMetadata = (await nftContract.read.getNFTMetadata([
+        BigInt(tokenId),
+      ])) as {
         contentId: bigint;
         author: Address;
         randomSeed: bigint;
@@ -139,15 +155,19 @@ export default function NftDetailsPage() {
       };
 
       // 6. Recupera i metadati del contenuto dal Registry (se contentId > 0)
-      let registryContentMetadata: Partial<ScientificContentRegistry_ContentMetadata> = {};
+      let registryContentMetadata: Partial<ScientificContentRegistry_ContentMetadata> =
+        {};
       if (nftContractMetadata.contentId > BigInt(0)) {
-        const registryContract = getContract({ // Usa getContract da viem
+        const registryContract = getContract({
+          // Usa getContract da viem
           address: SCIENTIFIC_CONTENT_REGISTRY_ADDRESS,
           abi: SCIENTIFIC_CONTENT_REGISTRY_ABI,
           client: publicClient,
         });
 
-        const contentData = await registryContract.read.getContent([nftContractMetadata.contentId]) as ScientificContentRegistry_ContentMetadata;
+        const contentData = (await registryContract.read.getContent([
+          nftContractMetadata.contentId,
+        ])) as ScientificContentRegistry_ContentMetadata;
         registryContentMetadata.title = contentData.title;
         registryContentMetadata.description = contentData.description;
         registryContentMetadata.ipfsHash = contentData.ipfsHash; // L'hash IPFS del documento scientifico reale
@@ -158,21 +178,46 @@ export default function NftDetailsPage() {
         tokenId: BigInt(tokenId),
         owner: owner,
         contentId: nftContractMetadata.contentId,
-        author: nftContractMetadata.author, // Autore direttamente dal contratto NFT
+        author: nftContractMetadata.author,
         randomSeed: nftContractMetadata.randomSeed,
         hasSpecialContent: nftContractMetadata.hasSpecialContent,
         copyNumber: nftContractMetadata.copyNumber,
         metadataURI: nftContractMetadata.metadataURI,
         title: registryContentMetadata.title,
         description: registryContentMetadata.description,
-        contentIpfsHash: registryContentMetadata.ipfsHash, // IPFS hash del contenuto scientifico reale
-        imageUrlFromMetadata: metadata.image, // Prende l'immagine dai metadati esterni
+        contentIpfsHash: registryContentMetadata.ipfsHash,
+        imageUrlFromMetadata: metadata.image,
+        // Aggiungi lo status con un valore di default
+        status: { type: "inWallet" },
+        // Aggiungi anche seller se richiesto dal tipo NFT
+        seller: owner, // Assumiamo che il proprietario corrente sia anche il potenziale venditore
       });
 
+      // // 7. Combina tutti i dati per il tipo OwnedNFT (per la visualizzazione principale)
+      // setNftData({
+      //   tokenId: BigInt(tokenId),
+      //   owner: owner,
+      //   contentId: nftContractMetadata.contentId,
+      //   author: nftContractMetadata.author, // Autore direttamente dal contratto NFT
+      //   randomSeed: nftContractMetadata.randomSeed,
+      //   hasSpecialContent: nftContractMetadata.hasSpecialContent,
+      //   copyNumber: nftContractMetadata.copyNumber,
+      //   metadataURI: nftContractMetadata.metadataURI,
+      //   title: registryContentMetadata.title,
+      //   description: registryContentMetadata.description,
+      //   contentIpfsHash: registryContentMetadata.ipfsHash, // IPFS hash del contenuto scientifico reale
+      //   imageUrlFromMetadata: metadata.image, // Prende l'immagine dai metadati esterni
+      // });
     } catch (err: any) {
       console.error("Errore nel caricamento dei dettagli NFT:", err);
-      setError(`Impossibile caricare i dettagli dell'NFT: ${err.shortMessage || err.message || "Errore sconosciuto"}`);
-      toast.error(`Errore: ${err.shortMessage || err.message || "Operazione fallita"}`);
+      setError(
+        `Impossibile caricare i dettagli dell'NFT: ${
+          err.shortMessage || err.message || "Errore sconosciuto"
+        }`
+      );
+      toast.error(
+        `Errore: ${err.shortMessage || err.message || "Operazione fallita"}`
+      );
     } finally {
       setIsLoading(false);
     }
@@ -198,7 +243,9 @@ export default function NftDetailsPage() {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-600"></div>
-        <p className="ml-4 text-xl text-gray-700">Caricamento dettagli NFT...</p>
+        <p className="ml-4 text-xl text-gray-700">
+          Caricamento dettagli NFT...
+        </p>
       </div>
     );
   }
@@ -209,7 +256,7 @@ export default function NftDetailsPage() {
         <h1 className="text-3xl font-bold mb-4">Errore nel Caricamento</h1>
         <p className="text-lg mb-4">{error}</p>
         <Button
-          onClick={() => router.push('/my-nfts')}
+          onClick={() => router.push("/my-nfts")}
           className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-md text-lg"
         >
           Torna ai Miei NFT
@@ -222,9 +269,11 @@ export default function NftDetailsPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 text-gray-800 p-8 text-center">
         <h1 className="text-3xl font-bold mb-4">NFT Non Trovato</h1>
-        <p className="text-lg mb-4">Non è stato possibile trovare i dettagli per l'NFT con ID: {tokenId}.</p>
+        <p className="text-lg mb-4">
+          Non è stato possibile trovare i dettagli per l'NFT con ID: {tokenId}.
+        </p>
         <Button
-          onClick={() => router.push('/my-nfts')}
+          onClick={() => router.push("/my-nfts")}
           className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-md text-lg"
         >
           Torna alla Lista NFT
@@ -234,7 +283,9 @@ export default function NftDetailsPage() {
   }
 
   // Risolvi l'URL dell'immagine usando la funzione resolveIpfsLink
-  const displayImageUrl = fullMetadata.image ? resolveIpfsLink(fullMetadata.image) : PLACEHOLDER_IMAGE_URL;
+  const displayImageUrl = fullMetadata.image
+    ? resolveIpfsLink(fullMetadata.image)
+    : PLACEHOLDER_IMAGE_URL;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-200 to-black p-6">
@@ -254,9 +305,12 @@ export default function NftDetailsPage() {
           {!isOwner && isConnected && (
             <div className="mb-6 border border-orange-400 bg-orange-50 p-4 rounded-lg">
               <div className="text-orange-800">
-                <strong>⚠️ Attenzione:</strong> L'NFT con ID {tokenId} non appartiene al tuo wallet attualmente collegato ({connectedAddress}).
-                Il proprietario attuale è: <span className="font-mono text-sm">{nftOwner}</span>.
-                Puoi visualizzare i dettagli ma non puoi effettuare operazioni su questo NFT.
+                <strong>⚠️ Attenzione:</strong> L'NFT con ID {tokenId} non
+                appartiene al tuo wallet attualmente collegato (
+                {connectedAddress}). Il proprietario attuale è:{" "}
+                <span className="font-mono text-sm">{nftOwner}</span>. Puoi
+                visualizzare i dettagli ma non puoi effettuare operazioni su
+                questo NFT.
               </div>
             </div>
           )}
@@ -265,7 +319,8 @@ export default function NftDetailsPage() {
           {!isConnected && (
             <div className="mb-6 border border-red-400 bg-red-50 p-4 rounded-lg">
               <div className="text-red-800">
-                <strong>🔐 Wallet non connesso:</strong> Connetti il tuo wallet per verificare la proprietà dell'NFT.
+                <strong>🔐 Wallet non connesso:</strong> Connetti il tuo wallet
+                per verificare la proprietà dell'NFT.
               </div>
             </div>
           )}
@@ -281,7 +336,9 @@ export default function NftDetailsPage() {
                 className="rounded-lg object-cover shadow-lg border-2 border-blue-200"
                 onError={(e) => {
                   e.currentTarget.src = PLACEHOLDER_IMAGE_URL;
-                  console.error(`Failed to load image for NFT ${tokenId}: ${displayImageUrl}`);
+                  console.error(
+                    `Failed to load image for NFT ${tokenId}: ${displayImageUrl}`
+                  );
                 }}
               />
             </div>
@@ -297,23 +354,37 @@ export default function NftDetailsPage() {
               {/* NUOVO BLOCCO: Badge per Contenuto Speciale */}
               {nftData.hasSpecialContent && (
                 <div className="bg-yellow-100 p-4 rounded-lg flex items-center justify-center border border-yellow-400">
-                  <span className="text-yellow-700 text-xl mr-2 animate-pulse">✨</span>
+                  <span className="text-yellow-700 text-xl mr-2 animate-pulse">
+                    ✨
+                  </span>
                   <p className="text-lg text-yellow-800 font-bold">
                     EDIZIONE SPECIALE!
                   </p>
-                  <span className="text-yellow-700 text-xl ml-2 animate-pulse">✨</span>
+                  <span className="text-yellow-700 text-xl ml-2 animate-pulse">
+                    ✨
+                  </span>
                 </div>
               )}
               {/* FINE NUOVO BLOCCO */}
 
               {/* Mostra lo stato di proprietà */}
-              <div className={`p-4 rounded-lg ${isOwner ? 'bg-green-50' : 'bg-gray-50'}`}>
+              <div
+                className={`p-4 rounded-lg ${
+                  isOwner ? "bg-green-50" : "bg-gray-50"
+                }`}
+              >
                 <p className="text-lg text-gray-800">
-                  <strong className={isOwner ? 'text-green-700' : 'text-gray-700'}>
+                  <strong
+                    className={isOwner ? "text-green-700" : "text-gray-700"}
+                  >
                     Proprietà:
                   </strong>
-                  <span className={`ml-2 ${isOwner ? 'text-green-600' : 'text-gray-600'}`}>
-                    {isOwner ? '✅ Tuo NFT' : '❌ Non tuo'}
+                  <span
+                    className={`ml-2 ${
+                      isOwner ? "text-green-600" : "text-gray-600"
+                    }`}
+                  >
+                    {isOwner ? "✅ Tuo NFT" : "❌ Non tuo"}
                   </span>
                 </p>
               </div>
@@ -322,7 +393,9 @@ export default function NftDetailsPage() {
               {nftOwner && (
                 <div className="bg-orange-50 p-4 rounded-lg">
                   <p className="text-lg text-gray-800">
-                    <strong className="text-orange-700">Proprietario Attuale:</strong>{" "}
+                    <strong className="text-orange-700">
+                      Proprietario Attuale:
+                    </strong>{" "}
                     <a
                       href={`https://sepolia.arbiscan.io/address/${nftOwner}`}
                       target="_blank"
@@ -334,41 +407,46 @@ export default function NftDetailsPage() {
                   </p>
                 </div>
               )}
-              
+
               {nftData.contentId !== BigInt(0) && (
                 <div className="bg-green-50 p-4 rounded-lg">
                   <p className="text-lg text-gray-800">
-                    <strong className="text-green-700">Content ID:</strong> {nftData.contentId.toString()}
+                    <strong className="text-green-700">Content ID:</strong>{" "}
+                    {nftData.contentId.toString()}
                   </p>
                 </div>
               )}
-              
+
               {fullMetadata.description && (
                 <div className="bg-purple-50 p-4 rounded-lg">
                   <p className="text-lg text-gray-800">
-                    <strong className="text-purple-700">Descrizione:</strong> 
-                    <span className="ml-2 break-words">{fullMetadata.description}</span>
+                    <strong className="text-purple-700">Descrizione:</strong>
+                    <span className="ml-2 break-words">
+                      {fullMetadata.description}
+                    </span>
                   </p>
                 </div>
               )}
-              
+
               {/* Mostra l'autore direttamente dall'Address, e controlla se è un indirizzo valido (non un indirizzo zero) */}
-              {nftData.author && nftData.author !== "0x0000000000000000000000000000000000000000" && (
-                <div className="bg-indigo-50 p-4 rounded-lg">
-                  <p className="text-lg text-gray-800">
-                    <strong className="text-indigo-700">Autore (EoA):</strong>{" "}
-                    <a
-                      href={`https://sepolia.arbiscan.io/address/${nftData.author}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 hover:underline break-all font-mono text-sm"
-                    >
-                      {nftData.author}
-                    </a>
-                  </p>
-                </div>
-              )}
-              
+              {nftData.author &&
+                nftData.author !==
+                  "0x0000000000000000000000000000000000000000" && (
+                  <div className="bg-indigo-50 p-4 rounded-lg">
+                    <p className="text-lg text-gray-800">
+                      <strong className="text-indigo-700">Autore (EoA):</strong>{" "}
+                      <a
+                        href={`https://sepolia.arbiscan.io/address/${nftData.author}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 hover:underline break-all font-mono text-sm"
+                      >
+                        {nftData.author}
+                      </a>
+                    </p>
+                  </div>
+                )}
+
               {fullMetadata.external_url && (
                 <div className="bg-pink-50 p-4 rounded-lg">
                   <p className="text-lg text-gray-800">
@@ -384,55 +462,76 @@ export default function NftDetailsPage() {
                   </p>
                 </div>
               )}
-              
+
               {nftData.contentIpfsHash && (
                 <div className="bg-teal-50 p-4 rounded-lg">
                   <p className="text-lg text-gray-800">
-                    <strong className="text-teal-700">Hash IPFS Contenuto:</strong>{" "}
+                    <strong className="text-teal-700">
+                      Hash IPFS Contenuto:
+                    </strong>{" "}
                     <a
                       href={resolveIpfsLink(nftData.contentIpfsHash)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-600 hover:text-blue-800 hover:underline break-all font-mono text-sm"
                     >
-                      {nftData.contentIpfsHash.slice(0, 10)}...{nftData.contentIpfsHash.slice(-10)}
+                      {nftData.contentIpfsHash.slice(0, 10)}...
+                      {nftData.contentIpfsHash.slice(-10)}
                     </a>
                   </p>
                 </div>
               )}
 
               {/* Campi personalizzati dallo schema (Attributes) */}
-              {fullMetadata.attributes && fullMetadata.attributes.length > 0 && (
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="text-xl font-semibold text-gray-800 mb-3">Attributi Personalizzati:</h3>
-                  <div className="space-y-2">
-                    {fullMetadata.attributes.map((attr, index) => (
-                      <div key={index} className="bg-white p-3 rounded border-l-4 border-blue-400">
-                        <p className="text-lg text-gray-800">
-                          <strong className="text-blue-700">{attr.trait_type}:</strong> 
-                          <span className="ml-2 break-words">{String(attr.value)}</span>
-                        </p>
-                      </div>
-                    ))}
+              {fullMetadata.attributes &&
+                fullMetadata.attributes.length > 0 && (
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h3 className="text-xl font-semibold text-gray-800 mb-3">
+                      Attributi Personalizzati:
+                    </h3>
+                    <div className="space-y-2">
+                      {fullMetadata.attributes.map((attr, index) => (
+                        <div
+                          key={index}
+                          className="bg-white p-3 rounded border-l-4 border-blue-400"
+                        >
+                          <p className="text-lg text-gray-800">
+                            <strong className="text-blue-700">
+                              {attr.trait_type}:
+                            </strong>
+                            <span className="ml-2 break-words">
+                              {String(attr.value)}
+                            </span>
+                          </p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
               {/* Altri campi specifici del tuo schema, se presenti nell'interfaccia NFTMetadata */}
               {fullMetadata.scientific_type && (
                 <div className="bg-yellow-50 p-4 rounded-lg">
                   <p className="text-lg text-gray-800">
-                    <strong className="text-yellow-700">Tipo Scientifico:</strong> 
-                    <span className="ml-2 break-words">{fullMetadata.scientific_type}</span>
+                    <strong className="text-yellow-700">
+                      Tipo Scientifico:
+                    </strong>
+                    <span className="ml-2 break-words">
+                      {fullMetadata.scientific_type}
+                    </span>
                   </p>
                 </div>
               )}
-              
+
               {fullMetadata.publication_date && (
                 <div className="bg-lime-50 p-4 rounded-lg">
                   <p className="text-lg text-gray-800">
-                    <strong className="text-lime-700">Data Pubblicazione:</strong> 
-                    <span className="ml-2 break-words">{fullMetadata.publication_date}</span>
+                    <strong className="text-lime-700">
+                      Data Pubblicazione:
+                    </strong>
+                    <span className="ml-2 break-words">
+                      {fullMetadata.publication_date}
+                    </span>
                   </p>
                 </div>
               )}
@@ -441,10 +540,14 @@ export default function NftDetailsPage() {
 
           {/* Sezione Metadati JSON Completi */}
           <div className="mt-8">
-            <h3 className="text-2xl font-bold text-gray-800 mb-4 text-center">Schema Metadati (JSON Completo)</h3>
+            <h3 className="text-2xl font-bold text-gray-800 mb-4 text-center">
+              Schema Metadati (JSON Completo)
+            </h3>
             <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
               <pre className="text-green-400 text-sm overflow-x-auto break-words whitespace-pre-wrap max-w-full">
-                <code className="break-words">{JSON.stringify(fullMetadata, null, 2)}</code>
+                <code className="break-words">
+                  {JSON.stringify(fullMetadata, null, 2)}
+                </code>
               </pre>
             </div>
           </div>
@@ -471,18 +574,19 @@ export default function NftDetailsPage() {
             {!isOwner && isConnected ? (
               <div className="space-y-4">
                 <Button
-                  onClick={() => router.push('/my-nfts')}
+                  onClick={() => router.push("/my-nfts")}
                   className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-8 py-4 rounded-lg text-lg font-semibold shadow-lg transform hover:scale-105 transition-transform"
                 >
                   Torna ai Miei NFT
                 </Button>
                 <p className="text-sm text-gray-600">
-                  Torna alla lista dei tuoi NFT per vedere solo quelli che possiedi
+                  Torna alla lista dei tuoi NFT per vedere solo quelli che
+                  possiedi
                 </p>
               </div>
             ) : (
               <Button
-                onClick={() => router.push('/my-nfts')}
+                onClick={() => router.push("/my-nfts")}
                 className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-4 rounded-lg text-lg font-semibold shadow-lg transform hover:scale-105 transition-transform"
               >
                 Torna alla Lista NFT
@@ -494,4 +598,3 @@ export default function NftDetailsPage() {
     </div>
   );
 }
-
