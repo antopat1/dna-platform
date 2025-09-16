@@ -1,4 +1,5 @@
-"use client";
+// frontend-dapp/src/app/founder/page.tsx
+"use client"; // Mantieni il "use client" perché il componente usa useState, Framer Motion, ecc.
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -64,14 +65,26 @@ interface Project {
   technologies: string[];
 }
 
+// ========================================
+// IMPORTANTE: METADATA SONO STATI SPOSTATI IN founder/layout.tsx
+// Rimosso: export const metadata: Metadata = { ... }
+// ========================================
+
 export default function FounderProfilePage() {
   const [activeModal, setActiveModal] = useState<string | null>(null);
 
-  // Dati (invariati)
   const experiences: Experience[] = [
     {
+      id: 0,
+      period: "01/09/2025 – Attualmente",
+      company: "Istituto agrario Gaetano Cantoni di Treviglio",
+      role: "Assistente tecnico e amministratore di Rete I.S.I.S.S.",
+      description:
+        "Attività di supporto tecnico, manutenzione, gestione e amministrazione della rete informatica e dei sistemi dell'istituto, garantendo efficienza e sicurezza.",
+    },
+    {
       id: 1,
-      period: "16/09/2022 – Attualmente",
+      period: "16/09/2021 – 31/08/2025",
       company: "IC Calusco D'Adda",
       role: "Assistente Tecnico e Docente Corsi Robotica & Coding",
       description:
@@ -118,7 +131,7 @@ export default function FounderProfilePage() {
       institution: "ITIS G. Ferraris",
       title: "Perito Elettronico e TLC",
       description: "Votazione: 95/100",
-      image: "/api/placeholder/300/200",
+      image: "/img/itis_belpasso.jpg", // Aggiornato con percorso reale
     },
     {
       id: 2,
@@ -127,7 +140,7 @@ export default function FounderProfilePage() {
       title: "Ingegnere delle TLC",
       description:
         "Votazione: 108/110. Discipline: Analisi, Teoria dei segnali, Reti, Sistemi di TLC.",
-      image: "/api/placeholder/300/200",
+      image: "/img/unict.jpg", // Aggiornato con percorso reale
     },
     {
       id: 3,
@@ -136,7 +149,7 @@ export default function FounderProfilePage() {
       title: "Simulazione Reti Tattiche",
       description:
         "Simulazione architetturale di reti tattiche con System Architect e OPNET Modeler.",
-      image: "/api/placeholder/300/200",
+      image: "/img/selex_elsag.jpg", // ho ripristinato questo se hai l'immagine, altrimenti usa /img/education.jpg
     },
   ];
 
@@ -146,7 +159,7 @@ export default function FounderProfilePage() {
       title: "Coinmarketcap Report Bot",
       description: "Bot per analisi quotidiana crypto con archiviazione JSON.",
       githubUrl: "https://github.com/antopat1/coinmarketcap_bot",
-      image: "/api/placeholder/300/200",
+      image: "/img/report_chatbot.jpg", // Aggiornato con percorso reale
       technologies: ["Python", "API", "JSON"],
     },
     {
@@ -155,7 +168,7 @@ export default function FounderProfilePage() {
       description:
         "Sistema Django per certificare articoli su testnet Ethereum.",
       githubUrl: "https://github.com/antopat1/ProgettoDJangoDiAntoninoPaterno2",
-      image: "/api/placeholder/300/200",
+      image: "/img/notarizzazione_news.jpg", // Aggiornato con percorso reale
       technologies: ["Django", "Blockchain", "Ethereum"],
     },
     {
@@ -164,7 +177,7 @@ export default function FounderProfilePage() {
       description:
         "Piattaforma trading Bitcoin con MongoDB e API CoinMarketCap.",
       githubUrl: "https://github.com/antopat1/ProgettoMongoDBdiAntoninoPaterno",
-      image: "/api/placeholder/300/200",
+      image: "/img/BTC-Exchange.jpg", // Aggiornato con percorso reale
       technologies: ["Django", "MongoDB", "API"],
     },
     {
@@ -174,7 +187,7 @@ export default function FounderProfilePage() {
         "Smart Contract ERC20 con interfaccia Web3.py per Ganache/Goerli.",
       githubUrl:
         "https://github.com/antopat1/ProgettoEthereumWeb3diAntoninoPaterno",
-      image: "/api/placeholder/300/200",
+      image: "/img/MoneyBox.png", // Aggiornato con percorso reale
       technologies: ["Solidity", "Web3.py", "ERC20"],
     },
     {
@@ -183,7 +196,7 @@ export default function FounderProfilePage() {
       description:
         "Sito portfolio personale realizzato con Bootstrap HTML/CSS.",
       githubUrl: "https://github.com/antopat1/antopat1-My_personal_website",
-      image: "/api/placeholder/300/200",
+      image: "/img/myimg.jpg", // Aggiornato con percorso reale
       technologies: ["HTML", "CSS", "Bootstrap"],
     },
     {
@@ -192,21 +205,21 @@ export default function FounderProfilePage() {
       description:
         "Script Python per acquisizione dati da PDF, elaborazione XML e salvataggio in CSV.",
       githubUrl: "https://github.com/antopat1/acquireDataFromPDFandSaveToCSV",
-      image: "/api/placeholder/300/200",
+      image: "/img/pdf_extraction.jpg", // Aggiornato con percorso reale
       technologies: ["Python", "PDF", "XML", "CSV"],
     },
   ];
 
   const hardSkills = [
     { name: "HTML", percentage: 80, color: "bg-yellow-500" },
-    { name: "CSS/Bootstrap", percentage: 60, color: "bg-green-500" },
+    { name: "CSS/Bootstrap/Tailwind", percentage: 60, color: "bg-green-500" },
     { name: "Python", percentage: 70, color: "bg-red-500" },
-    { name: "Django", percentage: 70, color: "bg-blue-500" },
-    { name: "React", percentage: 70, color: "bg-cyan-500" }, // <-- AGGIUNTO
-    { name: "Next.js", percentage: 70, color: "bg-neutral-400" }, // <-- AGGIUNTO
+    { name: "Django", percentage: 60, color: "bg-blue-500" },
+    { name: "React", percentage: 70, color: "bg-cyan-500" },
+    { name: "Next.js", percentage: 70, color: "bg-neutral-400" },
     { name: "Mongo DB", percentage: 60, color: "bg-teal-500" },
     { name: "Solidity/Blockchain S.C.", percentage: 75, color: "bg-gray-400" },
-    { name: "JavaScript", percentage: 50, color: "bg-indigo-500" },
+    { name: "JavaScript/TypeScript", percentage: 70, color: "bg-indigo-500" },
   ];
 
   const softSkills = [
@@ -226,7 +239,6 @@ export default function FounderProfilePage() {
     },
   ];
 
-  // <-- 2. MODIFICATA LA STRUTTURA DELLE ICONE PER INCLUDERE IL NOME
   const techIcons = [
     { icon: FaHtml5, name: "HTML5" },
     { icon: FaCss3Alt, name: "CSS3" },
@@ -246,81 +258,66 @@ export default function FounderProfilePage() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 font-sans">
-      {/* Componente Tooltip per l'intera pagina */}
       <Tooltip id="tech-tooltip" />
 
       {/* ======================================== */}
-      {/* HERO SECTION - TESTO CENTRATO, ICONE LATERALI */}
+      {/* HERO SECTION - TESTO CENTRATO            */}
       {/* ======================================== */}
-      <section className="relative min-h-[50px] flex items-center py-20 overflow-hidden bg-gradient-to-br from-gray-900 to-indigo-900/50">
-        <div className="absolute inset-0 bg-black/30"></div>
-        <div className="relative z-10 container mx-auto px-4">
-          {/* 
-      LAYOUT PRINCIPALE:
-      - Mobile (default): Flexbox a colonna, tutto centrato e impilato.
-      - Desktop (md:): CSS Grid a 3 colonne per un controllo preciso.
-    */}
-          <div className="flex flex-col items-center gap-8 md:grid md:grid-cols-3 md:items-center md:gap-12">
-            {/* 
-        COLONNA 1: ICONE SOCIAL
-        - Su desktop (md:), sono una colonna verticale e si posizionano nella prima colonna della griglia.
-        - Su mobile, sono una riga orizzontale e vanno sotto il testo (grazie a order-2).
-      */}
-            <motion.div
-              className="flex flex-row md:flex-col gap-6 order-2 md:order-1"
-              initial={{ x: -50, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.8 }}
-            >
-              {socialLinks.map((link, index) => (
-                <a
-                  key={index}
-                  href={link.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-gray-400 hover:text-purple-400 transition-colors"
-                >
-                  <link.icon className="text-3xl" />
-                </a>
-              ))}
-            </motion.div>
+      <section
+        className="relative h-[45vh] overflow-hidden 
+             bg-hero-background bg-cover bg-no-repeat bg-left-center"
+      >
+        <div className="absolute inset-0 bg-black/50"></div>
 
-            {/* 
-        COLONNA 2: BLOCCO TESTO
-        - Su desktop (md:), viene forzato nella colonna centrale della griglia con "md:col-start-2".
-        - Su mobile, va sopra le icone (grazie a order-1).
-        - Il testo è sempre centrato con "text-center".
-      */}
-            <div className="text-center order-1 md:order-2 md:col-start-2">
-              <motion.h1
-                className="text-3xl md:text-5xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 whitespace-nowrap"
-                initial={{ y: 50, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.5 }}
+        <div className="absolute z-20 top-1/2 left-4 md:left-8 transform -translate-y-1/2">
+          <motion.div
+            className="flex md:flex-col gap-6"
+            initial={{ x: -50, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.8 }}
+          >
+            {socialLinks.map((link, index) => (
+              <a
+                key={index}
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-white transition-colors"
               >
-                Antonio Paternò
-              </motion.h1>
-              <div className="text-xl md:text-2xl text-gray-300 h-24 md:h-12">
-                <TypeAnimation
-                  sequence={[
-                    "Telecommunications Engineer",
-                    2000,
-                    "FTTH Project Manager",
-                    2000,
-                    "Coding & Robotics Teacher",
-                    2000,
-                    "Blockchain Enthusiast & Developer",
-                    2000,
-                  ]}
-                  wrapper="span"
-                  speed={50}
-                  style={{ display: "inline-block" }}
-                  repeat={Infinity}
-                />
-              </div>
-            </div>
+                <link.icon className="text-3xl" />
+              </a>
+            ))}
+          </motion.div>
+        </div>
 
-            {/* La terza colonna della griglia su desktop rimane volutamente vuota, garantendo la centratura del testo. */}
+        <div className="absolute z-10 inset-0 flex flex-col items-center justify-center text-center p-4">
+          <div>
+            <motion.h1
+              className="text-5xl md:text-7xl font-bold mb-4 text-blue-600 drop-shadow-lg"
+              initial={{ y: 50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              Antonino Paternò
+            </motion.h1>
+            <div className="text-xl md:text-2xl text-gray-200 h-24 md:h-12 drop-shadow-md">
+              <TypeAnimation
+                sequence={[
+                  "Telecommunications Engineer",
+                  2000,
+                  "FTTH Project Manager",
+                  2000,
+                  "Coding & Robotics Teacher",
+                  2000,
+                  "Blockchain Enthusiast & Developer",
+                  2000,
+                ]}
+                wrapper="span"
+                speed={50}
+                style={{ display: "inline-block" }}
+                repeat={Infinity}
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -328,7 +325,7 @@ export default function FounderProfilePage() {
       {/* ======================================== */}
       {/* SEZIONE ABOUT ME & SKILLS                */}
       {/* ======================================== */}
-      <section className="py-20 px-4 bg-gray-800/50" id="about">
+      <section className="py-20 px-4 bg-gray-600/50" id="about">
         <div className="max-w-7xl mx-auto">
           <motion.div
             className="text-center mb-16"
@@ -341,7 +338,20 @@ export default function FounderProfilePage() {
               ABOUT ME
             </h2>
             <p className="text-lg text-gray-300 max-w-3xl mx-auto leading-relaxed">
-              Conclusi gli studi in Ingegneria e dopo 14 anni di esperienza nelle settore delle TLC prima come consulente presso operatori ISP in qualità di analista tecnico di reportistica e monitoraggio traffico dati su diversi Time Frame, poi come Project Manager e Controller contabile nei cantieri di realizzazione rete di accesso FTTH progetto BUL, ho deciso a seguito di una profonda riflessione personale e professionale post COVID, di alimentare le mie passioni nel campo delle tecnologie informatiche, registri ditribuiti e sistemi/processi economici decentralizzati basati su Blockchain. L'opportunità di lavorare presso Istituti comprensivi di scuola secondaria di primo grado in qualità di Assistente Tecnico informatico e docente corsi di Coding e Robotica, rappresenta per me oggi una combinazione perfetta per conciliare lavoro e studio personale grazie al percorso proposto da{" "}
+              Conclusi gli studi in Ingegneria e dopo 14 anni di esperienza
+              nelle settore delle TLC prima come consulente presso operatori ISP
+              in qualità di analista tecnico di reportistica e monitoraggio
+              traffico dati su diversi Time Frame, poi come Project Manager e
+              Controller contabile nei cantieri di realizzazione rete di accesso
+              FTTH progetto BUL, ho deciso a seguito di una profonda riflessione
+              personale e professionale post COVID, di alimentare le mie
+              passioni nel campo delle tecnologie informatiche, registri
+              ditribuiti e sistemi/processi economici decentralizzati basati su
+              Blockchain. L'opportunità di lavorare presso Istituti comprensivi
+              di scuola secondaria di primo grado in qualità di Assistente
+              Tecnico informatico e docente corsi di Coding e Robotica,
+              rappresenta per me oggi una combinazione perfetta per conciliare
+              lavoro e studio personale grazie al percorso proposto da{" "}
               <a
                 href="https://www.start2impact.it/"
                 target="_blank"
@@ -388,7 +398,7 @@ export default function FounderProfilePage() {
               ))}
             </motion.div>
 
-            {/* Image */}
+            {/* Image - Aggiornato con percorso reale */}
             <motion.div
               className="flex justify-center"
               initial={{ scale: 0.5, opacity: 0 }}
@@ -397,7 +407,7 @@ export default function FounderProfilePage() {
               transition={{ duration: 0.7 }}
             >
               <img
-                src="/api/placeholder/400/400"
+                src="/img/myimg.jpg" // Percorso aggiornato
                 alt="Antonio Paternò"
                 className="rounded-full w-64 h-64 md:w-80 md:h-80 object-cover border-4 border-purple-500 shadow-lg"
               />
@@ -442,18 +452,16 @@ export default function FounderProfilePage() {
               x: ["0%", "-100%"],
               transition: {
                 ease: "linear",
-                duration: 40, // <-- 3. DURATA AUMENTATA PER RALLENTARE
+                duration: 40,
                 repeat: Infinity,
               },
             }}
           >
-            {/* Duplico l'array per un loop infinito e fluido */}
             {[...techIcons, ...techIcons].map((tech, index) => (
               <div
                 key={index}
                 className="flex-shrink-0 mx-8 flex items-center justify-center"
                 style={{ width: "100px" }}
-                // <-- 4. ATTRIBUTI PER IL TOOLTIP
                 data-tooltip-id="tech-tooltip"
                 data-tooltip-content={tech.name}
               >
@@ -514,7 +522,7 @@ export default function FounderProfilePage() {
 
           <div className="text-center mt-16">
             <motion.a
-              href="/api/placeholder/cv"
+              href="/pdf/Curriculum Paternò .pdf" // Percorso aggiornato per il PDF
               download="Curriculum_Antonio_Paterno.pdf"
               className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-8 rounded-full transition-colors shadow-lg text-lg"
               whileHover={{ scale: 1.05 }}
@@ -615,7 +623,7 @@ export default function FounderProfilePage() {
                     transition={{ delay: index * 0.1 }}
                   >
                     <img
-                      src={edu.image}
+                      src={edu.image} // Utilizza il percorso dell'immagine definito nell'array education
                       alt={edu.institution}
                       className="w-full h-48 object-cover"
                     />
@@ -669,7 +677,7 @@ export default function FounderProfilePage() {
                   >
                     <div className="relative">
                       <img
-                        src={project.image}
+                        src={project.image} // Utilizza il percorso dell'immagine definito nell'array projects
                         alt={project.title}
                         className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
                       />
