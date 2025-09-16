@@ -105,7 +105,7 @@ export default function SecureCoachSetupPage() {
       const encoder = new TextEncoder();
       // this.data = encoder.encode(privateKey).buffer.slice();
       const buffer = encoder.encode(privateKey).buffer.slice();
-      this.data = buffer instanceof ArrayBuffer ? buffer : buffer as ArrayBuffer;
+      this.data = buffer instanceof ArrayBuffer ? buffer : buffer as unknown as ArrayBuffer;
     }
 
     // Recupera temporaneamente la chiave - ora corretto come async
