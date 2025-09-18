@@ -92,7 +92,7 @@ const uploadMetadataToIpfs = async (
       image: previewImageIpfsHash
         ? `ipfs://${previewImageIpfsHash}`
         : undefined,
-      external_url: `https://tuo-dominio-dapp.com/content/${
+      external_url: `https://dna-platform.vercel.app/content/${
           contentId?.toString() || "unknown"
         }`,
       attributes: [

@@ -284,7 +284,7 @@ export const useRegisterContent = () => {
             image: ipfsPreviewImageCid
               ? `ipfs://${ipfsPreviewImageCid}`
               : undefined,
-            external_url: `https://tuo-dominio-dapp.com/content/${
+            external_url: `https://dna-platform.vercel.app/content/${
               registryContentId?.toString() || "unknown"
             }`,
             attributes: [
