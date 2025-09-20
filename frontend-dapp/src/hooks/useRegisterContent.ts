@@ -261,7 +261,7 @@ export const useRegisterContent = () => {
                 name: options.title || "Scientific Content Copy",
                 description: options.description || "Copy of registered scientific content",
                 image: options.previewImageIpfsHash ? `ipfs://${options.previewImageIpfsHash}` : undefined,
-                external_url: `https://platform-dna.vercel.app/content/${options.contentId?.toString() || "unknown"}`,
+                external_url: `https://platform-dna.vercel.app/nft-details/${options.contentId?.toString() || "unknown"}`,
                 attributes: [
                     { trait_type: "Author Address", value: address },
                     { trait_type: "Registry Content ID", value: options.contentId?.toString() || "N/A" },
