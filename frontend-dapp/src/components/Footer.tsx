@@ -1,19 +1,21 @@
+// frontend-dapp/src/components/Footer.tsx
 'use client';
 
 import Link from 'next/link';
 import { Code, Zap } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import ThemeToggle from './ThemeToggle';
+import { useTheme } from '@/context/ThemeContext';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
   const [isHovered, setIsHovered] = useState(false);
+  const { isDarkMode } = useTheme();
 
-  // Auto-scroll quando il footer si espande
+  // La logica per lo scroll è ottima e rimane invariata
   useEffect(() => {
     if (isHovered) {
-      // Aspetta che l'animazione CSS sia completata
       const timer = setTimeout(() => {
-        // Prova prima con scrollTo verso il massimo
         const maxScroll = Math.max(
           document.body.scrollHeight,
           document.body.offsetHeight,
@@ -21,13 +23,10 @@ export default function Footer() {
           document.documentElement.scrollHeight,
           document.documentElement.offsetHeight
         );
-        
         window.scrollTo({
           top: maxScroll,
           behavior: 'smooth'
         });
-        
-        // Fallback - se non funziona, prova con scrollIntoView
         setTimeout(() => {
           const footer = document.querySelector('footer');
           if (footer) {
@@ -38,8 +37,7 @@ export default function Footer() {
             });
           }
         }, 100);
-        
-      }, 300); // Delay maggiore per aspettare l'animazione completa
+      }, 300);
 
       return () => clearTimeout(timer);
     }
@@ -51,9 +49,9 @@ export default function Footer() {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Top Section - Hidden by default, shown on hover */}
+      {/* Top Section - I colori scuri ora usano `slate` per essere più chiari e bluastri */}
       <div 
-        className={`bg-gray-500 text-white border-t border-gray-400 overflow-hidden transition-all duration-300 ${
+        className={`bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-white border-t border-gray-300 dark:border-slate-500 overflow-hidden transition-all duration-300 ${
           isHovered ? 'max-h-[1000px] opacity-100 py-8' : 'max-h-0 opacity-0 py-0'
         }`}
       >
@@ -62,11 +60,11 @@ export default function Footer() {
             
             {/* Platform Info */}
             <div className="space-y-4">
-              <h3 className="text-xl font-bold text-purple-400">DnA Platform</h3>
-              <p className="text-gray-300 text-sm leading-relaxed">
+              <h3 className="text-xl font-bold text-purple-600 dark:text-purple-400">DnA Platform</h3>
+              <p className="text-gray-600 dark:text-slate-300 text-sm leading-relaxed">
                 Una piattaforma NFT di contenuti scientifici all'avanguardia che consente ai ricercatori di tokenizzare, condividere e monetizzare i propri contributi intellettuali.
               </p>
-              <div className="flex items-center space-x-2 text-purple-300">
+              <div className="flex items-center space-x-2 text-purple-500 dark:text-purple-300">
                 <Zap className="w-4 h-4" />
                 <span className="text-sm">Powered by Blockchain Technology</span>
               </div>
@@ -74,25 +72,24 @@ export default function Footer() {
 
             {/* Quick Links */}
             <div className="space-y-4">
-              <h4 className="text-lg font-semibold text-gray-200">Quick Links</h4>
+              <h4 className="text-lg font-semibold text-gray-700 dark:text-slate-200">Quick Links</h4>
               <nav className="flex flex-col space-y-2">
                 <Link 
                   href="/registered-content" 
-                  className="text-gray-300 hover:text-purple-300 transition-colors text-sm"
+                  className="text-gray-600 dark:text-slate-300 hover:text-purple-600 dark:hover:text-purple-300 transition-colors text-sm"
                 >
                   Browse Content
                 </Link>
                 <Link 
                   href="/admin/templates" 
-                  className="text-gray-300 hover:text-purple-300 transition-colors text-sm"
+                  className="text-gray-600 dark:text-slate-300 hover:text-purple-600 dark:hover:text-purple-300 transition-colors text-sm"
                 >
                   Admin Panel
                 </Link>
-                {/* Il link a "Documentation" è stato rimosso */}
                 <a 
-                  href="mailto:antopat1@gmail.com" // Modificato per puntare alla mail
-                  className="text-gray-300 hover:text-purple-300 transition-colors text-sm"
-                  target="_blank" // Aggiunto per aprire la mail in una nuova tab/app di mail
+                  href="mailto:antopat1@gmail.com"
+                  className="text-gray-600 dark:text-slate-300 hover:text-purple-600 dark:hover:text-purple-300 transition-colors text-sm"
+                  target="_blank"
                   rel="noopener noreferrer"
                 >
                   Support
@@ -102,8 +99,8 @@ export default function Footer() {
 
             {/* Technology Stack */}
             <div className="space-y-4">
-              <h4 className="text-lg font-semibold text-gray-200">Built With</h4>
-              <div className="grid grid-cols-2 gap-2 text-sm text-gray-300">
+              <h4 className="text-lg font-semibold text-gray-700 dark:text-slate-200">Built With</h4>
+              <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 dark:text-slate-300">
                 <span className="flex items-center space-x-1">
                   <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
                   <span>Next.js 14</span>
@@ -126,21 +123,28 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* Bottom Bar - Always visible */}
-      <div className="bg-gray-600 border-t border-gray-400">
+      {/* Bottom Bar - Anche qui i colori scuri usano `slate` per il giusto contrasto */}
+      <div className="bg-gray-300 dark:bg-slate-700 border-t border-gray-400 dark:border-slate-600">
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0">
+          <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
             {/* Copyright */}
-            <div className="text-sm text-gray-400">
+            <div className="text-sm text-gray-500 dark:text-slate-400 order-1 sm:order-1">
               © {currentYear} DnA Platform. All rights reserved.
             </div>
 
+            {/* Theme Toggle in the middle with text labels */}
+            <div className="order-3 sm:order-2 flex items-center space-x-2">
+              <span className={`text-sm font-medium transition-colors duration-200 ${isDarkMode ? 'text-gray-500 dark:text-slate-400' : 'text-gray-700 dark:text-white'}`}>Light</span>
+              <ThemeToggle />
+              <span className={`text-sm font-medium transition-colors duration-200 ${isDarkMode ? 'text-gray-700 dark:text-white' : 'text-gray-500 dark:text-slate-400'}`}>Dark</span>
+            </div>
+
             {/* Designer Credit */}
-            <div className="flex items-center space-x-2 text-sm text-gray-400">
+            <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-slate-400 order-2 sm:order-3">
               <span>System designed and developed by</span>
               <div className="flex items-center space-x-1">
-                <Code className="w-4 h-4 text-purple-400" />
-                <Link href="/founder" className="text-purple-300 font-medium hover:underline"> {/* Modificato il link qui */}
+                <Code className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                <Link href="/founder" className="text-purple-700 dark:text-purple-300 font-medium hover:underline">
                   Antonino Paternò
                 </Link>
               </div>
@@ -151,161 +155,5 @@ export default function Footer() {
     </footer>
   );
 }
-
-// 'use client';
-
-// import Link from 'next/link';
-// import { Code, Zap } from 'lucide-react';
-// import { useState, useEffect } from 'react';
-
-// export default function Footer() {
-//   const currentYear = new Date().getFullYear();
-//   const [isHovered, setIsHovered] = useState(false);
-
-//   // Auto-scroll quando il footer si espande
-//   useEffect(() => {
-//     if (isHovered) {
-//       // Aspetta che l'animazione CSS sia completata
-//       const timer = setTimeout(() => {
-//         // Prova prima con scrollTo verso il massimo
-//         const maxScroll = Math.max(
-//           document.body.scrollHeight,
-//           document.body.offsetHeight,
-//           document.documentElement.clientHeight,
-//           document.documentElement.scrollHeight,
-//           document.documentElement.offsetHeight
-//         );
-        
-//         window.scrollTo({
-//           top: maxScroll,
-//           behavior: 'smooth'
-//         });
-        
-//         // Fallback - se non funziona, prova con scrollIntoView
-//         setTimeout(() => {
-//           const footer = document.querySelector('footer');
-//           if (footer) {
-//             footer.scrollIntoView({ 
-//               behavior: 'smooth', 
-//               block: 'end',
-//               inline: 'nearest'
-//             });
-//           }
-//         }, 100);
-        
-//       }, 300); // Delay maggiore per aspettare l'animazione completa
-
-//       return () => clearTimeout(timer);
-//     }
-//   }, [isHovered]);
-
-//   return (
-//     <footer 
-//       className="w-full transition-all duration-300"
-//       onMouseEnter={() => setIsHovered(true)}
-//       onMouseLeave={() => setIsHovered(false)}
-//     >
-//       {/* Top Section - Hidden by default, shown on hover */}
-//       <div 
-//         className={`bg-gray-500 text-white border-t border-gray-400 overflow-hidden transition-all duration-300 ${
-//           isHovered ? 'max-h-[1000px] opacity-100 py-8' : 'max-h-0 opacity-0 py-0'
-//         }`}
-//       >
-//         <div className="max-w-7xl mx-auto px-4">
-//           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            
-//             {/* Platform Info */}
-//             <div className="space-y-4">
-//               <h3 className="text-xl font-bold text-purple-400">DnA Platform</h3>
-//               <p className="text-gray-300 text-sm leading-relaxed">
-//                 Una piattaforma NFT di contenuti scientifici all'avanguardia che consente ai ricercatori di tokenizzare, condividere e monetizzare i propri contributi intellettuali.
-//               </p>
-//               <div className="flex items-center space-x-2 text-purple-300">
-//                 <Zap className="w-4 h-4" />
-//                 <span className="text-sm">Powered by Blockchain Technology</span>
-//               </div>
-//             </div>
-
-//             {/* Quick Links */}
-//             <div className="space-y-4">
-//               <h4 className="text-lg font-semibold text-gray-200">Quick Links</h4>
-//               <nav className="flex flex-col space-y-2">
-//                 <Link 
-//                   href="/registered-content" 
-//                   className="text-gray-300 hover:text-purple-300 transition-colors text-sm"
-//                 >
-//                   Browse Content
-//                 </Link>
-//                 <Link 
-//                   href="/admin/templates" 
-//                   className="text-gray-300 hover:text-purple-300 transition-colors text-sm"
-//                 >
-//                   Admin Panel
-//                 </Link>
-//                 <Link 
-//                   href="/docs" 
-//                   className="text-gray-300 hover:text-purple-300 transition-colors text-sm"
-//                 >
-//                   Documentation
-//                 </Link>
-//                 <Link 
-//                   href="/support" 
-//                   className="text-gray-300 hover:text-purple-300 transition-colors text-sm"
-//                 >
-//                   Support
-//                 </Link>
-//               </nav>
-//             </div>
-
-//             {/* Technology Stack */}
-//             <div className="space-y-4">
-//               <h4 className="text-lg font-semibold text-gray-200">Built With</h4>
-//               <div className="grid grid-cols-2 gap-2 text-sm text-gray-300">
-//                 <span className="flex items-center space-x-1">
-//                   <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-//                   <span>Next.js 14</span>
-//                 </span>
-//                 <span className="flex items-center space-x-1">
-//                   <div className="w-2 h-2 bg-cyan-400 rounded-full"></div>
-//                   <span>Tailwind CSS</span>
-//                 </span>
-//                 <span className="flex items-center space-x-1">
-//                   <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
-//                   <span>Web3 Integration</span>
-//                 </span>
-//                 <span className="flex items-center space-x-1">
-//                   <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-//                   <span>TypeScript</span>
-//                 </span>
-//               </div>
-//             </div>
-//           </div>
-//         </div>
-//       </div>
-
-//       {/* Bottom Bar - Always visible */}
-//       <div className="bg-gray-600 border-t border-gray-400">
-//         <div className="max-w-7xl mx-auto px-4 py-4">
-//           <div className="flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0">
-//             {/* Copyright */}
-//             <div className="text-sm text-gray-400">
-//               © {currentYear} DnA Platform. All rights reserved.
-//             </div>
-
-//             {/* Designer Credit */}
-//             <div className="flex items-center space-x-2 text-sm text-gray-400">
-//               <span>System designed and developed by</span>
-//               <div className="flex items-center space-x-1">
-//                 <Code className="w-4 h-4 text-purple-400" />
-//                 <span className="text-purple-300 font-medium">Antonino Paternò</span>
-//               </div>
-//             </div>
-//           </div>
-//         </div>
-//       </div>
-//     </footer>
-//   );
-// }
-
 
 

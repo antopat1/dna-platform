@@ -1,38 +1,14 @@
+/* frontend-dapp/src/app/globals.css */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Reset completo per eliminare margin/padding di default */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-:root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
-  }
-}
-
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-}
-
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
+    /* Tema Chiaro (Light Mode) */
+    --background: 0 0% 100%; /* white */
+    --foreground: 0 0% 3.9%; /* black */
     --card: 0 0% 100%;
     --card-foreground: 0 0% 3.9%;
     --popover: 0 0% 100%;
@@ -50,17 +26,13 @@
     --border: 0 0% 89.8%;
     --input: 0 0% 89.8%;
     --ring: 0 0% 3.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
     --radius: 0.5rem;
   }
   
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
+    /* Tema Scuro (Dark Mode) */
+    --background: 0 0% 3.9%; /* quasi black */
+    --foreground: 0 0% 98%; /* quasi white */
     --card: 0 0% 3.9%;
     --card-foreground: 0 0% 98%;
     --popover: 0 0% 3.9%;
@@ -78,73 +50,17 @@
     --border: 0 0% 14.9%;
     --input: 0 0% 14.9%;
     --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
   }
 }
 
-/* Reset fondamentale per html, body e contenitori Next.js */
 @layer base {
   * {
     @apply border-border;
   }
   
-  html {
-    height: 100%;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    background-color: rgb(243, 244, 246) !important; /* bg-gray-100 */
-    overflow-x: hidden; /* Previene scroll orizzontale */
-  }
-  
+  /* Impostiamo il colore di sfondo e testo di base per l'intero body.
+     Questi valori verranno dai nostri temi :root e .dark */
   body {
-    height: 100vh !important; /* Forza altezza viewport */
-    width: 100vw !important; /* Forza larghezza viewport */
-    min-height: 100vh !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    background-color: rgb(243, 244, 246) !important; /* bg-gray-100 */
-    overflow-x: hidden !important; /* Previene scroll orizzontale */
-    position: relative;
-  }
-  
-  /* Contenitori Next.js */
-  #__next {
-    height: 100%;
-    width: 100%;
-    background-color: rgb(243, 244, 246) !important;
-  }
-  
-  /* Override per NextUI che potrebbe interferire */
-  .nextui-provider {
-    height: 100% !important;
-    width: 100% !important;
-    background-color: transparent !important;
-  }
-  
-  /* Override per RainbowKit modals/overlays */
-  [data-rk] {
-    background-color: transparent !important;
+    @apply bg-background text-foreground;
   }
 }
-
-/* Fix specifici per componenti che potrebbero causare problemi */
-@layer components {
-  /* Assicura che tutti i contenitori principali rispettino le dimensioni */
-  .main-container {
-    min-height: 100vh;
-    width: 100%;
-    background-color: rgb(243, 244, 246);
-  }
-  
-  /* Override per eventuali stili di NextUI che interferiscono */
-  .nextui-c-PJLV .nextui-c-PJLV-css {
-    background-color: transparent !important;
-  }
-}
-
-

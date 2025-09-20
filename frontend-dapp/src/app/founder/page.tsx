@@ -1,7 +1,8 @@
 // frontend-dapp/src/app/founder/page.tsx
-"use client"; // Mantieni il "use client" perché il componente usa useState, Framer Motion, ecc.
+"use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { TypeAnimation } from "react-type-animation";
 import { Tooltip } from "react-tooltip";
@@ -37,8 +38,9 @@ import {
   SiTypescript,
   SiTailwindcss,
 } from "react-icons/si";
+import { ArrowRight } from "lucide-react";
 
-// Tipi per i dati (invariati)
+// Tipi (invariati)
 interface Experience {
   id: number;
   period: string;
@@ -46,7 +48,6 @@ interface Experience {
   role: string;
   description: string;
 }
-
 interface Education {
   id: number;
   period: string;
@@ -55,7 +56,6 @@ interface Education {
   description: string;
   image: string;
 }
-
 interface Project {
   id: number;
   title: string;
@@ -65,14 +65,10 @@ interface Project {
   technologies: string[];
 }
 
-// ========================================
-// IMPORTANTE: METADATA SONO STATI SPOSTATI IN founder/layout.tsx
-// Rimosso: export const metadata: Metadata = { ... }
-// ========================================
-
 export default function FounderProfilePage() {
   const [activeModal, setActiveModal] = useState<string | null>(null);
 
+  // DATI (invariati)
   const experiences: Experience[] = [
     {
       id: 0,
@@ -123,7 +119,6 @@ export default function FounderProfilePage() {
         "Amministrazione e sicurezza rete aziendale, Help-Desk, installazione e configurazione Router WiFi.",
     },
   ];
-
   const education: Education[] = [
     {
       id: 1,
@@ -131,7 +126,7 @@ export default function FounderProfilePage() {
       institution: "ITIS G. Ferraris",
       title: "Perito Elettronico e TLC",
       description: "Votazione: 95/100",
-      image: "/img/itis_belpasso.jpg", // Aggiornato con percorso reale
+      image: "/img/itis_belpasso.jpg",
     },
     {
       id: 2,
@@ -140,7 +135,7 @@ export default function FounderProfilePage() {
       title: "Ingegnere delle TLC",
       description:
         "Votazione: 108/110. Discipline: Analisi, Teoria dei segnali, Reti, Sistemi di TLC.",
-      image: "/img/unict.jpg", // Aggiornato con percorso reale
+      image: "/img/unict.jpg",
     },
     {
       id: 3,
@@ -149,17 +144,16 @@ export default function FounderProfilePage() {
       title: "Simulazione Reti Tattiche",
       description:
         "Simulazione architetturale di reti tattiche con System Architect e OPNET Modeler.",
-      image: "/img/selex_elsag.jpg", // ho ripristinato questo se hai l'immagine, altrimenti usa /img/education.jpg
+      image: "/img/selex_elsag.jpg",
     },
   ];
-
   const projects: Project[] = [
     {
       id: 1,
       title: "Coinmarketcap Report Bot",
       description: "Bot per analisi quotidiana crypto con archiviazione JSON.",
       githubUrl: "https://github.com/antopat1/coinmarketcap_bot",
-      image: "/img/report_chatbot.jpg", // Aggiornato con percorso reale
+      image: "/img/report_chatbot.jpg",
       technologies: ["Python", "API", "JSON"],
     },
     {
@@ -168,7 +162,7 @@ export default function FounderProfilePage() {
       description:
         "Sistema Django per certificare articoli su testnet Ethereum.",
       githubUrl: "https://github.com/antopat1/ProgettoDJangoDiAntoninoPaterno2",
-      image: "/img/notarizzazione_news.jpg", // Aggiornato con percorso reale
+      image: "/img/notarizzazione_news.jpg",
       technologies: ["Django", "Blockchain", "Ethereum"],
     },
     {
@@ -177,7 +171,7 @@ export default function FounderProfilePage() {
       description:
         "Piattaforma trading Bitcoin con MongoDB e API CoinMarketCap.",
       githubUrl: "https://github.com/antopat1/ProgettoMongoDBdiAntoninoPaterno",
-      image: "/img/BTC-Exchange.jpg", // Aggiornato con percorso reale
+      image: "/img/BTC-Exchange.jpg",
       technologies: ["Django", "MongoDB", "API"],
     },
     {
@@ -187,7 +181,7 @@ export default function FounderProfilePage() {
         "Smart Contract ERC20 con interfaccia Web3.py per Ganache/Goerli.",
       githubUrl:
         "https://github.com/antopat1/ProgettoEthereumWeb3diAntoninoPaterno",
-      image: "/img/MoneyBox.png", // Aggiornato con percorso reale
+      image: "/img/MoneyBox.png",
       technologies: ["Solidity", "Web3.py", "ERC20"],
     },
     {
@@ -196,7 +190,7 @@ export default function FounderProfilePage() {
       description:
         "Sito portfolio personale realizzato con Bootstrap HTML/CSS.",
       githubUrl: "https://github.com/antopat1/antopat1-My_personal_website",
-      image: "/img/myimg.jpg", // Aggiornato con percorso reale
+      image: "/img/myimg.jpg",
       technologies: ["HTML", "CSS", "Bootstrap"],
     },
     {
@@ -205,11 +199,10 @@ export default function FounderProfilePage() {
       description:
         "Script Python per acquisizione dati da PDF, elaborazione XML e salvataggio in CSV.",
       githubUrl: "https://github.com/antopat1/acquireDataFromPDFandSaveToCSV",
-      image: "/img/pdf_extraction.jpg", // Aggiornato con percorso reale
+      image: "/img/pdf_extraction.jpg",
       technologies: ["Python", "PDF", "XML", "CSV"],
     },
   ];
-
   const hardSkills = [
     { name: "HTML", percentage: 80, color: "bg-yellow-500" },
     { name: "CSS/Bootstrap/Tailwind", percentage: 60, color: "bg-green-500" },
@@ -221,7 +214,6 @@ export default function FounderProfilePage() {
     { name: "Solidity/Blockchain S.C.", percentage: 75, color: "bg-gray-400" },
     { name: "JavaScript/TypeScript", percentage: 70, color: "bg-indigo-500" },
   ];
-
   const softSkills = [
     { name: "Lavorare in team", icon: FaUsers },
     { name: "Organizzazione", icon: FaListUl },
@@ -229,7 +221,6 @@ export default function FounderProfilePage() {
     { name: "Problem solving", icon: FaBrain },
     { name: "Comunicazione", icon: FaBullhorn },
   ];
-
   const socialLinks = [
     { href: "https://github.com/antopat1", icon: FaGithub },
     { href: "https://www.facebook.com/antopat1", icon: FaFacebook },
@@ -238,7 +229,6 @@ export default function FounderProfilePage() {
       icon: FaLinkedin,
     },
   ];
-
   const techIcons = [
     { icon: FaHtml5, name: "HTML5" },
     { icon: FaCss3Alt, name: "CSS3" },
@@ -257,18 +247,13 @@ export default function FounderProfilePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100 font-sans">
+    // CAMBIO CHIAVE: Aggiunte classi dark:* per il background e il testo principale
+    <div className="min-h-screen font-sans transition-all duration-300 bg-gray-50 text-gray-800 dark:bg-slate-900 dark:text-slate-200">
       <Tooltip id="tech-tooltip" />
 
-      {/* ======================================== */}
-      {/* HERO SECTION - TESTO CENTRATO            */}
-      {/* ======================================== */}
-      <section
-        className="relative h-[45vh] overflow-hidden 
-             bg-hero-background bg-cover bg-no-repeat bg-left-center"
-      >
+      {/* Hero Section - L'overlay scuro funziona bene su entrambi i temi */}
+      <section className="relative h-[45vh] overflow-hidden bg-hero-background bg-cover bg-no-repeat bg-left-center">
         <div className="absolute inset-0 bg-black/50"></div>
-
         <div className="absolute z-20 top-1/2 left-4 md:left-8 transform -translate-y-1/2">
           <motion.div
             className="flex md:flex-col gap-6"
@@ -282,14 +267,13 @@ export default function FounderProfilePage() {
                 href={link.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-gray-400 hover:text-white transition-colors"
+                className="text-gray-300 hover:text-white transition-colors"
               >
                 <link.icon className="text-3xl" />
               </a>
             ))}
           </motion.div>
         </div>
-
         <div className="absolute z-10 inset-0 flex flex-col items-center justify-center text-center p-4">
           <div>
             <motion.h1
@@ -322,10 +306,11 @@ export default function FounderProfilePage() {
         </div>
       </section>
 
-      {/* ======================================== */}
-      {/* SEZIONE ABOUT ME & SKILLS                */}
-      {/* ======================================== */}
-      <section className="py-20 px-4 bg-gray-600/50" id="about">
+      {/* Sezione About Me & Skills */}
+      <section
+        className="py-20 px-4 transition-colors duration-300 bg-gray-100 dark:bg-slate-800"
+        id="about"
+      >
         <div className="max-w-7xl mx-auto">
           <motion.div
             className="text-center mb-16"
@@ -337,51 +322,83 @@ export default function FounderProfilePage() {
             <h2 className="text-4xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600">
               ABOUT ME
             </h2>
-            <p className="text-lg text-gray-300 max-w-3xl mx-auto leading-relaxed">
-              Conclusi gli studi in Ingegneria e dopo 14 anni di esperienza
-              nelle settore delle TLC prima come consulente presso operatori ISP
-              in qualità di analista tecnico di reportistica e monitoraggio
-              traffico dati su diversi Time Frame, poi come Project Manager e
-              Controller contabile nei cantieri di realizzazione rete di accesso
-              FTTH progetto BUL, ho deciso a seguito di una profonda riflessione
-              personale e professionale post COVID, di alimentare le mie
-              passioni nel campo delle tecnologie informatiche, registri
-              ditribuiti e sistemi/processi economici decentralizzati basati su
-              Blockchain. L'opportunità di lavorare presso Istituti comprensivi
-              di scuola secondaria di primo grado in qualità di Assistente
-              Tecnico informatico e docente corsi di Coding e Robotica,
-              rappresenta per me oggi una combinazione perfetta per conciliare
-              lavoro e studio personale grazie al percorso proposto da{" "}
+            {/* Testo con colore adattivo */}
+            <p className="text-lg max-w-3xl mx-auto leading-relaxed text-gray-600 dark:text-slate-400">
+              Conclusi gli studi in Ingegneria e dopo 14 anni di esperienza nelle settore delle TLC prima come consulente presso operatori ISP in qualità di analista tecnico di reportistica e monitoraggio traffico dati su diversi Time Frame, poi come Project Manager e Controller contabile nei cantieri di realizzazione rete di accesso FTTH progetto BUL, ho deciso a seguito di una profonda riflessione personale e professionale post COVID, di alimentare le mie passioni nel campo delle tecnologie informatiche, registri ditribuiti e sistemi/processi economici decentralizzati basati su Blockchain. L'opportunità di lavorare presso Istituti comprensivi di scuola secondaria di primo grado in qualità di Assistente Tecnico informatico e docente corsi di Coding e Robotica, rappresenta per me oggi una combinazione perfetta per conciliare lavoro e studio personale grazie al percorso proposto da{" "}
               <a
                 href="https://www.start2impact.it/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-purple-400 font-semibold hover:underline"
+                className="text-purple-600 font-semibold hover:underline"
               >
                 Start2impact University
               </a>
               .
             </p>
           </motion.div>
+          
+          <motion.div
+            className="max-w-3xl mx-auto mt-16"
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            {/* Card con colore adattivo */}
+            <Link
+              href="/"
+              className="group block p-6 rounded-xl transform transition-all duration-300 hover:scale-105 bg-white shadow-lg hover:shadow-2xl dark:bg-slate-700"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div
+                    className="flex-shrink-0 mr-5 p-3 rounded-full flex items-center justify-center overflow-hidden bg-gray-100 dark:bg-slate-600"
+                    style={{ width: "48px", height: "48px" }}
+                  >
+                    <img
+                      src="/img/logo.png"
+                      alt="DnA Platform Logo"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    {/* Testi con colori adattivi */}
+                    <h3 className="font-bold text-xl md:text-2xl text-gray-900 dark:text-slate-100">
+                      DnA Platform
+                    </h3>
+                    <p className="text-sm uppercase font-semibold tracking-wide rounded-full px-2 py-0.5 mt-1 inline-block bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300">
+                      Portfolio Main Project
+                    </p>
+                    <p className="mt-2 text-xs md:text-sm text-gray-600 dark:text-slate-400">
+                      Marketplace NFT che ho costruito per integrare tutte le tecnologie apprese e semplificare meccanismi on chain complessi attraverso Cifratura AES-256-GCM/PBKDF2 e Agenti AI.
+                    </p>
+                  </div>
+                </div>
+                {/* Icona con colore adattivo */}
+                <ArrowRight className="w-8 h-8 ml-4 transition-transform duration-300 group-hover:translate-x-2 text-gray-400 dark:text-slate-500" />
+              </div>
+            </Link>
+          </motion.div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-center">
-            {/* Hard Skills */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-center mt-20">
             <motion.div
               className="space-y-4"
               initial={{ x: -100, opacity: 0 }}
               whileInView={{ x: 0, opacity: 1 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.7 }}
+              transition={{ duration: 0.7, delay: 0.4 }}
             >
               <h3 className="text-2xl font-bold text-center lg:text-left mb-6">
                 HARD SKILLS
               </h3>
               {hardSkills.map((skill) => (
                 <div key={skill.name}>
-                  <p className="text-sm font-medium text-gray-300 mb-1">
+                  {/* Testo con colore adattivo */}
+                  <p className="text-sm font-medium mb-1 text-gray-700 dark:text-slate-300">
                     {skill.name}
                   </p>
-                  <div className="bg-gray-700 rounded-full h-4">
+                  {/* Barra di progresso con colore adattivo */}
+                  <div className="bg-gray-200 rounded-full h-4 dark:bg-slate-600">
                     <motion.div
                       className={`${skill.color} h-4 rounded-full flex items-center justify-end pr-2`}
                       initial={{ width: 0 }}
@@ -397,51 +414,49 @@ export default function FounderProfilePage() {
                 </div>
               ))}
             </motion.div>
-
-            {/* Image - Aggiornato con percorso reale */}
             <motion.div
-              className="flex justify-center"
+              className="flex justify-center order-first lg:order-none"
               initial={{ scale: 0.5, opacity: 0 }}
               whileInView={{ scale: 1, opacity: 1 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.7 }}
+              transition={{ duration: 0.7, delay: 0.4 }}
             >
-              <img
-                src="/img/myimg.jpg" // Percorso aggiornato
-                alt="Antonio Paternò"
-                className="rounded-full w-64 h-64 md:w-80 md:h-80 object-cover border-4 border-purple-500 shadow-lg"
-              />
+              <div className="overflow-hidden rounded-xl border-4 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 border-purple-600 w-64 md:w-80 aspect-[4/5]">
+                <img
+                  src="/img/myimg.jpg"
+                  alt="Antonino Paternò"
+                  className="w-full h-full object-cover"
+                />
+              </div>
             </motion.div>
-
-            {/* Soft Skills */}
             <motion.div
               className="space-y-4"
               initial={{ x: 100, opacity: 0 }}
               whileInView={{ x: 0, opacity: 1 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.7 }}
+              transition={{ duration: 0.7, delay: 0.4 }}
             >
               <h3 className="text-2xl font-bold text-center lg:text-left mb-6">
                 SOFT SKILLS
               </h3>
               {softSkills.map((skill) => (
+                // Card con colore adattivo
                 <div
                   key={skill.name}
-                  className="flex items-center bg-gray-700 p-3 rounded-lg"
+                  className="flex items-center p-3 rounded-lg bg-white shadow-sm dark:bg-slate-700"
                 >
                   <skill.icon className="text-2xl text-blue-400 mr-4" />
-                  <span className="text-lg text-gray-200">{skill.name}</span>
+                  {/* Testo con colore adattivo */}
+                  <span className="text-lg text-gray-800 dark:text-slate-200">{skill.name}</span>
                 </div>
               ))}
             </motion.div>
           </div>
         </div>
       </section>
-
-      {/* ======================================== */}
-      {/* MARQUEE DELLE SKILLS - CON TOOLTIP      */}
-      {/* ======================================== */}
-      <section className="py-12 bg-gray-900 overflow-hidden">
+      
+      {/* Sezione con sfondo adattivo */}
+      <section className="py-12 overflow-hidden bg-gray-50 dark:bg-slate-900">
         <h2 className="text-3xl font-bold text-center mb-8 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600">
           COMPUTER SKILLS
         </h2>
@@ -450,11 +465,7 @@ export default function FounderProfilePage() {
             className="flex"
             animate={{
               x: ["0%", "-100%"],
-              transition: {
-                ease: "linear",
-                duration: 40,
-                repeat: Infinity,
-              },
+              transition: { ease: "linear", duration: 40, repeat: Infinity },
             }}
           >
             {[...techIcons, ...techIcons].map((tech, index) => (
@@ -465,253 +476,250 @@ export default function FounderProfilePage() {
                 data-tooltip-id="tech-tooltip"
                 data-tooltip-content={tech.name}
               >
-                <tech.icon className="text-6xl text-gray-500 hover:text-white transition-colors" />
+                {/* Icona con colore hover adattivo */}
+                <tech.icon className="text-6xl transition-colors text-violet-700 hover:text-gray-800 dark:hover:text-slate-200" />
               </div>
             ))}
           </motion.div>
         </div>
       </section>
 
-      {/* ======================================== */}
-      {/* SEZIONE CARD E MODALI (INVARIATA)      */}
-      {/* ======================================== */}
-      <section className="py-20 px-4">
+      <section className="py-10 px-4">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-4xl font-bold text-center mb-16 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600">
             Esplora il mio percorso
           </h2>
-
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Card con stili adattivi */}
             <motion.div
-              className="bg-gray-800 rounded-xl p-8 cursor-pointer transform transition-all hover:scale-105 hover:bg-gray-700"
+              className="rounded-xl p-8 cursor-pointer transform transition-all hover:scale-105 bg-white shadow-lg hover:shadow-xl dark:bg-slate-700"
               onClick={() => setActiveModal("education")}
               whileHover={{ y: -10 }}
             >
               <FaGraduationCap className="text-5xl text-blue-400 mb-4" />
               <h3 className="text-2xl font-bold mb-4">Formazione</h3>
-              <p className="text-gray-400">
+              <p className="text-gray-600 dark:text-slate-400">
                 Percorso accademico dall'ITIS all'Università, con
                 specializzazione in Telecomunicazioni.
               </p>
             </motion.div>
             <motion.div
-              className="bg-gray-800 rounded-xl p-8 cursor-pointer transform transition-all hover:scale-105 hover:bg-gray-700"
+              className="rounded-xl p-8 cursor-pointer transform transition-all hover:scale-105 bg-white shadow-lg hover:shadow-xl dark:bg-slate-700"
               onClick={() => setActiveModal("experience")}
               whileHover={{ y: -10 }}
             >
               <FaBuilding className="text-5xl text-green-400 mb-4" />
               <h3 className="text-2xl font-bold mb-4">Esperienza</h3>
-              <p className="text-gray-400">
+              <p className="text-gray-600 dark:text-slate-400">
                 Oltre 15 anni nel settore TLC, con competenze in reti FTTH e
                 project management.
               </p>
             </motion.div>
             <motion.div
-              className="bg-gray-800 rounded-xl p-8 cursor-pointer transform transition-all hover:scale-105 hover:bg-gray-700"
+              className="rounded-xl p-8 cursor-pointer transform transition-all hover:scale-105 bg-white shadow-lg hover:shadow-xl dark:bg-slate-700"
               onClick={() => setActiveModal("projects")}
               whileHover={{ y: -10 }}
             >
               <FaLaptopCode className="text-5xl text-purple-400 mb-4" />
               <h3 className="text-2xl font-bold mb-4">Progetti</h3>
-              <p className="text-gray-400">
+              <p className="text-gray-600 dark:text-slate-400">
                 Portfolio di progetti blockchain, smart contracts, e sistemi
                 decentralizzati.
               </p>
             </motion.div>
           </div>
-
           <div className="text-center mt-16">
             <motion.a
-              href="/pdf/Curriculum Paternò .pdf" // Percorso aggiornato per il PDF
+              href="/pdf/Curriculum Paternò .pdf"
               download="Curriculum_Antonio_Paterno.pdf"
               className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-8 rounded-full transition-colors shadow-lg text-lg"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              <BiDownload className="mr-3 text-xl" />
-              Scarica il Curriculum PDF
+              <BiDownload className="mr-3 text-xl" /> Scarica il Curriculum PDF
             </motion.a>
           </div>
         </div>
       </section>
 
-      {/* Modali (invariate) */}
       <AnimatePresence>
-        {activeModal === "experience" && (
+        {activeModal && (
           <motion.div
             className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
+            {/* Finestra modale con stili adattivi */}
             <motion.div
-              className="bg-gray-800 rounded-xl p-8 max-w-4xl w-full max-h-[80vh] overflow-y-auto"
+              className="rounded-xl p-6 md:p-8 w-full max-h-[90vh] overflow-y-auto bg-white text-gray-800 dark:bg-slate-800 dark:text-slate-200"
               initial={{ scale: 0.5, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.5, opacity: 0 }}
+              style={{
+                maxWidth:
+                  activeModal === "projects"
+                    ? "1200px"
+                    : activeModal === "education"
+                    ? "1024px"
+                    : "896px",
+              }}
             >
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-3xl font-bold">Esperienze Professionali</h2>
-                <button
-                  onClick={() => setActiveModal(null)}
-                  className="text-gray-400 hover:text-white"
-                >
-                  <BiX className="text-3xl" />
-                </button>
-              </div>
-              <div className="space-y-6">
-                {experiences.map((exp, index) => (
-                  <motion.div
-                    key={exp.id}
-                    className="bg-gray-700 rounded-lg p-6"
-                    initial={{ x: -50, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: index * 0.1 }}
-                  >
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
-                      <div>
-                        <h3 className="text-xl font-bold text-blue-400">
-                          {exp.role}
-                        </h3>
-                        <p className="text-gray-300">{exp.company}</p>
-                      </div>
-                      <span className="text-sm bg-purple-600 px-3 py-1 rounded-full mt-2 md:mt-0">
-                        {exp.period}
-                      </span>
-                    </div>
-                    <p className="text-gray-300 leading-relaxed">
-                      {exp.description}
-                    </p>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {activeModal === "education" && (
-          <motion.div
-            className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <motion.div
-              className="bg-gray-800 rounded-xl p-8 max-w-6xl w-full max-h-[80vh] overflow-y-auto"
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.5, opacity: 0 }}
-            >
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-3xl font-bold">Percorso di Formazione</h2>
-                <button
-                  onClick={() => setActiveModal(null)}
-                  className="text-gray-400 hover:text-white"
-                >
-                  <BiX className="text-3xl" />
-                </button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {education.map((edu, index) => (
-                  <motion.div
-                    key={edu.id}
-                    className="bg-gray-700 rounded-lg overflow-hidden"
-                    initial={{ y: 50, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: index * 0.1 }}
-                  >
-                    <img
-                      src={edu.image} // Utilizza il percorso dell'immagine definito nell'array education
-                      alt={edu.institution}
-                      className="w-full h-48 object-cover"
-                    />
-                    <div className="p-6">
-                      <h3 className="text-xl font-bold text-blue-400 mb-2">
-                        {edu.title}
-                      </h3>
-                      <p className="text-purple-400 mb-2">{edu.institution}</p>
-                      <p className="text-sm text-gray-400 mb-3">{edu.period}</p>
-                      <p className="text-gray-300 text-sm">{edu.description}</p>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {activeModal === "projects" && (
-          <motion.div
-            className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <motion.div
-              className="bg-gray-800 rounded-xl p-8 max-w-7xl w-full max-h-[80vh] overflow-y-auto"
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.5, opacity: 0 }}
-            >
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-3xl font-bold">Portfolio Progetti</h2>
-                <button
-                  onClick={() => setActiveModal(null)}
-                  className="text-gray-400 hover:text-white"
-                >
-                  <BiX className="text-3xl" />
-                </button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {projects.map((project, index) => (
-                  <motion.div
-                    key={project.id}
-                    className="bg-gray-700 rounded-lg overflow-hidden group"
-                    initial={{ y: 50, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: index * 0.1 }}
-                  >
-                    <div className="relative">
-                      <img
-                        src={project.image} // Utilizza il percorso dell'immagine definito nell'array projects
-                        alt={project.title}
-                        className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
-                      />
-                    </div>
-                    <div className="p-6">
-                      <h3 className="text-xl font-bold text-blue-400 mb-3">
-                        {project.title}
-                      </h3>
-                      <p className="text-gray-300 text-sm mb-4 leading-relaxed">
-                        {project.description}
-                      </p>
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        {project.technologies.map((tech) => (
-                          <span
-                            key={tech}
-                            className="bg-gray-600 text-xs px-2 py-1 rounded"
-                          >
-                            {tech}
-                          </span>
-                        ))}
-                      </div>
-                      <a
-                        href={project.githubUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors text-sm"
+              {activeModal === "experience" && (
+                <>
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-2xl md:text-3xl font-bold">
+                      Esperienze Professionali
+                    </h2>
+                    {/* Pulsante chiusura con stili adattivi */}
+                    <button
+                      onClick={() => setActiveModal(null)}
+                      className="text-gray-500 hover:text-black dark:text-slate-400 dark:hover:text-white"
+                    >
+                      <BiX className="text-3xl" />
+                    </button>
+                  </div>
+                  <div className="space-y-6">
+                    {experiences.map((exp, index) => (
+                      <motion.div
+                        key={exp.id}
+                        // Elemento lista con stili adattivi
+                        className="rounded-lg p-6 bg-gray-100 dark:bg-slate-700"
+                        initial={{ x: -50, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        transition={{ delay: index * 0.1 }}
                       >
-                        <BiCode className="mr-2" />
-                        Vedi su GitHub
-                      </a>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+                          <div>
+                            <h3 className="text-xl font-bold text-blue-400">
+                              {exp.role}
+                            </h3>
+                            {/* Testo con colore adattivo */}
+                            <p className="text-gray-600 dark:text-slate-400">{exp.company}</p>
+                          </div>
+                          <span className="text-sm bg-purple-600 text-white px-3 py-1 rounded-full mt-2 md:mt-0 flex-shrink-0">
+                            {exp.period}
+                          </span>
+                        </div>
+                        <p className="leading-relaxed text-gray-600 dark:text-slate-400">
+                          {exp.description}
+                        </p>
+                      </motion.div>
+                    ))}
+                  </div>
+                </>
+              )}
+              {activeModal === "education" && (
+                <>
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-2xl md:text-3xl font-bold">
+                      Percorso di Formazione
+                    </h2>
+                    <button
+                      onClick={() => setActiveModal(null)}
+                      className="text-gray-500 hover:text-black dark:text-slate-400 dark:hover:text-white"
+                    >
+                      <BiX className="text-3xl" />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {education.map((edu, index) => (
+                      <motion.div
+                        key={edu.id}
+                        // Card con stili adattivi
+                        className="rounded-lg overflow-hidden bg-gray-100 dark:bg-slate-700"
+                        initial={{ y: 50, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: index * 0.1 }}
+                      >
+                        <img
+                          src={edu.image}
+                          alt={edu.institution}
+                          className="w-full h-48 object-cover"
+                        />
+                        <div className="p-6">
+                          <h3 className="text-xl font-bold text-blue-400 mb-2">
+                            {edu.title}
+                          </h3>
+                          <p className="text-purple-400 mb-2">
+                            {edu.institution}
+                          </p>
+                          {/* Testi con colori adattivi */}
+                          <p className="text-sm mb-3 text-gray-500 dark:text-slate-400">
+                            {edu.period}
+                          </p>
+                          <p className="text-sm text-gray-600 dark:text-slate-300">
+                            {edu.description}
+                          </p>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </>
+              )}
+              {activeModal === "projects" && (
+                <>
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-2xl md:text-3xl font-bold">
+                      Portfolio Progetti
+                    </h2>
+                    <button
+                      onClick={() => setActiveModal(null)}
+                      className="text-gray-500 hover:text-black dark:text-slate-400 dark:hover:text-white"
+                    >
+                      <BiX className="text-3xl" />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {projects.map((project, index) => (
+                      <motion.div
+                        key={project.id}
+                        // Card con stili adattivi
+                        className="rounded-lg overflow-hidden group bg-gray-100 dark:bg-slate-700"
+                        initial={{ y: 50, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: index * 0.1 }}
+                      >
+                        <div className="relative">
+                          <img
+                            src={project.image}
+                            alt={project.title}
+                            className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
+                          />
+                        </div>
+                        <div className="p-6">
+                          <h3 className="text-xl font-bold text-blue-400 mb-3">
+                            {project.title}
+                          </h3>
+                          {/* Testo con colore adattivo */}
+                          <p className="text-sm mb-4 leading-relaxed text-gray-600 dark:text-slate-400">
+                            {project.description}
+                          </p>
+                          <div className="flex flex-wrap gap-2 mb-4">
+                            {project.technologies.map((tech) => (
+                              // Tag con stili adattivi
+                              <span
+                                key={tech}
+                                className="text-xs px-2 py-1 rounded bg-gray-200 text-gray-700 dark:bg-slate-600 dark:text-slate-300"
+                              >
+                                {tech}
+                              </span>
+                            ))}
+                          </div>
+                          <a
+                            href={project.githubUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                          >
+                            <BiCode className="mr-2" /> Vedi su GitHub
+                          </a>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </>
+              )}
             </motion.div>
           </motion.div>
         )}
@@ -719,3 +727,5 @@ export default function FounderProfilePage() {
     </div>
   );
 }
+
+

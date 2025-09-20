@@ -27,5 +27,3 @@ export const CHAINLINK_SUBSCRIPTION_ID = BigInt(process.env.NEXT_PUBLIC_CHAINLIN
 // Altrimenti, verrà usato il gateway pubblico di fallback di Pinata.
 
 
-// Nota: Assicurati di avere i tuoi file ABI in `src/abis/` o nel percorso corretto.
-// Se li compili in un'altra posizione (es. `artifacts/`), aggiorna i percorsi di importazione.
