@@ -8,21 +8,6 @@
 [![Next.js](https://img.shields.io/badge/Next.js-14.2.5-black)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://typescriptlang.org/)
 
-## 📋 Table of Contents
-
-- [Overview](#overview)
-- [Key Features](#key-features)
-- [Architecture](#architecture)
-- [Smart Contracts](#smart-contracts)
-- [Technology Stack](#technology-stack)
-- [Installation & Setup](#installation--setup)
-- [Testing](#testing)
-- [AI-Powered Author Verification](#ai-powered-author-verification)
-- [Real-Time Event Monitoring](#real-time-event-monitoring)
-- [User Roles & Permissions](#user-roles--permissions)
-- [Deployment](#deployment)
-- [Contributing](#contributing)
-- [License](#license)
 
 ## 🌟 Overview
 
@@ -316,46 +301,6 @@ The frontend is deployed on Vercel with automatic deployments from the main bran
 ### Smart Contracts (Arbitrum Sepolia)
 Contracts are deployed and verified on Arbitrum Sepolia testnet for cost-effective testing and development.
 
-## 📊 Key Metrics & Performance
-
-### User Experience
-- **Average approval time**: 45 seconds (vs 48 hours manual process)
-- **Automation rate**: 85% of applications processed without human intervention
-- **Cost reduction**: 90% decrease in operational overhead
-
-### Technical Performance
-- **Test coverage**: 80+ comprehensive test cases
-- **Real-time latency**: <100ms for event propagation
-- **Blockchain finality**: ~15 seconds on Arbitrum Sepolia
-
-## 🔮 Future Roadmap
-
-### Short-term Enhancements
-- Integration with academic databases (ORCID, Scopus)
-- Multi-language support for international researchers
-- Advanced analytics dashboard
-
-### Long-term Vision
-- Custom ML models trained on platform data
-- Decentralized reputation system
-- Cross-platform credential portability
-- Integration with major research institutions
-
-## 🤝 Contributing
-
-We welcome contributions from the community! Please read our contributing guidelines:
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit changes: `git commit -m 'Add amazing feature'`
-4. Push to branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
-
-### Development Guidelines
-- Follow existing code style and conventions
-- Add comprehensive tests for new features
-- Update documentation for API changes
-- Ensure all tests pass before submitting PR
 
 ## 📄 License
 
