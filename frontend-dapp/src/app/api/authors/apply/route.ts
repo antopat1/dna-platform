@@ -9,7 +9,7 @@ import { whitelistAuthorOnChain } from '@/lib/secure-wallet';
 const SCORE_THRESHOLD_APPROVE = 80;
 const SCORE_THRESHOLD_REJECT = 60;
 
-// Funzione di parsing (invariata dal tuo codice originale, ma resa riutilizzabile)
+
 const parseGeminiResponse = (rawLLMResponse: any) => {
     let llmScore = 0;
     let llmComment = 'Parsing error';
@@ -83,10 +83,10 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ message: 'Applicazione non trovata per il wallet.', debug: { walletAddress } }, { status: 404 });
       }
 
-      // 1. Parsing della risposta di Gemini
+      
       const { llmScore, llmComment, llmApproved } = parseGeminiResponse(rawLLMResponse);
 
-      // 2. Logica decisionale basata sullo score
+    
       let finalStatus: IAuditAuthor['status'] = 'PENDING';
       let backendApproved = false;
       let finalMessage = '';
@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
       }
       console.log(`🧠 Decisione del backend: Score=${llmScore}, Status=${finalStatus}`);
 
-      // 3. Esecuzione del Whitelisting On-Chain se approvato
+
       let txHash: string | null = null;
       if (finalStatus === 'APPROVED') {
         try {
@@ -114,16 +114,16 @@ export async function POST(req: NextRequest) {
           finalMessage += ' L\'indirizzo è stato aggiunto alla whitelist on-chain.';
         } catch (chainError: any) {
           console.error(`❌ Fallimento del whitelisting on-chain per ${walletAddress}:`, chainError.message);
-          finalStatus = 'ERROR'; // Lo stato cambia in ERRORE se il whitelisting fallisce
+          finalStatus = 'ERROR'; 
           finalMessage = `Candidatura approvata, ma il whitelisting on-chain è fallito: ${chainError.message}`;
         }
       }
 
-      // 4. Aggiornamento del Database
+      
       application.status = finalStatus;
       application.llmScore = llmScore;
       application.llmComment = llmComment;
-      application.llmApproved = backendApproved; // Usiamo la decisione del backend
+      application.llmApproved = backendApproved; 
       application.transactionHash = txHash ?? undefined;
 
       const savedApplication = await application.save();
@@ -141,9 +141,9 @@ export async function POST(req: NextRequest) {
       }, { status: 200 });
 
     } else {
-      // GESTISCE LA CHIAMATA DAL FORM (CREAZIONE INIZIALE)
+      
       console.log('📝 Chiamata dal form per creazione');
-      // ... la logica di creazione è invariata ...
+      
       const {
         walletAddress, name, email, institution, researchArea, biography, publicationsLink, linkedinProfile,
       } = body;

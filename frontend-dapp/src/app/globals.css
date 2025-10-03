@@ -6,9 +6,8 @@
 
 @layer base {
   :root {
-    /* Tema Chiaro (Light Mode) */
-    --background: 0 0% 100%; /* white */
-    --foreground: 0 0% 3.9%; /* black */
+    --background: 0 0% 100%; 
+    --foreground: 0 0% 3.9%; 
     --card: 0 0% 100%;
     --card-foreground: 0 0% 3.9%;
     --popover: 0 0% 100%;
@@ -30,9 +29,8 @@
   }
   
   .dark {
-    /* Tema Scuro (Dark Mode) */
-    --background: 0 0% 3.9%; /* quasi black */
-    --foreground: 0 0% 98%; /* quasi white */
+    --background: 0 0% 3.9%; 
+    --foreground: 0 0% 98%; 
     --card: 0 0% 3.9%;
     --card-foreground: 0 0% 98%;
     --popover: 0 0% 3.9%;
@@ -58,8 +56,7 @@
     @apply border-border;
   }
   
-  /* Impostiamo il colore di sfondo e testo di base per l'intero body.
-     Questi valori verranno dai nostri temi :root e .dark */
+
   body {
     @apply bg-background text-foreground;
   }

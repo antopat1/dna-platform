@@ -1,9 +1,9 @@
 // frontend-dapp/src/app/admin/layout.tsx
-'use client'; // Necessario per usare il componente AdminGuard
+'use client'; 
 
 import React from 'react';
 import Link from 'next/link';
-import AdminGuard from '@/components/AdminGuard'; // Importiamo il nostro guard
+import AdminGuard from '@/components/AdminGuard'; 
 
 export default function AdminLayout({
   children,
@@ -12,7 +12,7 @@ export default function AdminLayout({
 }) {
   return (
     <div className="flex min-h-screen">
-      {/* Sidebar di Navigazione */}
+      
       <aside className="w-64 bg-gray-800 text-white p-4">
         <h2 className="text-2xl font-bold mb-6">DnA Admin</h2>
         <nav>
@@ -46,7 +46,7 @@ export default function AdminLayout({
         </nav>
       </aside>
 
-      {/* Contenuto Principale protetto dal Guard */}
+      
       <main className="flex-1 p-8 bg-gray-100">
         <AdminGuard>
           {children}

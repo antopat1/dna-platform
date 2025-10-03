@@ -18,7 +18,7 @@ import { resolveIpfsLink } from "@/utils/ipfs";
 const ITEMS_PER_PAGE = 10;
 const PLACEHOLDER_IMAGE_URL = "https://placehold.co/80x80/333333/ffffff?text=No+Img";
 
-// --- COMPONENTI UI ---
+
 const LoadingSpinner = () => <div className="flex justify-center items-center py-8"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div><p className="ml-4 text-white">Caricamento...</p></div>;
 
 const SuccessNotification = ({ contentId, onClose }: { contentId: bigint; onClose: () => void; }) => (
@@ -35,7 +35,7 @@ const SuccessNotification = ({ contentId, onClose }: { contentId: bigint; onClos
   </div>
 );
 
-// --- COMPONENTE PER NOTIFICA CONNESSIONE ---
+
 const ConnectionNotice = ({ isConnected, chainId }: { isConnected: boolean; chainId: number | undefined }) => {
   if (!isConnected) {
     return (
@@ -67,7 +67,7 @@ const ConnectionNotice = ({ isConnected, chainId }: { isConnected: boolean; chai
   return null;
 };
 
-// --- PAGINA PRINCIPALE ---
+
 const RegisteredContentPage = () => {
   const { address, isConnected, chainId } = useAccount();
   const { registeredContents, isLoading: isLoadingContents, error: contentsError, refetch } = useRegisteredContents();
@@ -76,8 +76,6 @@ const RegisteredContentPage = () => {
   const [isMintingId, setIsMintingId] = useState<bigint | null>(null);
   const [showSuccessNotification, setShowSuccessNotification] = useState<bigint | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-
-  // Determiniamo se l'utente può mintare (connesso e rete corretta)
   const canMint = isConnected && chainId === ARBITRUM_SEPOLIA_CHAIN_ID;
 
   const onMintNewCopy = useCallback(async (content: DisplayContent) => {
@@ -94,26 +92,20 @@ const RegisteredContentPage = () => {
       if (resetMintingState) resetMintingState();
       const mainDocCid = ipfsHash?.replace("ipfs://", "") || null;
       const previewCid = displayImageUrl?.split("/ipfs/")[1] || null;
-
-      // Avviamo la transazione
       await handleRequestMintForCopy(contentId, title, description, mainDocCid, previewCid, nftMintPrice);
-      
-      // La transazione è stata inviata (l'utente ha confermato su Metamask)
       toast.success("Transazione inviata! In attesa della finalizzazione...");
 
-      // --- LOGICA DEL TIMER ---
-      // Impostiamo un timer per mostrare il pop-up e riattivare i pulsanti
+
       setTimeout(() => {
         setShowSuccessNotification(contentId);
-        setIsMintingId(null); // Riattiva i pulsanti
-        refetch(); // Forziamo l'aggiornamento dei dati
-      }, 12000); // Aspettiamo 12 secondi
+        setIsMintingId(null); 
+        refetch(); 
+      }, 12000); 
 
     } catch (err: any) {
-      // Questo blocco viene eseguito se l'utente rifiuta la transazione in Metamask
       console.error("Minting process failed or was rejected:", err);
       toast.error(err.shortMessage || "Transazione annullata dall'utente.");
-      setIsMintingId(null); // Riattiviamo subito i pulsanti in caso di rifiuto
+      setIsMintingId(null); 
     }
   }, [isConnected, address, chainId, isAdminProcessing, isMintingId, resetMintingState, handleRequestMintForCopy, refetch]);
 
@@ -134,7 +126,7 @@ const RegisteredContentPage = () => {
           <CardDescription className="text-gray-400">Esplora i contenuti registrati e conia la tua copia NFT.</CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Notifica di connessione sempre visibile quando necessaria */}
+
           <ConnectionNotice isConnected={isConnected} chainId={chainId} />
           
           {isLoadingContents ? <LoadingSpinner /> : contentsError ? <div className="text-red-500 text-center py-8">Errore: {contentsError}</div> : currentContents.length === 0 ? <div className="text-center text-gray-500 py-8 text-lg">Nessun contenuto registrato trovato.</div> : (
@@ -155,11 +147,6 @@ const RegisteredContentPage = () => {
                   {currentContents.map((content) => {
                     const isMintingThis = isMintingId === content.contentId;
                     const isAvailable = content.mintedCopies < content.maxCopies && content.isAvailable;
-                    
-                    // Il pulsante è disabilitato se:
-                    // 1. Non può mintare (wallet non connesso o rete sbagliata)
-                    // 2. Contenuto non disponibile/esaurito
-                    // 3. Operazione in corso (admin processing o minting in corso)
                     const isButtonDisabled = !canMint || !isAvailable || isAdminProcessing || !!isMintingId;
                     
                     return (

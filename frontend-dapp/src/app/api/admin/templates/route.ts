@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import NftTemplateDefinition from '@/models/NftTemplateDefinition';
 
-// Handler per GET (recupera tutti i template)
+
 export async function GET() {
   await dbConnect();
   try {
@@ -15,7 +15,7 @@ export async function GET() {
   }
 }
 
-// Handler per POST (crea un nuovo template)
+
 export async function POST(req: Request) {
   await dbConnect();
   try {
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, data: template }, { status: 201 });
   } catch (error: any) {
     console.error('Error creating NFT template:', error);
-    // MongoDB duplicate key error code is 11000
+    
     if (error.code === 11000) {
       return NextResponse.json({ success: false, message: 'Template name already exists.' }, { status: 409 });
     }

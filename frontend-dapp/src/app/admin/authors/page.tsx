@@ -5,7 +5,7 @@ import { useAccount, useReadContract, useWriteContract, useWaitForTransactionRec
 import { isAddress } from 'viem';
 import { toast } from 'react-hot-toast';
 
-// ABI per le funzioni necessarie
+
 const SCIENTIFIC_CONTENT_REGISTRY_ABI = [
     {
         "inputs": [{"internalType": "bytes32", "name": "role", "type": "bytes32"}, {"internalType": "address", "name": "account", "type": "address"}],
@@ -58,10 +58,10 @@ const SCIENTIFIC_CONTENT_REGISTRY_ABI = [
 
 const contractAddress = process.env.NEXT_PUBLIC_SCIENTIFIC_CONTENT_REGISTRY_ADDRESS;
 
-// Debug log
+
 console.log("Indirizzo del contratto letto da .env.local:", contractAddress);
 
-// Controllo di validità
+
 if (!contractAddress || contractAddress === "") {
     throw new Error(
         "Errore: NEXT_PUBLIC_SCIENTIFIC_CONTENT_REGISTRY_ADDRESS non è definito. " +
@@ -75,7 +75,7 @@ export default function WhitelistedAuthorsPage() {
     const { address: connectedAddress, isConnected } = useAccount();
     const [authorAddress, setAuthorAddress] = useState('');
 
-    // Legge il valore di ADMIN_ROLE dal contratto
+   
     const { 
         data: adminRoleHash, 
         isLoading: isAdminRoleLoading,
@@ -86,7 +86,7 @@ export default function WhitelistedAuthorsPage() {
         functionName: 'ADMIN_ROLE',
     });
 
-    // Controlla se l'utente connesso ha il ruolo di admin
+    
     const { 
         data: hasAdminRole, 
         isLoading: isAdminCheckLoading, 
@@ -99,7 +99,7 @@ export default function WhitelistedAuthorsPage() {
         args: adminRoleHash && connectedAddress ? [adminRoleHash, connectedAddress] : undefined,
     });
 
-    // Controlla se un indirizzo è whitelisted
+    
     const { 
         data: isWhitelisted, 
         refetch: refetchWhitelisted,
@@ -113,7 +113,7 @@ export default function WhitelistedAuthorsPage() {
 
     const isAdmin = Boolean(hasAdminRole);
 
-    // Hook per la scrittura del contratto
+    
     const { 
         writeContract, 
         data: txHash, 
@@ -132,7 +132,7 @@ export default function WhitelistedAuthorsPage() {
         }
     });
 
-    // Controlla lo stato della transazione
+    
     const { 
         isLoading: isConfirming, 
         isSuccess: isConfirmed,
@@ -207,7 +207,7 @@ export default function WhitelistedAuthorsPage() {
         }
     };
 
-    // Gestione dei risultati delle transazioni
+    
     useEffect(() => {
         if (isConfirmed && txHash) {
             toast.success('Operazione completata con successo!');
@@ -225,7 +225,7 @@ export default function WhitelistedAuthorsPage() {
         }
     }, [isConfirmed, receiptError, txHash, refetchWhitelisted, refetchAdminRole]);
 
-    // Debug logs
+    
     useEffect(() => {
         console.log('Connected address:', connectedAddress);
         console.log('Admin role hash:', adminRoleHash);

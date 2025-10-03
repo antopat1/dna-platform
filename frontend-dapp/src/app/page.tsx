@@ -17,17 +17,15 @@ export default function Home() {
   const { isAuthor, isConnected } = useUserRole();
 
   return (
-    // CAMBIO CHIAVE: Abbiamo definito stili per entrambi i temi.
-    // Tema Chiaro (default): Sfondo bianco, testo scuro.
-    // Tema Scuro (`dark:`): Sfondo ardesia scuro, testo chiaro, replicando il tuo screenshot.
+ 
     <div className="flex flex-col items-center justify-center min-h-screen bg-white text-slate-800 dark:bg-slate-900 dark:text-slate-200">
       
-      {/* Hero Section */}
+    
       <section className="text-center py-20 px-4 max-w-4xl mx-auto flex flex-col items-center">
         <h1 className="text-5xl md:text-6xl font-extrabold leading-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600">
           Il Futuro della Scienza è Tokenizzato.
         </h1>
-        {/* Testo del paragrafo con colori specifici per tema */}
+       
         <p className="text-xl md:text-2xl text-slate-600 dark:text-slate-300 font-light mb-8">
           Benvenuto su DnA, il marketplace che trasforma la ricerca scientifica in asset digitali unici e verificabili.
         </p>
@@ -37,7 +35,7 @@ export default function Home() {
           </Link>
           
           {isConnected && (
-            // Bottone secondario con stili per entrambi i temi
+         
             <Link 
               href={isAuthor ? "/dashboard/register-content" : "/my-nfts"} 
               className="bg-transparent border-2 border-slate-300 text-slate-700 hover:border-blue-500 hover:text-blue-500 dark:border-slate-700 dark:text-slate-300 dark:hover:border-blue-400 dark:hover:text-blue-400 font-semibold py-3 px-8 rounded-full transition-colors"
@@ -47,7 +45,7 @@ export default function Home() {
           )}
         </div>
 
-        {/* LOTTIE ANIMATION: Reinserita esattamente come era prima */}
+    
         <div className="mt-8 w-full flex justify-center transform transition-transform duration-300 hover:scale-110">
           <div className="w-2/3 md:w-1/2 lg:w-1/3 max-w-[280px]">
             <Player
@@ -60,11 +58,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Features Section */}
-      {/* Sfondo sezione con colori specifici per tema, replicando lo screenshot */}
+
       <section className="w-full py-20 px-4 bg-slate-100 dark:bg-slate-800">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
-          {/* Card con colori specifici per tema, replicando lo screenshot */}
+
           <div className="flex flex-col items-center p-6 bg-white dark:bg-slate-700 rounded-xl shadow-lg transform transition-transform hover:scale-105">
             <BiLayer className="text-5xl text-blue-400 mb-4" />
             <h3 className="text-2xl font-bold mb-2">Trasparenza Assoluta</h3>
@@ -89,12 +86,12 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Final CTA Section */}
+
       <section className="text-center py-20 px-4">
         <h2 className="text-3xl font-bold mb-4">
           Pronto a Rivoluzionare la Ricerca?
         </h2>
-        {/* Testo del paragrafo con colori specifici per tema */}
+
         <p className="text-lg text-slate-500 dark:text-slate-400 mb-6">
           Unisciti a noi e contribuisci a costruire un futuro della scienza aperto e accessibile a tutti.<br/>
           Richiedi l accredito immediato tramite agente AI o invia form al nostro Team per registrare contenuti scientifici <br/>disponibili per il Minting in NFT unici

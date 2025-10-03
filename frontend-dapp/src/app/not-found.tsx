@@ -6,14 +6,12 @@ import Link from 'next/link';
 import notFoundAnimation from '../assets/animation/not-found.json';
 import dynamic from 'next/dynamic'; // Importa la funzione dynamic
 
-// ======================= INIZIO SOLUZIONE =======================
-// Applichiamo la stessa tecnica qui: importiamo il componente Player
-// in modo dinamico, disabilitando il Server-Side Rendering.
+
 const Player = dynamic(
   () => import('@lottiefiles/react-lottie-player').then((mod) => mod.Player),
   { ssr: false }
 );
-// ======================== FINE SOLUZIONE ========================
+
 
 export default function NotFound() {
   return (

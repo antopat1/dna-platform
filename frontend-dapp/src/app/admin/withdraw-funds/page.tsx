@@ -5,11 +5,11 @@ import { useAccount, useReadContract, useWriteContract, useWaitForTransactionRec
 import { formatEther } from 'viem';
 import { toast } from 'react-hot-toast';
 
-// Importa gli indirizzi dei contratti dalle variabili d'ambiente
+
 const SCIENTIFIC_CONTENT_NFT_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_SCIENTIFIC_CONTENT_NFT_ADDRESS as `0x${string}`;
 const SCIENTIFIC_CONTENT_MARKETPLACE_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_SCIENTIFIC_CONTENT_MARKETPLACE_CONTRACT_ADDRESS as `0x${string}`;
 
-// ABI completo per AccessControl e funzioni necessarie
+
 const MARKETPLACE_ABI = [
     {
         "inputs": [
@@ -51,7 +51,7 @@ const MARKETPLACE_ABI = [
     }
 ] as const;
 
-// ABI per il contratto NFT (se diverso)
+
 const NFT_ABI = [
     {
         "inputs": [
@@ -83,19 +83,19 @@ export default function WithdrawFundsPage() {
     const { address: connectedAddress, isConnected } = useAccount();
     const publicClient = usePublicClient();
     
-    // Stato per i saldi dei contratti
+    
     const [nftBalance, setNftBalance] = useState<bigint | null>(null);
     const [marketplaceBalance, setMarketplaceBalance] = useState<bigint | null>(null);
     const [marketplaceAccumulatedFees, setMarketplaceAccumulatedFees] = useState<bigint | null>(null);
 
-    // 1. Legge il valore costante di ADMIN_ROLE
+    
     const { data: adminRole, isLoading: isAdminRoleLoading } = useReadContract({
         abi: MARKETPLACE_ABI,
         address: SCIENTIFIC_CONTENT_MARKETPLACE_CONTRACT_ADDRESS,
         functionName: 'ADMIN_ROLE',
     });
 
-    // 2. Controlla se l'utente connesso ha l'ADMIN_ROLE sul contratto NFT
+    
     const { data: hasNftAdminRole, isLoading: isNftRoleLoading } = useReadContract({
         abi: NFT_ABI,
         address: SCIENTIFIC_CONTENT_NFT_CONTRACT_ADDRESS,
@@ -106,7 +106,7 @@ export default function WithdrawFundsPage() {
         },
     });
 
-    // 3. Controlla se l'utente connesso ha l'ADMIN_ROLE sul contratto Marketplace
+    
     const { data: hasMarketplaceAdminRole, isLoading: isMarketplaceRoleLoading } = useReadContract({
         abi: MARKETPLACE_ABI,
         address: SCIENTIFIC_CONTENT_MARKETPLACE_CONTRACT_ADDRESS,
@@ -117,7 +117,7 @@ export default function WithdrawFundsPage() {
         },
     });
 
-    // 4. Legge le commissioni accumulate nel Marketplace
+    
     const { data: accumulatedFeesData, isLoading: isAccumulatedFeesLoading, error: accumulatedFeesError } = useReadContract({
         abi: MARKETPLACE_ABI,
         address: SCIENTIFIC_CONTENT_MARKETPLACE_CONTRACT_ADDRESS,
@@ -133,10 +133,10 @@ export default function WithdrawFundsPage() {
         hash: txHash,
     });
     
-    // L'utente è un admin autorizzato se ha il ruolo su ENTRAMBI i contratti
+    
     const isAuthorizedAdmin = hasNftAdminRole && hasMarketplaceAdminRole;
 
-    // Funzione per aggiornare i saldi
+    
     const fetchBalances = async () => {
         if (!publicClient) return;
 
@@ -161,28 +161,28 @@ export default function WithdrawFundsPage() {
             fetchBalances();
         }
         
-        // Aggiorna le commissioni accumulate quando i dati sono disponibili
+        
         if (accumulatedFeesData !== undefined) {
             setMarketplaceAccumulatedFees(accumulatedFeesData);
         }
     }, [isConnected, isConfirmed, publicClient, accumulatedFeesData]);
 
-    // Funzione di prelievo migliorata con controlli aggiuntivi
+    
     const handleWithdraw = async (contractAddress: `0x${string}`, contractType: 'nft' | 'marketplace') => {
         if (!isAuthorizedAdmin) {
             toast.error("Non hai il ruolo ADMIN per eseguire questa operazione.");
             return;
         }
 
-        // Per il marketplace, controlla prima se ci sono fondi da ritirare
+        
         if (contractType === 'marketplace') {
-            // Se abbiamo i dati delle commissioni accumulate, controlliamo
+            
             if (accumulatedFeesData !== undefined && accumulatedFeesData === 0n) {
                 toast.error("Non ci sono commissioni accumulate da ritirare nel Marketplace.");
                 return;
             }
             
-            // Se non abbiamo i dati delle commissioni ma il saldo è 0, probabile che non ci siano fondi
+            
             if (accumulatedFeesData === undefined && marketplaceBalance === 0n) {
                 toast.error("Il contratto Marketplace non sembra avere fondi disponibili.");
                 return;
@@ -192,7 +192,7 @@ export default function WithdrawFundsPage() {
         try {
             const abi = contractType === 'marketplace' ? MARKETPLACE_ABI : NFT_ABI;
             
-            // Log per debug
+            
             console.log(`Attempting to withdraw from ${contractType}:`, {
                 contractAddress,
                 connectedAddress,
@@ -214,7 +214,7 @@ export default function WithdrawFundsPage() {
         }
     };
     
-    // Gestione degli stati di caricamento globali
+    
     const isLoading = isAdminRoleLoading || isNftRoleLoading || isMarketplaceRoleLoading;
     const isTransactionInProgress = isPending || isConfirming;
 
@@ -325,7 +325,7 @@ export default function WithdrawFundsPage() {
                         </div>
                     )}
 
-                    {/* Debug info - rimuovi in produzione */}
+                    
                     <div className="mt-6 p-4 bg-gray-100 rounded-md">
                         <h4 className="text-sm font-medium text-gray-700 mb-2">Info Debug:</h4>
                         <p className="text-xs text-gray-600">Admin Role: {adminRole?.toString()}</p>

@@ -14,8 +14,8 @@ export interface IAuditAuthor extends Document {
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'REVIEW_REQUIRED' | 'ERROR';
   llmScore?: number;
   llmComment?: string;
-  llmApproved?: boolean; // Aggiunto per coerenza con il codice API
-  transactionHash?: string; // Aggiunto per il whitelisting
+  llmApproved?: boolean; 
+  transactionHash?: string; 
   createdAt: Date;
   updatedAt: Date;
 }
@@ -81,10 +81,10 @@ const AuditAuthorSchema = new Schema<IAuditAuthor>({
     type: String,
     maxlength: 1000
   },
-  llmApproved: { // Campo aggiunto
+  llmApproved: { 
     type: Boolean
   },
-  transactionHash: { // Campo aggiunto
+  transactionHash: { 
     type: String,
     trim: true,
   }
@@ -92,7 +92,7 @@ const AuditAuthorSchema = new Schema<IAuditAuthor>({
   timestamps: true
 });
 
-// Indici per ottimizzare le query
+
 AuditAuthorSchema.index({ walletAddress: 1 });
 AuditAuthorSchema.index({ status: 1 });
 AuditAuthorSchema.index({ createdAt: -1 });

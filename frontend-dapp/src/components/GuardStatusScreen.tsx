@@ -1,8 +1,7 @@
 'use client';
 import React from 'react';
 
-// Un oggetto che contiene i vari elementi icona in JSX.
-// Questo rende facile aggiungere o modificare icone in un unico posto.
+
 const ICONS = {
   loading: <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>,
   error: (
@@ -21,7 +20,7 @@ const ICONS = {
   ),
 };
 
-// Definiamo le proprietà che il nostro componente accetterà.
+
 interface GuardStatusScreenProps {
   iconType: keyof typeof ICONS;
   title: string;

@@ -34,8 +34,7 @@ export async function GET(request: NextRequest) {
     const db = client.db(DATABASE_NAME);
     const collection = db.collection('events');
     
-    // Questa riga usa `request.url`, che è la causa dell'errore di pre-rendering.
-    // Con `export const dynamic = 'force-dynamic';` ora è consentito.
+
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '5', 10);
 
@@ -49,8 +48,6 @@ export async function GET(request: NextRequest) {
         ]
       })
       // Ordina per blockNumber e logIndex per garantire un ordine cronologico corretto
-      // sulla blockchain. _id è affidabile, ma può non riflettere sempre l'ordine esatto
-      // di transazione all'interno di un blocco.
       .sort({ blockNumber: -1, logIndex: -1 })
       .limit(limit)
       .toArray();

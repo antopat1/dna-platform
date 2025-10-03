@@ -107,7 +107,6 @@ export const useRegisteredContents = (): UseRegisteredContentsResult => {
             } catch (e) {
                 console.warn(`Metodo 1 fallito per contentId ${content.contentId}, provo con il fallback...`);
                 try {
-                    // --- CORREZIONE: Aggiunto cast 'as bigint' ---
                     const totalSupply = await nftContract.read.totalSupply() as bigint;
                     for (let tokenId = BigInt(1); tokenId <= totalSupply; tokenId++) {
                         try {
@@ -122,7 +121,6 @@ export const useRegisteredContents = (): UseRegisteredContentsResult => {
                                 break;
                             }
                         } catch (innerLoopError) {
-                            // Ignora errori su singoli token (potrebbero non esistere)
                             continue;
                         }
                     }

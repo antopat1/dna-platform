@@ -29,7 +29,7 @@ interface SubmissionResult {
 const ARBISCAN_URL = "https://sepolia.arbiscan.io/tx/";
 const ADMIN_EMAIL = "antopat1@gmail.com";
 
-// --- NUOVO COMPONENTE PER LA SCHERMATA DI CARICAMENTO ---
+
 const PollingScreen = ({ applicationId }: { applicationId: string | null }) => {
   const loadingMessages = [
     "L'intelligenza artificiale sta analizzando la tua candidatura...",
@@ -47,9 +47,9 @@ const PollingScreen = ({ applicationId }: { applicationId: string | null }) => {
       setCurrentMessageIndex(
         (prevIndex) => (prevIndex + 1) % loadingMessages.length
       );
-    }, 4000); // Cambia messaggio ogni 4 secondi
+    }, 4000); 
 
-    return () => clearInterval(intervalId); // Pulisce l'intervallo quando il componente viene smontato
+    return () => clearInterval(intervalId); 
   }, [loadingMessages.length]);
 
   return (
@@ -146,10 +146,10 @@ export default function ApplyForWhitelist() {
       if (isCompleted) {
         clearInterval(pollInterval);
       }
-    }, 3000); // Controlla ogni 3 secondi
+    }, 3000); 
 
     setTimeout(() => {
-      // Non impostare errore se il polling è già terminato
+
       if (isPolling && !submitted) {
         clearInterval(pollInterval);
         setIsPolling(false);
@@ -157,7 +157,7 @@ export default function ApplyForWhitelist() {
           "Timeout: l'elaborazione sta richiedendo più tempo del previsto. Ricarica la pagina per verificare lo stato."
         );
       }
-    }, 120000); // Timeout 2 minuti
+    }, 120000); 
   };
 
   const handleInputChange = (
@@ -195,7 +195,7 @@ export default function ApplyForWhitelist() {
     }
   };
 
-  // ---- Componenti UI ----
+ 
   const renderResult = () => {
     if (!result) return null;
 
@@ -306,7 +306,7 @@ export default function ApplyForWhitelist() {
             </p>
           )}
 
-          {/* Pulsanti differenziati per ogni caso */}
+          
           {result.status === "APPROVED" && (
             <Link
               href="/"
@@ -346,7 +346,7 @@ export default function ApplyForWhitelist() {
     );
   };
 
-  // --- Rendering Condizionale ---
+
   if (!isConnected) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center text-center">
@@ -368,7 +368,7 @@ export default function ApplyForWhitelist() {
 
   if (submitted) return renderResult();
 
-  // --- Form di Candidatura (invariato) ---
+
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">

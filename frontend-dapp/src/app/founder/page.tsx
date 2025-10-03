@@ -6,8 +6,6 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { TypeAnimation } from "react-type-animation";
 import { Tooltip } from "react-tooltip";
-
-// Import Icone
 import { BiDownload, BiX, BiCode } from "react-icons/bi";
 import {
   FaGraduationCap,
@@ -68,7 +66,7 @@ interface Project {
 export default function FounderProfilePage() {
   const [activeModal, setActiveModal] = useState<string | null>(null);
 
-  // DATI (invariati)
+
   const experiences: Experience[] = [
     {
       id: 0,
@@ -247,11 +245,11 @@ export default function FounderProfilePage() {
   ];
 
   return (
-    // CAMBIO CHIAVE: Aggiunte classi dark:* per il background e il testo principale
+    
     <div className="min-h-screen font-sans transition-all duration-300 bg-gray-50 text-gray-800 dark:bg-slate-900 dark:text-slate-200">
       <Tooltip id="tech-tooltip" />
 
-      {/* Hero Section - L'overlay scuro funziona bene su entrambi i temi */}
+
       <section className="relative h-[45vh] overflow-hidden bg-hero-background bg-cover bg-no-repeat bg-left-center">
         <div className="absolute inset-0 bg-black/50"></div>
         <div className="absolute z-20 top-1/2 left-4 md:left-8 transform -translate-y-1/2">
@@ -306,7 +304,7 @@ export default function FounderProfilePage() {
         </div>
       </section>
 
-      {/* Sezione About Me & Skills */}
+     
       <section
         className="py-20 px-4 transition-colors duration-300 bg-gray-100 dark:bg-slate-800"
         id="about"
@@ -322,7 +320,7 @@ export default function FounderProfilePage() {
             <h2 className="text-4xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600">
               ABOUT ME
             </h2>
-            {/* Testo con colore adattivo */}
+            
             <p className="text-lg max-w-3xl mx-auto leading-relaxed text-gray-600 dark:text-slate-400">
               Conclusi gli studi in Ingegneria e dopo 14 anni di esperienza nelle settore delle TLC prima come consulente presso operatori ISP in qualità di analista tecnico di reportistica e monitoraggio traffico dati su diversi Time Frame, poi come Project Manager e Controller contabile nei cantieri di realizzazione rete di accesso FTTH progetto BUL, ho deciso a seguito di una profonda riflessione personale e professionale post COVID, di alimentare le mie passioni nel campo delle tecnologie informatiche, registri ditribuiti e sistemi/processi economici decentralizzati basati su Blockchain. L'opportunità di lavorare presso Istituti comprensivi di scuola secondaria di primo grado in qualità di Assistente Tecnico informatico e docente corsi di Coding e Robotica, rappresenta per me oggi una combinazione perfetta per conciliare lavoro e studio personale grazie al percorso proposto da{" "}
               <a
@@ -344,7 +342,7 @@ export default function FounderProfilePage() {
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            {/* Card con colore adattivo */}
+            
             <Link
               href="/"
               className="group block p-6 rounded-xl transform transition-all duration-300 hover:scale-105 bg-white shadow-lg hover:shadow-2xl dark:bg-slate-700"
@@ -362,7 +360,7 @@ export default function FounderProfilePage() {
                     />
                   </div>
                   <div className="flex-1">
-                    {/* Testi con colori adattivi */}
+                    
                     <h3 className="font-bold text-xl md:text-2xl text-gray-900 dark:text-slate-100">
                       DnA Platform
                     </h3>
@@ -374,7 +372,7 @@ export default function FounderProfilePage() {
                     </p>
                   </div>
                 </div>
-                {/* Icona con colore adattivo */}
+                
                 <ArrowRight className="w-8 h-8 ml-4 transition-transform duration-300 group-hover:translate-x-2 text-gray-400 dark:text-slate-500" />
               </div>
             </Link>
@@ -393,11 +391,11 @@ export default function FounderProfilePage() {
               </h3>
               {hardSkills.map((skill) => (
                 <div key={skill.name}>
-                  {/* Testo con colore adattivo */}
+                
                   <p className="text-sm font-medium mb-1 text-gray-700 dark:text-slate-300">
                     {skill.name}
                   </p>
-                  {/* Barra di progresso con colore adattivo */}
+             
                   <div className="bg-gray-200 rounded-full h-4 dark:bg-slate-600">
                     <motion.div
                       className={`${skill.color} h-4 rounded-full flex items-center justify-end pr-2`}
@@ -440,13 +438,13 @@ export default function FounderProfilePage() {
                 SOFT SKILLS
               </h3>
               {softSkills.map((skill) => (
-                // Card con colore adattivo
+              
                 <div
                   key={skill.name}
                   className="flex items-center p-3 rounded-lg bg-white shadow-sm dark:bg-slate-700"
                 >
                   <skill.icon className="text-2xl text-blue-400 mr-4" />
-                  {/* Testo con colore adattivo */}
+                  
                   <span className="text-lg text-gray-800 dark:text-slate-200">{skill.name}</span>
                 </div>
               ))}
@@ -455,7 +453,7 @@ export default function FounderProfilePage() {
         </div>
       </section>
       
-      {/* Sezione con sfondo adattivo */}
+
       <section className="py-12 overflow-hidden bg-gray-50 dark:bg-slate-900">
         <h2 className="text-3xl font-bold text-center mb-8 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600">
           COMPUTER SKILLS
@@ -476,7 +474,7 @@ export default function FounderProfilePage() {
                 data-tooltip-id="tech-tooltip"
                 data-tooltip-content={tech.name}
               >
-                {/* Icona con colore hover adattivo */}
+
                 <tech.icon className="text-6xl transition-colors text-violet-700 hover:text-gray-800 dark:hover:text-slate-200" />
               </div>
             ))}
@@ -490,7 +488,7 @@ export default function FounderProfilePage() {
             Esplora il mio percorso
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Card con stili adattivi */}
+
             <motion.div
               className="rounded-xl p-8 cursor-pointer transform transition-all hover:scale-105 bg-white shadow-lg hover:shadow-xl dark:bg-slate-700"
               onClick={() => setActiveModal("education")}
@@ -550,7 +548,7 @@ export default function FounderProfilePage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            {/* Finestra modale con stili adattivi */}
+          
             <motion.div
               className="rounded-xl p-6 md:p-8 w-full max-h-[90vh] overflow-y-auto bg-white text-gray-800 dark:bg-slate-800 dark:text-slate-200"
               initial={{ scale: 0.5, opacity: 0 }}
@@ -571,7 +569,7 @@ export default function FounderProfilePage() {
                     <h2 className="text-2xl md:text-3xl font-bold">
                       Esperienze Professionali
                     </h2>
-                    {/* Pulsante chiusura con stili adattivi */}
+                  
                     <button
                       onClick={() => setActiveModal(null)}
                       className="text-gray-500 hover:text-black dark:text-slate-400 dark:hover:text-white"
@@ -583,7 +581,7 @@ export default function FounderProfilePage() {
                     {experiences.map((exp, index) => (
                       <motion.div
                         key={exp.id}
-                        // Elemento lista con stili adattivi
+
                         className="rounded-lg p-6 bg-gray-100 dark:bg-slate-700"
                         initial={{ x: -50, opacity: 0 }}
                         animate={{ x: 0, opacity: 1 }}
@@ -594,7 +592,7 @@ export default function FounderProfilePage() {
                             <h3 className="text-xl font-bold text-blue-400">
                               {exp.role}
                             </h3>
-                            {/* Testo con colore adattivo */}
+                           
                             <p className="text-gray-600 dark:text-slate-400">{exp.company}</p>
                           </div>
                           <span className="text-sm bg-purple-600 text-white px-3 py-1 rounded-full mt-2 md:mt-0 flex-shrink-0">
@@ -626,7 +624,7 @@ export default function FounderProfilePage() {
                     {education.map((edu, index) => (
                       <motion.div
                         key={edu.id}
-                        // Card con stili adattivi
+                        
                         className="rounded-lg overflow-hidden bg-gray-100 dark:bg-slate-700"
                         initial={{ y: 50, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
@@ -644,7 +642,7 @@ export default function FounderProfilePage() {
                           <p className="text-purple-400 mb-2">
                             {edu.institution}
                           </p>
-                          {/* Testi con colori adattivi */}
+                          
                           <p className="text-sm mb-3 text-gray-500 dark:text-slate-400">
                             {edu.period}
                           </p>
@@ -674,7 +672,7 @@ export default function FounderProfilePage() {
                     {projects.map((project, index) => (
                       <motion.div
                         key={project.id}
-                        // Card con stili adattivi
+                        
                         className="rounded-lg overflow-hidden group bg-gray-100 dark:bg-slate-700"
                         initial={{ y: 50, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
@@ -691,13 +689,13 @@ export default function FounderProfilePage() {
                           <h3 className="text-xl font-bold text-blue-400 mb-3">
                             {project.title}
                           </h3>
-                          {/* Testo con colore adattivo */}
+                          
                           <p className="text-sm mb-4 leading-relaxed text-gray-600 dark:text-slate-400">
                             {project.description}
                           </p>
                           <div className="flex flex-wrap gap-2 mb-4">
                             {project.technologies.map((tech) => (
-                              // Tag con stili adattivi
+                              
                               <span
                                 key={tech}
                                 className="text-xs px-2 py-1 rounded bg-gray-200 text-gray-700 dark:bg-slate-600 dark:text-slate-300"

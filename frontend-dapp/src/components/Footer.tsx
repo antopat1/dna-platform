@@ -12,7 +12,7 @@ export default function Footer() {
   const [isHovered, setIsHovered] = useState(false);
   const { isDarkMode } = useTheme();
 
-  // La logica per lo scroll è ottima e rimane invariata
+
   useEffect(() => {
     if (isHovered) {
       const timer = setTimeout(() => {
@@ -49,7 +49,7 @@ export default function Footer() {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Top Section - I colori scuri ora usano `slate` per essere più chiari e bluastri */}
+
       <div 
         className={`bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-white border-t border-gray-300 dark:border-slate-500 overflow-hidden transition-all duration-300 ${
           isHovered ? 'max-h-[1000px] opacity-100 py-8' : 'max-h-0 opacity-0 py-0'
@@ -58,7 +58,7 @@ export default function Footer() {
         <div className="max-w-7xl mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             
-            {/* Platform Info */}
+
             <div className="space-y-4">
               <h3 className="text-xl font-bold text-purple-600 dark:text-purple-400">DnA Platform</h3>
               <p className="text-gray-600 dark:text-slate-300 text-sm leading-relaxed">
@@ -70,7 +70,7 @@ export default function Footer() {
               </div>
             </div>
 
-            {/* Quick Links */}
+
             <div className="space-y-4">
               <h4 className="text-lg font-semibold text-gray-700 dark:text-slate-200">Quick Links</h4>
               <nav className="flex flex-col space-y-2">
@@ -97,7 +97,7 @@ export default function Footer() {
               </nav>
             </div>
 
-            {/* Technology Stack */}
+
             <div className="space-y-4">
               <h4 className="text-lg font-semibold text-gray-700 dark:text-slate-200">Built With</h4>
               <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 dark:text-slate-300">
@@ -123,23 +123,23 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* Bottom Bar - Anche qui i colori scuri usano `slate` per il giusto contrasto */}
+
       <div className="bg-gray-300 dark:bg-slate-700 border-t border-gray-400 dark:border-slate-600">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
-            {/* Copyright */}
+     
             <div className="text-sm text-gray-500 dark:text-slate-400 order-1 sm:order-1">
               © {currentYear} DnA Platform. All rights reserved.
             </div>
 
-            {/* Theme Toggle in the middle with text labels */}
+       
             <div className="order-3 sm:order-2 flex items-center space-x-2">
               <span className={`text-sm font-medium transition-colors duration-200 ${isDarkMode ? 'text-gray-500 dark:text-slate-400' : 'text-gray-700 dark:text-white'}`}>Light</span>
               <ThemeToggle />
               <span className={`text-sm font-medium transition-colors duration-200 ${isDarkMode ? 'text-gray-700 dark:text-white' : 'text-gray-500 dark:text-slate-400'}`}>Dark</span>
             </div>
 
-            {/* Designer Credit */}
+
             <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-slate-400 order-2 sm:order-3">
               <span>System designed and developed by</span>
               <div className="flex items-center space-x-1">

@@ -15,7 +15,7 @@ export default function WhitelistCheck() {
   const { address, isConnected } = useAccount()
   const [hasChecked, setHasChecked] = useState(false)
 
-  // Aggiorna il default redirect path
+ 
   const redirectPath = searchParams.get('redirect') || '/dashboard/register-content'
 
   const { 
@@ -46,7 +46,7 @@ export default function WhitelistCheck() {
     if (isConnected && address && !isChecking && hasChecked) {
       if (isWhitelisted === true) {
         console.log('User is whitelisted, redirecting to:', redirectPath)
-        // Usa window.location invece di router.push per evitare problemi
+        
         setTimeout(() => {
           window.location.href = redirectPath
         }, 1500)
@@ -166,7 +166,7 @@ export default function WhitelistCheck() {
     )
   }
 
-  // Non è in whitelist
+
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">

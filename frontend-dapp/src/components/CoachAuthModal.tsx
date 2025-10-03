@@ -22,7 +22,7 @@ export const CoachAuthModal: React.FC<CoachAuthModalProps> = ({
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  // Reset form when modal opens/closes
+
   useEffect(() => {
     if (isOpen) {
       setUsername('');
@@ -37,7 +37,6 @@ export const CoachAuthModal: React.FC<CoachAuthModalProps> = ({
     
     const success = await onAuthenticate(username.trim(), password);
     if (success) {
-      // Modal will be closed by the hook
     }
   };
 
@@ -55,7 +54,7 @@ export const CoachAuthModal: React.FC<CoachAuthModalProps> = ({
       onClick={handleOverlayClick}
     >
       <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 w-full max-w-md mx-4 shadow-2xl border border-purple-500/30 animate-slideUp">
-        {/* Header */}
+
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-purple-600 rounded-lg">
@@ -75,9 +74,9 @@ export const CoachAuthModal: React.FC<CoachAuthModalProps> = ({
           </button>
         </div>
 
-        {/* Form */}
+
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Username Field */}
+
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
               Nome Utente
@@ -93,7 +92,7 @@ export const CoachAuthModal: React.FC<CoachAuthModalProps> = ({
             />
           </div>
 
-          {/* Password Field */}
+
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
               Password
@@ -119,14 +118,14 @@ export const CoachAuthModal: React.FC<CoachAuthModalProps> = ({
             </div>
           </div>
 
-          {/* Error Message */}
+
           {error && (
             <div className="bg-red-900/50 border border-red-500 rounded-lg p-3 animate-shake">
               <p className="text-red-300 text-sm text-center">{error}</p>
             </div>
           )}
 
-          {/* Submit Button */}
+
           <button
             type="submit"
             disabled={isLoading || !username.trim() || !password.trim()}
@@ -143,7 +142,7 @@ export const CoachAuthModal: React.FC<CoachAuthModalProps> = ({
           </button>
         </form>
 
-        {/* Security Notice */}
+
         <div className="mt-6 p-3 bg-yellow-900/30 border border-yellow-500/50 rounded-lg">
           <p className="text-yellow-300 text-xs text-center">
             ⚠️ Accesso riservato esclusivamente al personale autorizzato <br /> ( attendere qualche secondo dopo il login per il reindirizzamento)

@@ -43,7 +43,6 @@ export default function MarketplacePage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [bidInputs, setBidInputs] = useState<Map<string, { value: string; error: string | null }>>(new Map()); // <-- CORRETTO
 
-  // Stato per memorizzare il timestamp corrente (approssimazione di block.timestamp)
   const [currentTime, setCurrentTime] = useState(Date.now());
 
   useEffect(() => {

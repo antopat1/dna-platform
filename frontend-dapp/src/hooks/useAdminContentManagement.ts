@@ -26,7 +26,7 @@ import {
   ARBITRUM_SEPOLIA_CHAIN_ID,
 } from "@/lib/constants";
 
-// Importa le utilità di tracking
+
 import {
   trackTransaction,
   buildPendingTxDetails,
@@ -35,7 +35,7 @@ import {
   TransactionDetails,
 } from "@/utils/trackTransaction";
 
-// Definizione dell'interfaccia per gli argomenti dell'evento NFTMinted
+
 type NFTMintedEventArgs = {
   tokenId: bigint;
   contentId: bigint;
@@ -45,19 +45,18 @@ type NFTMintedEventArgs = {
   metadataURI: string;
 };
 
-// Prezzo di minting
+
 const MINT_PRICE_ETH = "0.005";
 
-// Funzione per salvare l'evento in MongoDB (adattala al tuo endpoint reale)
+
 const saveMintEventToMongo = async (eventData: {
   contentId: string;
   tokenId: string;
   owner: string;
   metadataURI: string;
-  // Aggiungi altri campi come nel tuo handleRequestMintForNewContent
 }) => {
   try {
-    const response = await fetch("/api/save-mint-event", { // Assumi endpoint simile al tuo progetto
+    const response = await fetch("/api/save-mint-event", { 
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(eventData),
@@ -72,7 +71,7 @@ const saveMintEventToMongo = async (eventData: {
   }
 };
 
-// Funzione per il caricamento dei metadati (con fix per BigInt)
+
 const uploadMetadataToIpfs = async (
   address: `0x${string}` | undefined,
   contentId: bigint | null,
@@ -128,7 +127,6 @@ const uploadMetadataToIpfs = async (
     };
   }
 
-  // Safeguard: Converti eventuali BigInt in stringhe
   const serializedMetadata = JSON.stringify(fullMetadata, (key, value) =>
     typeof value === "bigint" ? value.toString() : value
   );
@@ -189,14 +187,14 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
   const { address: userAddress, isConnected } = useAccount();
   const publicClient = usePublicClient({ chainId: ARBITRUM_SEPOLIA_CHAIN_ID });
 
-  // Riferimento per i dettagli iniziali della transazione (ora usiamo TransactionDetails)
+ 
   const pendingTxDetailsRef = useRef<TransactionDetails | null>(null);
 
   const currentPreviewImageCidRef = useRef<string | null>(null);
 
   const lastProcessedTxHashRef = useRef<Hex | null>(null);
 
-  // ***** NFT Contract Interactions *****
+  
   const {
     data: nftTxHash,
     writeContract: writeNftContract,
@@ -217,7 +215,7 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
     query: { enabled: !!nftTxHash },
   });
 
-  // ***** Marketplace Contract Interactions *****
+  
   const {
     data: marketplaceTxHash,
     writeContract: writeMarketplaceContract,
@@ -246,25 +244,23 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
     setMintingRevertReason(null);
     currentPreviewImageCidRef.current = null;
     lastProcessedTxHashRef.current = null;
-
-    // AGGIUNTA: Resetta lo stato di useWriteContract per pulire nftTxHash e prevenire trigger errati nell'useEffect
     resetNftWrite();
-    resetMarketplaceWrite(); // Opzionale, per completezza (anche se non usato nel minting)
-  }, [resetNftWrite, resetMarketplaceWrite]); // Aggiunte dipendenze
+    resetMarketplaceWrite(); 
+  }, [resetNftWrite, resetMarketplaceWrite]); 
 
-  // useEffect per gestire la conferma delle transazioni (NFT)
+  
   useEffect(() => {
     async function handleNftConfirmation() {
       if (!nftTxHash) {
         return;
       }
 
-      // Verifica se abbiamo già processato questa transazione
+      
       if (lastProcessedTxHashRef.current === nftTxHash) {
         return;
       }
 
-      // Se non abbiamo dettagli pending, creali ora
+     
       if (!pendingTxDetailsRef.current && userAddress) {
         pendingTxDetailsRef.current = {
           transactionHash: nftTxHash,
@@ -279,9 +275,7 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
             contentId: currentMintContentIdRef.current?.toString() || "unknown",
             type: "NewContentMint",
           },
-        };
-
-        // Traccia immediatamente come pending
+        };  
         await trackTransaction(pendingTxDetailsRef.current);
       }
 
@@ -297,10 +291,8 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
         setIsProcessing(false);
         lastProcessedTxHashRef.current = nftTxHash;
         
-        // Aggiunta: Salva evento in MongoDB (simile a handleRequestMintForNewContent)
         if (nftTxReceipt.logs && nftTxReceipt.logs.length > 0) {
           for (const log of nftTxReceipt.logs) {
-            // Controlla che il log provenga dal contratto corretto
             if (log.address.toLowerCase() === SCIENTIFIC_CONTENT_NFT_ADDRESS.toLowerCase()) {
               try {
                 const decoded = decodeEventLog({
@@ -309,28 +301,19 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
                   topics: log.topics,
                 });
 
-                // Se la decodifica ha successo, controlla che sia l'evento che cerchiamo
+
                 if (decoded.eventName === 'NFTMinted') {
-                  // ======================= INIZIO BLOCCO CORRETTO =======================
-                  // Cast a 'unknown' per forzare il tipo corretto, poiché 'decodeEventLog' 
-                  // restituisce un tipo generico che TypeScript non può associare direttamente.
                   const args = decoded.args as unknown as NFTMintedEventArgs;
-                  // ======================= FINE BLOCCO CORRETTO =======================
 
                   await saveMintEventToMongo({
                     contentId: args.contentId.toString(),
                     tokenId: args.tokenId.toString(),
                     owner: args.owner,
                     metadataURI: args.metadataURI,
-                    // Aggiungi altri campi come nel tuo progetto
                   });
-                  
-                  // Trovato l'evento, possiamo uscire dal loop
                   break; 
                 }
               } catch (decodeError) {
-                // Questo log non corrisponde a nessun evento nell'ABI fornito,
-                // oppure non è quello che cerchiamo. Ignoriamo e continuiamo.
               }
             }
           }
@@ -390,7 +373,7 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
     chainId,
   ]);
 
-  // useEffect per gestire la conferma delle transazioni (Marketplace)
+
   useEffect(() => {
     async function handleMarketplaceConfirmation() {
       if (
@@ -415,7 +398,7 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
         );
         setIsProcessing(false);
 
-        // Nuova logica: Decodifica e salva eventi marketplace specifici usando l'API esistente
+
         if (marketplaceTxReceipt.logs) {
           for (const log of marketplaceTxReceipt.logs) {
             if (log.address.toLowerCase() === SCIENTIFIC_CONTENT_MARKETPLACE_ADDRESS.toLowerCase()) {
@@ -426,17 +409,17 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
                   topics: log.topics,
                 }) as { eventName: string; args: any };
 
-                // Prepara i dati per /api/transactions con status "event_marketplace"
+
                 const eventData = {
                   transactionHash: marketplaceTxHash,
-                  from: updatedTxData.from, // Usa from dalla tx
+                  from: updatedTxData.from, 
                   to: updatedTxData.to,
                   value: updatedTxData.value || "0",
                   chainId: updatedTxData.chainId,
-                  status: "event_marketplace", // Nuovo status per distinguere
+                  status: "event_marketplace", 
                   args: {
-                    event: decoded.eventName, // Nome evento (es. "NFTListedForSale")
-                    ...decoded.args, // Argomenti decodificati (converti BigInt a string)
+                    event: decoded.eventName, 
+                    ...decoded.args, 
                   },
                   logIndex: log.logIndex?.toString() || null,
                   transactionIndex: marketplaceTxReceipt.transactionIndex?.toString() || null,
@@ -446,7 +429,7 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
                   metadata: { source: "frontend_marketplace_event" },
                 };
 
-                // Invia a /api/transactions
+               
                 await fetch("/api/transactions", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
@@ -502,7 +485,7 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
     setIsProcessing,
   ]);
 
-  // Funzione per gestire l'invio generico di transazioni
+
   const sendTransaction = useCallback(
     async (
       contractAddress: `0x${string}`,
@@ -530,7 +513,7 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
       setMintingRevertReason(null);
       setIsProcessing(true);
       pendingTxDetailsRef.current = null;
-      lastProcessedTxHashRef.current = null; // Reset anche questo
+      lastProcessedTxHashRef.current = null; 
 
       toast(`Preparazione transazione per ${functionName}...`, { icon: "⏳" });
 
@@ -556,10 +539,7 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
         } else {
           throw new Error("Indirizzo contratto non riconosciuto.");
         }
-        
-        // Il risultato di writeContract dovrebbe essere l'hash della transazione
-        // Ma potrebbe essere restituito in modo asincrono, quindi aspettiamo che nftTxHash o marketplaceTxHash vengano impostati
-        
+
         toast("Transazione inviata! In attesa di conferma...", {
           icon: "🚀",
         });
@@ -573,7 +553,7 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
         setIsProcessing(false);
         setMintingRevertReason(errorMessage);
         
-        // Costruisci dettagli failed e traccia
+
         const initialDetails = {
           transactionHash: "0x" as `0x${string}`,
           from: userAddress,
@@ -600,9 +580,6 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
     ]
   );
 
-  // ***** Funzioni specifiche del tuo DApp (usando sendTransaction) *****
-
-  // PER IL MINTING INIZIALE (dopo registrazione)
   const handleRequestMintForNewContent = useCallback(
     async (
       registryContentId: bigint,
@@ -612,13 +589,13 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
       ipfsPreviewImageCid: string | null,
       refetchContentDetails?: () => void
     ) => {
-      // RESET COMPLETO DELLO STATO PRIMA DI INIZIARE
+      
       resetMintingState();
       setError(null);
       setMintingRevertReason(null);
       hasStartedMintPolling.current = false;
 
-      // Salva il CID dell'immagine
+      
       currentPreviewImageCidRef.current = ipfsPreviewImageCid;
 
       if (isProcessing) {
@@ -638,7 +615,6 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
       toast("Preparazione dei metadati per il minting NFT...", { icon: "⏳" });
 
       try {
-        // 1. CARICA I METADATI SU IPFS
         const metadataCid = await uploadMetadataToIpfs(
           userAddress,
           registryContentId,
@@ -660,7 +636,6 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
 
         currentMintContentIdRef.current = registryContentId;
 
-        // 2. AVVIA IL MINTING tramite sendTransaction
         await sendTransaction(
           SCIENTIFIC_CONTENT_NFT_ADDRESS,
           SCIENTIFIC_CONTENT_NFT_ABI as Abi,
@@ -688,7 +663,6 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
     [isProcessing, userAddress, sendTransaction, resetMintingState]
   );
 
-  // PER IL MINTING DI COPIE AGGIUNTIVE (dalla pagina dei contenuti registrati)
   const handleRequestMintForCopy = useCallback(
     async (
       contentId: bigint,
@@ -699,7 +673,6 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
       mintPriceWei: bigint,
       refetchContentDetails?: () => void
     ) => {
-      // RESET COMPLETO DELLO STATO PRIMA DI INIZIARE
       resetMintingState();
       setError(null);
       setMintingRevertReason(null);
@@ -718,7 +691,6 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
       });
 
       try {
-        // 1. CARICA I METADATI SU IPFS per la copia
         const metadataCid = await uploadMetadataToIpfs(
           userAddress,
           contentId,
@@ -736,12 +708,9 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
         }
 
         const metadataURI = `ipfs://${metadataCid}`;
-
-        // Salva il CID dell'immagine per il completamento
         currentPreviewImageCidRef.current = previewImageIpfsHash;
         currentMintContentIdRef.current = contentId;
 
-        // 2. AVVIA IL MINTING tramite sendTransaction
         await sendTransaction(
           SCIENTIFIC_CONTENT_NFT_ADDRESS,
           SCIENTIFIC_CONTENT_NFT_ABI as Abi,
@@ -769,7 +738,7 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
     [userAddress, isProcessing, sendTransaction, resetMintingState]
   );
 
-  // MARKETPLACE: List NFT for Sale
+
   const handleListNFTForSale = useCallback(
     async (tokenId: bigint, priceEth: string) => {
       const priceWei = parseEther(priceEth);
@@ -786,7 +755,7 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
     [sendTransaction]
   );
 
-  // MARKETPLACE: Purchase NFT
+
   const handlePurchaseNFT = useCallback(
     async (tokenId: bigint, priceEth: string) => {
       const priceWei = parseEther(priceEth);
@@ -803,7 +772,7 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
     [sendTransaction]
   );
 
-  // MARKETPLACE: Start Auction
+
   const handleStartAuction = useCallback(
     async (tokenId: bigint, minPriceEth: string, durationSeconds: number) => {
       const minPriceWei = parseEther(minPriceEth);
@@ -824,7 +793,7 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
     [sendTransaction]
   );
 
-  // MARKETPLACE: Place Bid
+
   const handlePlaceBid = useCallback(
     async (tokenId: bigint, bidAmountEth: string) => {
       const bidAmountWei = parseEther(bidAmountEth);
@@ -841,7 +810,7 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
     [sendTransaction]
   );
 
-  // MARKETPLACE: End Auction
+
   const handleEndAuction = useCallback(
     async (tokenId: bigint) => {
       await sendTransaction(
@@ -857,7 +826,7 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
     [sendTransaction]
   );
 
-  // MARKETPLACE: Claim Refund
+
   const handleClaimRefund = useCallback(
     async (tokenId: bigint) => {
       await sendTransaction(
@@ -874,7 +843,6 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
   );
 
   useEffect(() => {
-    // Controlla se questa è una nuova transazione che non abbiamo ancora processato
     if (
       isNftTxSuccess &&
       nftTxHash &&
@@ -882,7 +850,7 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
       !isMintingFulfilled &&
       lastProcessedTxHashRef.current !== nftTxHash
     ) {
-      // AGGIUNTA OPZIONALE: Se nftTxHash è undefined o già processato, skippa
+      
       if (!nftTxHash || nftTxHash === lastProcessedTxHashRef.current) {
         return;
       }
@@ -891,19 +859,17 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
         duration: 7000,
       });
 
-      // Usa il CID salvato per generare l'URL
       if (currentPreviewImageCidRef.current) {
         const PINATA_GATEWAY_SUBDOMAIN =
           process.env.NEXT_PUBLIC_PINATA_GATEWAY_SUBDOMAIN || "your-subdomain";
         const imageUrl = `https://${PINATA_GATEWAY_SUBDOMAIN}.mypinata.cloud/ipfs/${currentPreviewImageCidRef.current}`;
 
-        // Simuliamo il minting completato
+        
         setMintedTokenId(BigInt(0));
         setMintingFulfillmentTxHash(nftTxHash);
         setIsMintingFulfilled(true);
         setMintedNftImageUrl(imageUrl);
 
-        // Marca questa transazione come processata
         lastProcessedTxHashRef.current = nftTxHash;
 
         toast.success(`🎉 NFT Mintato!`);
@@ -912,7 +878,6 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
           onMintingCompleted();
         }
       } else {
-        // toast.error("Mancata immagine di preview");
         setIsProcessing(false);
       }
     }
@@ -924,7 +889,6 @@ const useAdminContentManagement = (onMintingCompleted?: () => void) => {
     onMintingCompleted,
   ]);
 
-  // Cleanup finale per assicurarsi che i timer siano sempre cancellati
   useEffect(() => {
     return () => {
       if (pollingIntervalRef.current) {

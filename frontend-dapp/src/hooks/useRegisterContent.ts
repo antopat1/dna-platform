@@ -11,7 +11,7 @@ import { toast } from "react-hot-toast";
 import {
   SCIENTIFIC_CONTENT_REGISTRY_ADDRESS,
   SCIENTIFIC_CONTENT_REGISTRY_ABI,
-  SCIENTIFIC_CONTENT_NFT_ADDRESS, // Mantenuto per il controllo di setNftContract
+  SCIENTIFIC_CONTENT_NFT_ADDRESS, 
   ARBITRUM_SEPOLIA_CHAIN_ID,
 } from "@/lib/constants";
 import { parseEther, Abi, decodeEventLog, AbiEvent } from "viem";
@@ -40,7 +40,7 @@ interface ContentOnChain {
 const CONTENT_REGISTERED_EVENT_TOPIC =
   "0xb3fb1534604fd9d4678cce38f4708f0b6725d2692cbfb2af0e493612a78944dc";
 
-const MINT_PRICE_ETH = "0.005"; // Mantenuto qui perché è legato al prezzo di registrazione iniziale
+const MINT_PRICE_ETH = "0.005"; 
 
 export const useRegisterContent = () => {
   const [mounted, setMounted] = useState(false);
@@ -232,11 +232,11 @@ export const useRegisterContent = () => {
     []
   );
 
-  // handleMetadataUpload rimane qui, ma sarà più generico o chiamato per la registrazione
+  
   const handleMetadataUpload = useCallback(
     async (
       options: {
-        isCopy?: boolean; // Questo campo potrebbe non servire più qui se la logica di copia va in Admin
+        isCopy?: boolean; 
         contentId?: bigint;
         title?: string;
         description?: string;
@@ -251,12 +251,8 @@ export const useRegisterContent = () => {
       try {
         let fullMetadata: any;
 
-        // Se options.isCopy è true, significa che i metadati sono per un NFT di copia,
-        // questa logica verrà spostata in useAdminContentManagement.ts
-        if (options.isCopy) {
-            // Questo blocco sarà rimosso o modificato se la logica di copia va altrove.
-            // Per ora lo lasciamo come promemoria, ma idealmente dovrebbe essere gestito altrove.
-            // Se lo lasciamo qui, assicurati che i parametri necessari siano disponibili.
+        
+        if (options.isCopy) {            
             fullMetadata = {
                 name: options.title || "Scientific Content Copy",
                 description: options.description || "Copy of registered scientific content",
@@ -272,7 +268,7 @@ export const useRegisterContent = () => {
             };
 
         } else {
-          // METADATI PER REGISTRAZIONE INIZIALE
+          
           const template = templates.find((t) => t._id === selectedTemplateId);
           if (!template) {
             throw new Error("Nessun template selezionato.");
@@ -499,7 +495,7 @@ export const useRegisterContent = () => {
     ]
   );
 
-  // --- useEffect per la registrazione del contenuto ---
+  
   useEffect(() => {
     if (isSetNftContractSuccess) {
       toast.success(
@@ -597,7 +593,6 @@ export const useRegisterContent = () => {
 
     if (isRegistryError) {
       setError("Errore nella registrazione del contenuto on-chain.");
-      // Puoi aggiungere dettagli dall'errore della ricevuta se disponibili
       if (registryReceiptError) {
           console.error("Dettagli errore ricevuta registrazione:", registryReceiptError);
           toast.error(`Errore nella registrazione del contenuto on-chain: ${registryReceiptError.message}`);
@@ -658,13 +653,7 @@ export const useRegisterContent = () => {
     resetForm,
     MINT_PRICE_ETH,
     ARBITRUM_SEPOLIA_CHAIN_ID,
-    // La funzione handleMetadataUpload ora può essere passata
-    // o gestita internamente se la sua unica funzione è preparare i metadati
-    // per la registrazione del contenuto.
-    // Se serve anche per il minting in useAdminContentManagement, dovrà essere esposta.
     handleMetadataUpload,
-    // Espongo anche i setter dei CID in caso serva aggiornarli dall'esterno,
-    // ad esempio se un componente li riceve da un'API separata.
     setIpfsPreviewImageCid,
     setIpfsMainDocumentCid,
   };

@@ -318,7 +318,7 @@ export default function AdminManagementPage() {
           Gestione Amministratori
         </h1>
 
-        {/* Toggle per mostrare/nascondere info di debug */}
+        
         <div className="mb-4 text-center">
           <button
             onClick={() => setShowDebugInfo(!showDebugInfo)}
@@ -328,7 +328,7 @@ export default function AdminManagementPage() {
           </button>
         </div>
 
-        {/* Info di debug minimizzate */}
+       
         {showDebugInfo && (
           <div className="mb-6 p-4 rounded-md border border-gray-300 bg-gray-50">
             <h3 className="text-sm font-semibold text-gray-700 mb-2">Informazioni di Debug</h3>
@@ -351,7 +351,7 @@ export default function AdminManagementPage() {
 
         {!isProcessing && transactions.length === 0 ? (
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Selezione tipo operazione */}
+            
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
                 Tipo di Operazione
@@ -382,7 +382,7 @@ export default function AdminManagementPage() {
               </div>
             </div>
 
-            {/* Input indirizzo */}
+            
             <div>
               <label htmlFor="addressInput" className="block text-sm font-medium text-gray-700">
                 Indirizzo Ethereum
@@ -403,7 +403,7 @@ export default function AdminManagementPage() {
               )}
             </div>
 
-            {/* Descrizione operazione */}
+            
             <div className={`p-4 rounded-md border-l-4 ${
               operationType === 'grant' ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'
             }`}>

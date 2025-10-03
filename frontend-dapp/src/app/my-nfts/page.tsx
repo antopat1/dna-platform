@@ -41,7 +41,7 @@ import {
   buildFailedTxDetails,
 } from "@/utils/trackTransaction";
 
-// TIPI PER FILTRI E MODALE
+
 type SaleType = "sale" | "auction";
 type NftFilter = "all" | "sale" | "auction";
 
@@ -49,10 +49,10 @@ const PLACEHOLDER_IMAGE_URL =
   "https://placehold.co/80x80/333333/ffffff?text=No+Img";
 const ITEMS_PER_PAGE = 10;
 
-// Costante per la durata minima dell'asta in minuti (per frontend)
+
 const MIN_AUCTION_DURATION_MINUTES_FRONTEND = 15;
 
-// --- COMPONENTI UI (Spinner, Toggle, Modal) ---
+
 
 const LoadingSpinner = () => (
   <div className="flex justify-center items-center py-8">
@@ -139,10 +139,10 @@ const SellAuctionModal = ({
   };
 
   const validateDuration = (value: string) => {
-    const numericValue = parseFloat(value); // Usa parseFloat per gestire i decimali
-    const durationInSeconds = numericValue * 3600; // Converte l'input (ore) in secondi
-    const minDurationInSeconds = MIN_AUCTION_DURATION_MINUTES_FRONTEND * 60; // 15 minuti in secondi
-    const maxDurationInSeconds = 30 * 24 * 3600; // 30 giorni in secondi
+    const numericValue = parseFloat(value); 
+    const durationInSeconds = numericValue * 3600; 
+    const minDurationInSeconds = MIN_AUCTION_DURATION_MINUTES_FRONTEND * 60; 
+    const maxDurationInSeconds = 30 * 24 * 3600; 
 
     if (isNaN(numericValue) || numericValue <= 0) {
       setDurationError("Inserisci una durata valida e positiva.");
@@ -157,7 +157,6 @@ const SellAuctionModal = ({
       return false;
     }
     if (durationInSeconds > maxDurationInSeconds) {
-      // Compares hours input with max hours
       setDurationError("Durata massima 720 ore (30 giorni)");
       return false;
     }
@@ -176,7 +175,6 @@ const SellAuctionModal = ({
     }
 
     const saleType: SaleType = isAuction ? "auction" : "sale";
-    // Converte la durata in secondi e la arrotonda per difetto prima di convertirla in BigInt
     const durationSeconds = isAuction
       ? Math.floor(parseFloat(duration) * 3600)
       : undefined;
@@ -245,7 +243,6 @@ const SellAuctionModal = ({
             <label className="block text-sm font-medium text-gray-300 mb-2">
               Durata dell'asta (ore)
             </label>
-            {/* AGGIUNTO step="0.01" per consentire valori decimali */}
             <Input
               type="number"
               step="0.01"
@@ -319,7 +316,7 @@ const FilterToggle = ({
   );
 };
 
-// --- COMPONENTE PRINCIPALE ---
+
 export default function MyNFTsPage() {
   const { address, isConnected, chainId } = useAccount();
   const { data: walletClient } = useWalletClient();
@@ -360,14 +357,10 @@ export default function MyNFTsPage() {
       (nft) => nft.title && nft.description && nft.imageUrlFromMetadata
     );
     if (activeFilter === "all") return displayable;
-    // Per "sale" e "auction", vogliamo mostrare solo gli NFT che sono in vendita
-    // o in asta E che sono ancora attivi/non reclamati nel marketplace per l'utente corrente
     if (activeFilter === "sale")
       return displayable.filter((nft) => nft.status.type === "forSale");
     if (activeFilter === "auction")
       return displayable.filter((nft) => {
-        // Includi le aste se sono in corso o se sono scadute ma non ancora reclamate
-        // E l'utente connesso è il venditore (o il vincitore se dovesse essere visualizzato qui)
         return nft.status.type === "inAuction" && !nft.status.claimed;
       });
     return [];
@@ -426,51 +419,6 @@ export default function MyNFTsPage() {
     [removeFromSale, refetchOwnedNfts]
   );
 
-  // const handleTransfer = useCallback(async (nft: NFT) => {
-  //   const nftIdString = nft.tokenId.toString();
-  //   const recipient = transferAddressInput.get(nftIdString);
-  //   if (!recipient || !isAddress(recipient)) { toast.error("Indirizzo Ethereum non valido."); return; }
-  //   if (!walletClient || !address || !publicClient || !chainId) { toast.error("Wallet o client non disponibili per il trasferimento."); return; }
-
-  //   setIsTransferring(prev => new Map(prev).set(nftIdString, true));
-  //   const toastId = toast.loading(`Trasferimento NFT ID ${nftIdString}...`);
-
-  //   try {
-  //     const { request } = await publicClient.simulateContract({
-  //       account: address, address: SCIENTIFIC_CONTENT_NFT_ADDRESS, abi: SCIENTIFIC_CONTENT_NFT_ABI,
-  //       functionName: "safeTransferFrom", args: [address, recipient as Address, nft.tokenId],
-  //     });
-  //     const hash = await walletClient.writeContract(request);
-  //     const pendingDetails = buildPendingTxDetails(hash, address, SCIENTIFIC_CONTENT_NFT_ADDRESS, BigInt(0), "safeTransferFrom", "ScientificContentNFT", chainId, { tokenId: nft.tokenId.toString(), recipient });
-  //     await trackTransaction(pendingDetails);
-  //     const receipt = await publicClient.waitForTransactionReceipt({ hash });
-
-  //     if(receipt.status === 'success') {
-  //         const confirmedDetails = buildConfirmedTxDetails(pendingDetails, receipt);
-  //         await trackTransaction(confirmedDetails);
-  //         toast.success("NFT trasferito con successo!", { id: toastId });
-  //         setTimeout(() => {
-  //           setTransferAddressInput(prev => { const newMap = new Map(prev); newMap.delete(nftIdString); return newMap; });
-  //           refetchOwnedNfts();
-  //         }, 1500);
-  //     } else {
-  //         const failedDetails = buildFailedTxDetails(pendingDetails, new Error("Transaction reverted"));
-  //         await trackTransaction(failedDetails);
-  //         throw new Error("Transazione fallita (reverted).");
-  //     }
-  //   } catch (err: any) {
-  //     console.error("Errore nel trasferimento:", err);
-  //     // Fallback per hash se non definito, per evitare TypeErrors in buildFailedTxDetails
-  //     const fallbackHash = (hash || ("0x" + "0".repeat(64))) as `0x${string}`;
-  //     const fallbackPendingDetails = pendingDetails || { transactionHash: fallbackHash, from: address as Address, to: SCIENTIFIC_CONTENT_NFT_ADDRESS as Address, value: "0", methodName: "safeTransferFrom", contractName: "ScientificContentNFT", chainId: chainId!, status: 'pending', metadata: { tokenId: nft.tokenId.toString(), recipient } };
-  //     const failedDetails = buildFailedTxDetails(fallbackPendingDetails, err);
-  //     await trackTransaction(failedDetails);
-  //     toast.error(`Errore nel trasferimento: ${err.shortMessage || err.message}`, { id: toastId });
-  //   } finally {
-  //     setIsTransferring(prev => new Map(prev).set(nftIdString, false));
-  //   }
-  // }, [address, walletClient, publicClient, chainId, transferAddressInput, refetchOwnedNfts]);
-
   const handleTransfer = useCallback(
     async (nft: NFT) => {
       const nftIdString = nft.tokenId.toString();
@@ -487,7 +435,6 @@ export default function MyNFTsPage() {
       setIsTransferring((prev) => new Map(prev).set(nftIdString, true));
       const toastId = toast.loading(`Trasferimento NFT ID ${nftIdString}...`);
 
-      // Dichiara hash fuori dal try block per essere accessibile nel catch
       let hash: `0x${string}` | undefined;
       let pendingDetails: any;
 
@@ -655,13 +602,12 @@ export default function MyNFTsPage() {
                           isTransferring.get(nftIdString) || false;
                         const canSell = nft.status.type === "inWallet";
                         const canRevoke = nft.status.type === "forSale";
-                        // Aggiungo una condizione per isTokenInAuction per determinare canTransfer
                         const isTokenInAuction =
                           nft.status.type === "inAuction" &&
                           !nft.status.claimed;
                         const canTransfer =
                           nft.status.type === "inWallet" ||
-                          (nft.status.type === "forSale" && !canRevoke); // Puoi trasferire se in wallet, o se listato a prezzo fisso ma non puoi revocare (es. non sei più il seller)
+                          (nft.status.type === "forSale" && !canRevoke); 
 
                         return (
                           <TableRow
@@ -713,7 +659,7 @@ export default function MyNFTsPage() {
                                   case "inAuction":
                                     const timeLeft =
                                       status.endTime * 1000 - Date.now();
-                                    // Calcola ore e minuti per una visualizzazione più precisa anche per brevi durate
+                                    
                                     const totalMinutesLeft = Math.ceil(
                                       timeLeft / (1000 * 60)
                                     );
@@ -784,7 +730,7 @@ export default function MyNFTsPage() {
                                     In Asta
                                   </Button>
                                 )}
-                                {canTransfer && ( // Mostra l'opzione di trasferimento solo se l'NFT è "trasferibile"
+                                {canTransfer && ( 
                                   <div className="flex items-center space-x-2 pt-2 w-full">
                                     <Input
                                       type="text"

@@ -36,7 +36,7 @@ export default function RequestWhitelist() {
   const [formStatus, setFormStatus] = useState<FormStatus>({ type: null, message: '' })
   const [submitted, setSubmitted] = useState(false)
 
-  // SOSTITUISCI QUESTO ENDPOINT CON IL TUO DI FORMSPREE
+  // SOSTITUIRE ENDPOINT FORNITO DALLA DASHBOARD FORMSPREE
   const FORMSPREE_ENDPOINT = 'https://formspree.io/f/YOUR_FORM_ID'
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -53,7 +53,7 @@ export default function RequestWhitelist() {
     setIsSubmitting(true)
     setFormStatus({ type: null, message: '' })
 
-    // Prepara i dati da inviare includendo l'indirizzo wallet
+
     const dataToSend = {
       ...formData,
       walletAddress: address,
@@ -61,7 +61,7 @@ export default function RequestWhitelist() {
       _subject: 'Nuova richiesta autorizzazione whitelist'
     }
 
-    // Simula 2-3 secondi di loading per realismo
+
     await new Promise(resolve => setTimeout(resolve, 2000))
 
     try {
@@ -74,7 +74,7 @@ export default function RequestWhitelist() {
         body: JSON.stringify(dataToSend)
       })
 
-      // Se la richiesta va a buon fine, mostra successo
+   
       if (response.ok) {
         console.log('✅ Form inviato con successo a Formspree')
         setFormStatus({
@@ -82,7 +82,7 @@ export default function RequestWhitelist() {
           message: 'Richiesta inviata con successo! Ti contatteremo presto.'
         })
       } else {
-        // Se Formspree risponde con errore, comunque mostra successo all'utente
+     
         console.log('⚠️ Formspree ha risposto con errore, ma mostriamo successo all\'utente')
         setFormStatus({
           type: 'success',
@@ -90,7 +90,7 @@ export default function RequestWhitelist() {
         })
       }
     } catch (error) {
-      // Se c'è un errore di rete o Formspree è bloccato, comunque mostra successo
+     
       console.error('❌ Errore Formspree (probabilmente account bloccato):', error)
       console.log('🎭 Mostriamo successo all\'utente comunque')
       setFormStatus({
@@ -99,7 +99,7 @@ export default function RequestWhitelist() {
       })
     }
 
-    // Sempre eseguito: mostra successo e reset form
+  
     setSubmitted(true)
     setFormData({
       name: '',
@@ -113,7 +113,7 @@ export default function RequestWhitelist() {
     setIsSubmitting(false)
   }
 
-  // Componente per lo stato di successo
+  
   const SuccessState = () => (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
@@ -160,7 +160,7 @@ export default function RequestWhitelist() {
     </div>
   )
 
-  // Componente per wallet non connesso
+  
   if (!isConnected) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -189,12 +189,12 @@ export default function RequestWhitelist() {
     )
   }
 
-  // Mostra stato di successo
+ 
   if (submitted) {
     return <SuccessState />
   }
 
-  // Form principale
+  
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto">
@@ -333,7 +333,7 @@ export default function RequestWhitelist() {
               </p>
             </div>
 
-            {/* Campo nascosto honeypot per spam protection */}
+
             <input type="text" name="_gotcha" style={{ display: 'none' }} />
 
             <div className="flex items-center justify-between pt-6 border-t border-gray-200">

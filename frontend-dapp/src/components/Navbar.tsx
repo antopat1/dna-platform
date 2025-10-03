@@ -11,19 +11,19 @@ import { FaBars } from "react-icons/fa";
 export default function Navbar() {
   const { isAdmin, isAuthor, isConnected } = useUserRole();
 
-  // Link sempre visibili (sia connesso che non connesso)
+
   const alwaysVisibleLinks = [
     { href: "/registered-content", label: "Contenuti Registrati" },
     { href: "/marketplace", label: "Marketplace" },
   ];
 
-  // Link visibili solo quando l'utente è connesso
+
   const connectedOnlyLinks = [
     { href: "/my-nfts", label: "NFT Posseduti" },
     { href: "/transactionhistory", label: "Report azioni in Marketplace" },
   ];
 
-  // Link specifici per ruolo (solo se connesso)
+
   const roleSpecificLinks = [];
   if (isConnected) {
     if (isAdmin) {
@@ -34,14 +34,14 @@ export default function Navbar() {
     }
   }
 
-  // Combina i link in base allo stato di connessione
+
   const allLinks = [
     ...alwaysVisibleLinks,
     ...(isConnected ? connectedOnlyLinks : []),
     ...roleSpecificLinks
   ];
 
-  // Testo dinamico che appare al centro solo quando l'utente è connesso
+ 
   const userRoleText = () => {
     if (!isConnected) {
       return null;
@@ -63,12 +63,12 @@ export default function Navbar() {
           <FaBars className="text-xl animate-pulse" />
         </Link>
         
-        {/* Coach Audit Button - visible to everyone */}
+
         <div className="ml-3">
           <CoachAuditButton />
         </div>
         
-        {/* Container per i link del menu a scomparsa */}
+     
         <div className="absolute left-0 bottom-0 transform translate-y-full p-4 bg-gray-500 rounded-b-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 whitespace-nowrap z-20">
           <div className="flex flex-col space-y-2 text-lg">
             {allLinks.map(link => (
@@ -80,14 +80,11 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Sezione centrale con testo utente e bottone claim */}
+
       <div className="flex-1 flex items-center justify-center space-x-6">
-        {/* Testo centrale, visibile solo quando l'utente è connesso */}
         <div className="font-semibold text-lg hidden md:block whitespace-nowrap">
           {userRoleText()}
         </div>
-        
-        {/* Bottone Claim - visibile solo se l'utente possiede NFT e non ha governance token */}
         <ClaimButton />
       </div>
 

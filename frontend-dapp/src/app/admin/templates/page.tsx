@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { SaleOption } from '@/models/NftTemplateDefinition'; // Importiamo il tipo SaleOption
+import { SaleOption } from '@/models/NftTemplateDefinition'; 
 
 interface NftTemplate {
   _id: string;
@@ -10,8 +10,8 @@ interface NftTemplate {
   description: string;
   metadataSchema: any;
   royaltyPercentage: number;
-  saleOptions: SaleOption; // Aggiunto il nuovo campo
-  maxCopies: number; // Aggiunto il nuovo campo
+  saleOptions: SaleOption; 
+  maxCopies: number; 
 }
 
 export default function NftTemplatesPage() {
@@ -21,8 +21,8 @@ export default function NftTemplatesPage() {
     description: '',
     metadataSchema: '{}',
     royaltyPercentage: 0,
-    saleOptions: 'fixed_price' as SaleOption, // Inizializza con un valore di default
-    maxCopies: 1, // Inizializza con un valore di default
+    saleOptions: 'fixed_price' as SaleOption, 
+    maxCopies: 1, 
   });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -66,10 +66,10 @@ export default function NftTemplatesPage() {
           description: '',
           metadataSchema: '{}',
           royaltyPercentage: 0,
-          saleOptions: 'fixed_price', // Resetta al default
-          maxCopies: 1, // Resetta al default
+          saleOptions: 'fixed_price', 
+          maxCopies: 1, 
         });
-        fetchTemplates(); // Refresh the list
+        fetchTemplates(); 
       } else {
         setError(data.message || 'Failed to create template.');
       }
@@ -137,7 +137,7 @@ export default function NftTemplatesPage() {
               required
             />
           </div>
-          {/* Nuovo campo: Sale Options */}
+          
           <div>
             <label htmlFor="saleOptions" className="block text-sm font-medium text-gray-700">Sale Options</label>
             <select
@@ -152,7 +152,7 @@ export default function NftTemplatesPage() {
               <option value="both">Both (Fixed Price & Auction)</option>
             </select>
           </div>
-          {/* Nuovo campo: Max Copies */}
+          
           <div>
             <label htmlFor="maxCopies" className="block text-sm font-medium text-gray-700">Max Copies</label>
             <input

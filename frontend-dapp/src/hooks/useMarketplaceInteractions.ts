@@ -20,7 +20,7 @@ import {
   TransactionDetails,
 } from '@/utils/trackTransaction';
 
-// Definizione dei tipi NftStatusInfo per coerenza
+
 export type NftAuctionStatusInfo = {
   type: "inAuction";
   minPrice: string;
@@ -29,13 +29,13 @@ export type NftAuctionStatusInfo = {
   startTime: number;
   endTime: number;
   seller: Address;
-  claimed: boolean; // Aggiunto per tracciare lo stato di reclamo
-  currentUserBidInfo?: { amount: string; refunded: boolean; }; // Aggiunto per lo stato di bid dell'utente corrente
+  claimed: boolean; 
+  currentUserBidInfo?: { amount: string; refunded: boolean; }; 
 };
 
 export type NftSaleStatus =
   | { type: 'sale'; price: string; seller: Address }
-  | NftAuctionStatusInfo; // Usa il tipo esteso per l'asta
+  | NftAuctionStatusInfo; 
 
 
 export const useMarketplaceInteractions = () => {
@@ -164,7 +164,7 @@ export const useMarketplaceInteractions = () => {
         args: [tokenId],
       }) as readonly [`0x${string}`, bigint, bigint, boolean, bigint];
 
-      if (fixedPriceListing[3]) { // isActive
+      if (fixedPriceListing[3]) { 
         return {
           type: 'sale',
           price: formatEther(fixedPriceListing[2]),
@@ -179,11 +179,8 @@ export const useMarketplaceInteractions = () => {
         args: [tokenId],
       }) as readonly [`0x${string}`, bigint, bigint, bigint, `0x${string}`, bigint, bigint, boolean, boolean];
 
-      // `isActive` nel contratto indica se l'asta è ancora nel marketplace e non finalizzata.
-      // `claimed` indica se è stata finalizzata.
-      // Per `getNftStatus`, vogliamo lo stato attuale di un'asta, che include anche quelle scadute
-      // ma non ancora reclamate, per poterle visualizzare correttamente.
-      if (auction[7]) { // isActive == true
+
+      if (auction[7]) { 
         return {
           type: 'inAuction',
           seller: auction[0],
@@ -192,7 +189,7 @@ export const useMarketplaceInteractions = () => {
           highestBidder: auction[4],
           startTime: Number(auction[5]),
           endTime: Number(auction[6]),
-          claimed: auction[8], // Passa lo stato di 'claimed'
+          claimed: auction[8], 
         };
       }
 
@@ -287,9 +284,8 @@ export const useMarketplaceInteractions = () => {
       return;
     }
 
-    // Frontend validation for auction duration (matching contract)
-    const MIN_AUCTION_DURATION_SECONDS = 15 * 60; // 15 minutes
-    const MAX_AUCTION_DURATION_SECONDS = 30 * 24 * 60 * 60; // 30 days
+    const MIN_AUCTION_DURATION_SECONDS = 15 * 60; 
+    const MAX_AUCTION_DURATION_SECONDS = 30 * 24 * 60 * 60;
     if (durationSeconds < MIN_AUCTION_DURATION_SECONDS) {
         toast.error(`La durata minima dell'asta è di ${MIN_AUCTION_DURATION_SECONDS / 60} minuti.`);
         throw new Error(`Auction must last at least ${MIN_AUCTION_DURATION_SECONDS / 60} minutes.`);
@@ -436,7 +432,7 @@ export const useMarketplaceInteractions = () => {
     }
   }, [walletClient, address, publicClient, chainId]);
 
-  // --- FUNZIONI INTEGRATE ---
+
 
   const purchaseNFT = useCallback(async (tokenId: bigint, priceEth: string) => {
     if (!walletClient || !address || !publicClient || !chainId) {
@@ -532,7 +528,7 @@ export const useMarketplaceInteractions = () => {
     }
   }, [walletClient, address, publicClient, chainId]);
 
-  // --- NUOVE FUNZIONI PER CLAIM E REFUND ---
+
 
   const claimAuction = useCallback(async (tokenId: bigint) => {
     if (!walletClient || !address || !publicClient || !chainId) {

@@ -1,7 +1,6 @@
 // frontend-dapp/src/hooks/usePublicContents.ts
 import { useState, useEffect, useCallback, useRef } from "react";
 import { usePublicClient, useAccount } from "wagmi";
-// Importa AbiEvent per la tipizzazione corretta
 import { Abi, decodeEventLog, Address, encodeEventTopics, AbiEvent } from "viem";
 import { toast } from "react-hot-toast";
 
@@ -39,12 +38,10 @@ interface NftJsonMetadata {
   templateId?: string;
 }
 
-// ******************************************************************
-// Estrai la definizione specifica dell'AbiEvent 'NFTMinted'
+
 const NFTMintedEventAbi = SCIENTIFIC_CONTENT_NFT_ABI.find(
   (item) => item.type === 'event' && item.name === 'NFTMinted'
-) as AbiEvent; // Effettua il cast ad AbiEvent
-// ******************************************************************
+) as AbiEvent; 
 
 interface NFTMintedEventArgs {
   tokenId: bigint;
@@ -118,16 +115,14 @@ export const usePublicContents = () => {
         contentIdsToFetch.push(i);
       }
 
-      // ******************************************************************
-      // Soluzione per l'errore 'abi' does not exist in type 'AbiEvent'.
-      // Passa direttamente l'AbiEvent estratto.
+      
       const allMintLogs = await publicClient.getLogs({
         address: SCIENTIFIC_CONTENT_NFT_ADDRESS,
-        event: NFTMintedEventAbi, // Passa l'AbiEvent direttamente
+        event: NFTMintedEventAbi, 
         fromBlock: BigInt(0),
         toBlock: "latest",
       });
-      // ******************************************************************
+  
 
       mintedEventsCache.current.clear();
       const tempMintCounts = new Map<bigint, { count: bigint; firstMintMetadataURI: string | null }>();
@@ -141,7 +136,7 @@ export const usePublicContents = () => {
             data: log.data,
           });
 
-          // Esegui un type guard robusto per `NFTMintedEventArgs`
+          
           if (
             decoded.eventName === "NFTMinted" &&
             decoded.args &&

@@ -4,56 +4,53 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useEventFeed } from "./../app/providers";
 
-// Mappa per tradurre i nomi degli eventi in un formato leggibile
+
 const eventNameMap: { [key: string]: string } = {
-  // Eventi on-chain (direttamente dal log Ethereum)
   Approval: "Approvazione",
   ApprovalForAll: "Approvazione per tutti",
   BaseURIUpdated: "Base URI aggiornata",
   CoordinatorSet: "Coordinatore impostato",
   MintingFailed: "Conio fallito",
-  NFTMinted: "NFT Coniato", // Nome più chiaro per l'utente
+  NFTMinted: "NFT Coniato", 
   OwnershipTransferRequested: "Richiesto trasferimento proprietà",
   OwnershipTransferred: "Proprietà trasferita",
   ProtocolFeeReceiverUpdated: "Ricevitore fee protocollo aggiornato",
   ProtocolFeesWithdrawn: "Fee protocollo ritirate",
-  Transfer: "Trasferimento NFT", // Rinominato per chiarezza on-chain
+  Transfer: "Trasferimento NFT", 
 
-  // Eventi Marketplace (direttamente dal log Ethereum)
+ 
   AuctionEnded: "Asta terminata",
   AuctionStarted: "Asta iniziata",
   NFTClaimed: "NFT Reclamato",
-  NFTListedForSale: "NFT messo in vendita", // Evento on-chain per il listing
+  NFTListedForSale: "NFT messo in vendita", 
   NFTPurchased: "NFT Acquistato",
-  NFTSaleRemoved: "Vendita NFT Revocata", // Evento on-chain per la rimozione
+  NFTSaleRemoved: "Vendita NFT Revocata", 
   NewBid: "Nuova Offerta",
   RefundProcessed: "Rimborso Processato",
 
-  // Eventi gestiti dal frontend (dal campo methodName in metadata_frontend_tx)
-  safeTransferFrom: "Trasferimento NFT", // Corrisponde a 'Transfer' on-chain
-  listNFTForSale: "Messa in vendita NFT", // Corrisponde a 'NFTListedForSale' on-chain
-  removeNFTFromSale: "Rimozione vendita NFT", // Corrisponde a 'NFTSaleRemoved' on-chain
+  
+  safeTransferFrom: "Trasferimento NFT", 
+  listNFTForSale: "Messa in vendita NFT", 
+  removeNFTFromSale: "Rimozione vendita NFT", 
 
-  // Fallback generico se proprio non si trova un nome specifico
-  frontend_tx_status: "Aggiornamento Stato Transazione", // Nome per lo stato generico se non c'è methodName o event
+  
+  frontend_tx_status: "Aggiornamento Stato Transazione", 
 };
 
-// Funzione per formattare il nome dell'evento (traduzione e camelCase a spazi)
+
 const formatEventName = (name: string): string => {
   return eventNameMap[name] || name.replace(/([A-Z])/g, " $1").trim();
 };
 
-// Funzione per formattare l'indirizzo per visualizzazione abbreviata
-// Accetta 'string | undefined' e lo gestisce internamente.
+
 const formatAddress = (address: string | undefined): string => {
-  if (!address) return "N/A"; // Se è undefined o null o stringa vuota, restituisce N/A
+  if (!address) return "N/A"; 
   return `${address.substring(0, 6)}...${address.substring(
     address.length - 4
   )}`;
 };
 
-// Funzione per convertire il prezzo da Wei a ETH
-// QUESTA FUNZIONE DEVE RICEVERE SOLO VALORI IN WEI (NUMERI INTERI MOLTO GRANDI)
+
 const formatPriceInWeiToEth = (
   wei: string | number | { $numberLong: string }
 ): string => {
@@ -66,8 +63,7 @@ const formatPriceInWeiToEth = (
     weiValue = wei as string;
   }
 
-  // Assicurati che il valore sia una stringa di numeri interi prima di convertirlo in BigInt
-  // Regex per controllare che contenga solo cifre (0-9)
+
   if (!weiValue || !/^\d+$/.test(weiValue)) {
     console.warn(
       `Tentativo di convertire un valore non intero in BigInt (formatPriceInWeiToEth): ${weiValue}`
@@ -79,9 +75,9 @@ const formatPriceInWeiToEth = (
   return `${ethValue} ETH`;
 };
 
-// Funzione helper per ottenere un ID univoco da un evento per la deduplicazione
+
 const getEventId = (event: any): string | null => {
-  // L'ID del documento MongoDB è l'identificatore più affidabile
+
   if (event._id) {
     if (
       typeof event._id === "object" &&
@@ -94,11 +90,11 @@ const getEventId = (event: any): string | null => {
       return event._id;
     }
   }
-  // Fallback: se _id non c'è, usiamo una combinazione di transactionHash e logIndex (se on-chain)
+  
   if (event.transactionHash && event.logIndex !== undefined) {
     return `${event.transactionHash}-${event.logIndex}`;
   }
-  // Fallback per eventi frontend (transactionHash + methodName o source)
+  
   if (event.transactionHash) {
     if (event.metadata_frontend_tx?.methodName) {
       return `${event.transactionHash}-${event.metadata_frontend_tx.methodName}`;
@@ -113,14 +109,14 @@ const getEventId = (event: any): string | null => {
   return null;
 };
 
-// Funzione per rendere i dettagli espansi di un evento
+
 const renderExpandedDetails = (event: any) => {
-  // Determina il tipo di evento per i dettagli specifici, dando priorità al methodName
+  
   const eventType =
     event.metadata_frontend_tx?.methodName || event.event || event.methodName;
   const args = event.args || event.metadata_frontend_tx;
 
-  // Dettagli comuni a tutti gli eventi
+  
   const commonDetails = (
     <div>
       {/* <p><strong>Hash:</strong> {formatAddress(event.transactionHash)}</p> */}
@@ -287,7 +283,7 @@ const renderExpandedDetails = (event: any) => {
   );
 };
 
-// Componente per la navbar - versione compatta con dropdown hover
+
 const EventFeedNavbar = () => {
   const newEvents = useEventFeed();
   const [displayedEvents, setDisplayedEvents] = useState<any[]>([]);
@@ -429,7 +425,7 @@ const EventFeedNavbar = () => {
 
   return (
     <div className="relative group">
-      {/* Indicatore dell'ultimo evento nella navbar */}
+
       <div className="flex items-center space-x-2 px-3 py-2 text-white hover:text-purple-300 transition-colors cursor-pointer">
         <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
         <span className="text-sm font-medium">{displayEventName}</span>
@@ -448,7 +444,7 @@ const EventFeedNavbar = () => {
         </svg>
       </div>
 
-      {/* Dropdown con tutti gli eventi */}
+  
       <div className="absolute top-full right-0 mt-2 w-96 bg-white shadow-xl rounded-lg overflow-hidden opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-50">
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4">
           <h3 className="text-lg font-bold text-white">Eventi Recenti</h3>
@@ -555,7 +551,6 @@ const EventFeedNavbar = () => {
   );
 };
 
-// Componente principale EventFeed (versione originale per altre parti dell'app)
 const EventFeed = () => {
   const newEvents = useEventFeed();
   const [displayedEvents, setDisplayedEvents] = useState<any[]>([]);
@@ -738,4 +733,4 @@ const EventFeed = () => {
 };
 
 export default EventFeed;
-export { EventFeedNavbar };
+export { EventFeedNavbar }; 

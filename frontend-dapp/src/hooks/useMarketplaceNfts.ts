@@ -17,7 +17,7 @@ import { resolveIpfsLink } from "@/utils/ipfs";
 import axios from 'axios';
 import { NFT, NftStatusInfo, NftAuctionStatusInfo } from './useOwnedNfts';
 
-// Tipi necessari per le chiamate al contratto
+
 type NftMetadataFromContract = {
   contentId: bigint;
   author: Address;
@@ -40,7 +40,7 @@ type ContentFromRegistry = {
   nftMintPrice: bigint;
 };
 
-// Tipo di ritorno per bidderInfo dal contratto
+
 type BidderInfoContract = readonly [bigint, boolean];
 
 interface UseMarketplaceNftsResult {
@@ -50,7 +50,7 @@ interface UseMarketplaceNftsResult {
   refetch: () => void;
 }
 
-const MARKETPLACE_REFETCH_INTERVAL_MS = 90 * 1000; // 1 minuto
+const MARKETPLACE_REFETCH_INTERVAL_MS = 90 * 1000; 
 
 export const useMarketplaceNfts = (): UseMarketplaceNftsResult => {
   const publicClient = usePublicClient();
@@ -82,7 +82,7 @@ export const useMarketplaceNfts = (): UseMarketplaceNftsResult => {
 
       const tokenIdsToCheck = Array.from({ length: limit }, (_, i) => BigInt(i + 1));
 
-      // Prepara le chiamate multicall per ottenere i dati di base di tutti i token
+      
       const calls = tokenIdsToCheck.map(tokenId => ([
         { address: SCIENTIFIC_CONTENT_NFT_ADDRESS, abi: SCIENTIFIC_CONTENT_NFT_ABI, functionName: 'ownerOf', args: [tokenId] },
         { address: SCIENTIFIC_CONTENT_MARKETPLACE_ADDRESS, abi: SCIENTIFIC_CONTENT_MARKETPLACE_ABI, functionName: 'fixedPriceListings', args: [tokenId] },
@@ -92,7 +92,7 @@ export const useMarketplaceNfts = (): UseMarketplaceNftsResult => {
       const multicallResults = await publicClient.multicall({ contracts: calls as any, allowFailure: true });
       const relevantNftsBaseData: Omit<NFT, 'title'|'description'|'contentIpfsHash'|'imageUrlFromMetadata'|'currentUserBidInfo'|'bidsCount'>[] = [];
 
-      // Processa i risultati delle chiamate di base
+      
       for (let i = 0; i < tokenIdsToCheck.length; i++) {
         const tokenId = tokenIdsToCheck[i];
         const ownerRes = multicallResults[i * 3];
@@ -119,7 +119,7 @@ export const useMarketplaceNfts = (): UseMarketplaceNftsResult => {
         if (!status && auctionRes.status === 'success') {
           const auction = auctionRes.result as readonly [Address, bigint, bigint, bigint, Address, bigint, bigint, boolean, boolean];
           
-          if (auction[7] && !auction[8]) { // auction[7] = isActive, auction[8] = claimed
+          if (auction[7] && !auction[8]) { 
             seller = auction[0];
             status = { 
                 type: 'inAuction', 
@@ -130,7 +130,7 @@ export const useMarketplaceNfts = (): UseMarketplaceNftsResult => {
                 endTime: Number(auction[6]), 
                 seller,
                 claimed: auction[8],
-                bidsCount: 0 // Inizializza a 0, sarà aggiornato dopo
+                bidsCount: 0 
             };
           }
         }
@@ -165,17 +165,15 @@ export const useMarketplaceNfts = (): UseMarketplaceNftsResult => {
 
         if (baseData.status.type === 'inAuction') {
             try {
-                // PRIMO BLOCCO TRY/CATCH: Recupera il numero di offerenti per l'asta
                 const bidders = await marketplaceContract.read.getAuctionBidders([baseData.tokenId]) as Address[];
                 bidsCount = bidders.length;
             } catch (biddersErr) {
                 console.warn(`Could not get auction bidders for token ${baseData.tokenId}:`, biddersErr);
-                bidsCount = 0; // Solo bidsCount è influenzato da questo errore
+                bidsCount = 0; 
             }
 
             if (currentUserAddress) {
                 try {
-                    // SECONDO BLOCCO TRY/CATCH: Recupera le informazioni sul bid dell'utente corrente
                     const bidInfo = await marketplaceContract.read.getBidderInfo([baseData.tokenId, currentUserAddress]) as BidderInfoContract;
                     currentUserBidInfo = {
                         amount: formatEther(bidInfo[0]),
@@ -183,7 +181,7 @@ export const useMarketplaceNfts = (): UseMarketplaceNftsResult => {
                     };
                 } catch (bidInfoErr) {
                     console.warn(`Could not get bidder info for token ${baseData.tokenId} and user ${currentUserAddress}:`, bidInfoErr);
-                    currentUserBidInfo = { amount: "0", refunded: true }; // Solo currentUserBidInfo è influenzato
+                    currentUserBidInfo = { amount: "0", refunded: true }; 
                 }
             }
         }

@@ -17,10 +17,7 @@ export const ClaimButton = () => {
   } = useHasNfts();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Non mostrare il bottone se:
-  // - Sta caricando
-  // - L'utente non ha NFT
-  // - L'utente non può fare claim (ha già governance token)
+
   if (isLoading || !hasNfts || !canClaim) {
     return null;
   }
@@ -31,30 +28,29 @@ export const ClaimButton = () => {
         onClick={() => setIsModalOpen(true)}
         className="relative group flex items-center space-x-1 px-3 py-1 rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-yellow-500/50 animate-pulse-glow"
       >
-        {/* Icona principale */}
+
         <div className="relative">
           <FaStar className="w-3 h-3 text-white animate-spin-slow" />
           <div className="absolute -top-1 -right-1 w-1.5 h-1.5 bg-red-500 rounded-full animate-ping"></div>
         </div>
         
-        {/* Testo */}
+
         <span className="text-white font-bold text-xs whitespace-nowrap hidden sm:inline">
           Diritto al Claim!
         </span>
         
-        {/* Badge con numero NFT */}
+    
         <div className="absolute -top-2 -right-2 bg-purple-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold animate-bounce">
           {nftCount}
         </div>
 
-        {/* Effetti sparkle */}
         <div className="absolute inset-0 overflow-hidden rounded-full">
           <div className="absolute top-1 left-2 w-0.5 h-0.5 bg-white rounded-full animate-twinkle"></div>
           <div className="absolute bottom-2 right-3 w-0.5 h-0.5 bg-white rounded-full animate-twinkle animation-delay-500"></div>
           <div className="absolute top-3 right-1 w-0.5 h-0.5 bg-white rounded-full animate-twinkle animation-delay-1000"></div>
         </div>
 
-        {/* Tooltip */}
+     
         <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-2 bg-black text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 whitespace-nowrap z-40">
           <div className="text-center">
             <div className="font-semibold flex items-center space-x-1">

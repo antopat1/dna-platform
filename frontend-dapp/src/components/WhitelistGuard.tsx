@@ -23,7 +23,7 @@ export default function WhitelistGuard({ children }: WhitelistGuardProps) {
     },
   });
 
-  // 1. Wallet non connesso
+
   if (!isConnected) {
     return (
       <GuardStatusScreen
@@ -42,7 +42,7 @@ export default function WhitelistGuard({ children }: WhitelistGuardProps) {
     );
   }
 
-  // 2. Mentre sta controllando
+
   if (isChecking) {
     return (
       <GuardStatusScreen
@@ -53,7 +53,7 @@ export default function WhitelistGuard({ children }: WhitelistGuardProps) {
     );
   }
 
-  // 3. Errore nella verifica
+
   if (error) {
     return (
       <GuardStatusScreen
@@ -80,7 +80,7 @@ export default function WhitelistGuard({ children }: WhitelistGuardProps) {
     );
   }
 
-  // 4. Non è in whitelist
+
   if (!isWhitelisted) {
     return (
       <GuardStatusScreen
@@ -123,6 +123,6 @@ export default function WhitelistGuard({ children }: WhitelistGuardProps) {
     );
   }
 
-  // 5. Utente autorizzato
+
   return <>{children}</>;
 }

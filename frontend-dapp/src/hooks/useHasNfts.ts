@@ -31,7 +31,6 @@ export const useHasNfts = () => {
 
       setIsLoading(true);
       try {
-        // Controlla il balance NFT dell'utente
         const nftBalance = await publicClient.readContract({
           address: SCIENTIFIC_CONTENT_NFT_ADDRESS,
           abi: SCIENTIFIC_CONTENT_NFT_ABI,
@@ -43,7 +42,7 @@ export const useHasNfts = () => {
         setNftCount(nftBalanceNumber);
         setHasNfts(nftBalanceNumber > 0);
 
-        // Controlla il balance dei Governance Token dell'utente
+
         const govTokenBalance = await publicClient.readContract({
           address: GOVERNANCE_TOKEN_ADDRESS,
           abi: GOVERNANCE_TOKEN_ABI,
@@ -54,9 +53,6 @@ export const useHasNfts = () => {
         const govTokenBalanceNumber = Number(govTokenBalance);
         setGovernanceTokenBalance(govTokenBalanceNumber);
 
-        // L'utente può fare claim se:
-        // 1. Ha almeno 1 NFT
-        // 2. Ha 0 governance token (non ha mai fatto claim o acquistato token)
         const canClaimNow = nftBalanceNumber > 0 && govTokenBalanceNumber === 0;
         setCanClaim(canClaimNow);
 

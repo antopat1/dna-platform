@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useAccount } from 'wagmi';
-import { GuardStatusScreen } from './GuardStatusScreen'; // Importa il nuovo componente
+import { GuardStatusScreen } from './GuardStatusScreen'; 
 
 interface AdminGuardProps {
   children: React.ReactNode;
@@ -14,7 +14,7 @@ export default function AdminGuard({ children }: AdminGuardProps) {
   const { address } = useAccount();
   const { isAdmin, isLoading, isConnected, isError } = useUserRole();
 
-  // 1. Stato di caricamento
+ 
   if (isLoading) {
     return (
       <GuardStatusScreen
@@ -25,7 +25,7 @@ export default function AdminGuard({ children }: AdminGuardProps) {
     );
   }
 
-  // 2. Wallet non connesso
+
   if (!isConnected) {
     return (
       <GuardStatusScreen
@@ -44,7 +44,7 @@ export default function AdminGuard({ children }: AdminGuardProps) {
     );
   }
 
-  // 3. Errore durante la verifica
+ 
   if (isError) {
     return (
       <GuardStatusScreen
@@ -63,7 +63,7 @@ export default function AdminGuard({ children }: AdminGuardProps) {
     );
   }
 
-  // 4. Utente non amministratore
+
   if (!isAdmin) {
     return (
       <GuardStatusScreen
@@ -86,7 +86,7 @@ export default function AdminGuard({ children }: AdminGuardProps) {
     );
   }
 
-  // 5. Utente autorizzato
+
   return <>{children}</>;
 }
 

@@ -48,8 +48,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    // Aggiungiamo 'dark' come classe di default per il rendering iniziale
-    // e 'suppressHydrationWarning' per gestire il cambio di classe sul client
+
     <html lang="it" className="h-full dark" suppressHydrationWarning> 
       <body 
         className={`${inter.className} min-h-screen flex flex-col bg-white text-gray-800 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-300`}

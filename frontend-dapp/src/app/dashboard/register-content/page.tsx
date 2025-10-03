@@ -19,14 +19,14 @@ import {
   ArrowPathIcon,
 } from "@heroicons/react/24/outline";
 import { Star, Circle } from "lucide-react";
-import WhitelistGuard from "@/components/WhitelistGuard"; // <-- 1. IMPORT AGGIUNTO
+import WhitelistGuard from "@/components/WhitelistGuard"; 
 
-// 2. LA PAGINA ORIGINALE DIVENTA UN COMPONENTE INTERNO (NON PIÙ EXPORT DEFAULT)
+
 function RegisterContent() {
   const mounted = useIsMounted();
   const router = useRouter();
 
-  // Hook per la registrazione del contenuto
+  
   const {
     isConnected,
     chainId,
@@ -70,7 +70,7 @@ function RegisterContent() {
     setCurrentMintedCount((prev) => prev + 1);
   }, []);
 
-  // Hook per la gestione del minting e operazioni amministrative
+  
   const {
     handleRequestMintForNewContent,
     isProcessing: isAdminProcessing,
@@ -94,11 +94,11 @@ function RegisterContent() {
     nftContractAddressInRegistry?.toLowerCase() ===
     SCIENTIFIC_CONTENT_NFT_ADDRESS.toLowerCase();
 
-  // TROVA IL NUMERO MASSIMO DI COPIE DAL TEMPLATE SELEZIONATO
+ 
   const currentTemplateMaxCopies =
     templates.find((t) => t._id === selectedTemplateId)?.maxCopies || 1;
 
-  // Assicurati che maxCopies sia sempre <= currentTemplateMaxCopies
+  
   useEffect(() => {
     if (maxCopies > currentTemplateMaxCopies) {
       setMaxCopies(currentTemplateMaxCopies);
@@ -282,7 +282,7 @@ function RegisterContent() {
 
       {mounted && (
         <>
-          {/* 4. BLOCCO !isConnected RIMOSSO PERCHÉ GESTITO DAL GUARD */}
+          
 
           {!currentChainIsArbitrumSepolia && (
             <div className="bg-orange-50 border border-orange-200 text-orange-700 p-4 rounded-xl shadow-md text-center">
@@ -293,7 +293,7 @@ function RegisterContent() {
 
           {currentChainIsArbitrumSepolia && (
             <div className="max-w-4xl mx-auto space-y-8">
-              {/* NFT Contract Registry Status */}
+              
               <div className="bg-white p-8 rounded-xl shadow-2xl border border-blue-100 relative">
                 <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
                   <span className="bg-blue-500 text-white rounded-full p-2 mr-3 shadow-md">
@@ -375,7 +375,7 @@ function RegisterContent() {
                 )}
               </div>
 
-              {/* Registration Form */}
+              
               <form
                 onSubmit={handleRegisterContent}
                 className="bg-white p-8 rounded-xl shadow-2xl border border-indigo-100"
@@ -387,7 +387,7 @@ function RegisterContent() {
                   Dettagli Contenuto
                 </h2>
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                  {/* Contenuto principale */}
+                  
                   <div className="space-y-4">
                     <div>
                       <label
@@ -459,7 +459,7 @@ function RegisterContent() {
                     </div>
                   </div>
 
-                  {/* Selezione Template e Caricamento File */}
+                  
                   <div className="space-y-4">
                     <div>
                       <label
@@ -486,7 +486,7 @@ function RegisterContent() {
                       </select>
                     </div>
 
-                    {/* Caricamento Immagine di Anteprima */}
+                    
                     <div>
                       <label
                         htmlFor="previewImage"
@@ -557,7 +557,7 @@ function RegisterContent() {
                       )}
                     </div>
 
-                    {/* Caricamento Documento Principale */}
+                    
                     <div>
                       <label
                         htmlFor="mainDocument"
@@ -630,7 +630,7 @@ function RegisterContent() {
                   </div>
                 </div>
 
-                {/* Metadati Specifici del Template */}
+                
                 {selectedTemplateId && (
                   <div className="mt-8 pt-6 border-t border-gray-200">
                     <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
@@ -643,7 +643,7 @@ function RegisterContent() {
                   </div>
                 )}
 
-                {/* Error Display */}
+              
                 {error && (
                   <div
                     className="mt-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg shadow-sm text-sm"
@@ -663,7 +663,7 @@ function RegisterContent() {
                   </div>
                 )}
 
-                {/* Action Buttons */}
+                
                 <div className="mt-8 flex justify-end space-x-4">
                   <button
                     type="submit"
@@ -688,7 +688,7 @@ function RegisterContent() {
                 </div>
               </form>
 
-              {/* Minting Section (conditionally rendered) */}
+             
               {registryContentId && isRegistrySuccess && (
                 <div className="bg-white p-8 rounded-xl shadow-2xl border border-green-100">
                   <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
@@ -754,13 +754,13 @@ function RegisterContent() {
                     </div>
                   )}
                   <div className="mt-6 flex justify-end space-x-4">
-                    {/* Visualizza il conteggio dei mint */}
+                    
                     <p className="flex items-center text-gray-700 font-semibold text-lg">
                       Mintati: {currentMintedCount} / {maxCopies}
                     </p>
                     <button
                       onClick={() => {
-                        resetMintingState(); // Reset dello stato di minting
+                        resetMintingState(); 
                         handleRequestMintForNewContent(
                           registryContentId,
                           contentTitle,
@@ -894,7 +894,7 @@ function RegisterContent() {
 }
 
 
-// 3. NUOVO COMPONENTE DI EXPORT CHE USA IL GUARD
+
 export default function RegisterContentPage() {
   return (
     <WhitelistGuard>

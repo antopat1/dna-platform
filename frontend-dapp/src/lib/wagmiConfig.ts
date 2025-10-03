@@ -2,8 +2,6 @@
 import { arbitrumSepolia } from 'wagmi/chains';
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
 
-// IMPORTANTE: Ottieni il tuo Project ID da https://cloud.walletconnect.com/
-// e aggiungilo al tuo file .env: NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID="YOUR_PROJECT_ID"
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
 
 if (!projectId) {
@@ -11,11 +9,10 @@ if (!projectId) {
 }
 
 export const config = getDefaultConfig({
-  appName: 'DnA Platform', // Il nome della tua DApp
+  appName: 'DnA Platform', 
   projectId,
   chains: [arbitrumSepolia],
-  ssr: true, // Importante per l'App Router di Next.js
-});
+  ssr: true, 
 
 
 

@@ -4,9 +4,9 @@ import FormData from 'form-data';
 import { Readable } from 'stream';
 import axios from 'axios';
 
-// Configurazione per Next.js 14 App Router (sostituisce export const config)
+
 export const runtime = 'nodejs';
-export const maxDuration = 60; // Timeout in secondi per upload file
+export const maxDuration = 60; 
 
 const PINATA_JWT = process.env.PINATA_JWT;
 
@@ -24,7 +24,7 @@ async function* webStreamToNodeStream(webStream: ReadableStream<Uint8Array>) {
 }
 
 export async function POST(request: NextRequest) {
-    // Controlla solo la presenza del JWT
+    
     if (!PINATA_JWT) {
         console.error('Pinata JWT is not set in environment variables.');
         return NextResponse.json({ success: false, message: 'Server configuration error: Pinata JWT missing.' }, { status: 500 });

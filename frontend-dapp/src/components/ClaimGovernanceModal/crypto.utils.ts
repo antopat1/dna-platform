@@ -1,7 +1,4 @@
-// CLASSE PER GESTIONE SICURA DELLA MEMORIA
-// Questa classe incapsula la chiave privata in un buffer e fornisce metodi
-// per utilizzarla e distruggerla immediatamente dopo l'uso, riducendo il rischio
-// che rimanga in memoria e possa essere esposta.
+
 export class SecureMemory {
   private data: ArrayBuffer | null = null;
   private isValid: boolean = true;
@@ -21,10 +18,9 @@ export class SecureMemory {
     const key = decoder.decode(this.data);
     
     try {
-      // Esegue l'operazione richiesta passando la chiave decodificata
+
       return await callback(key);
     } finally {
-      // Distrugge la chiave dalla memoria subito dopo l'uso
       this.destroy();
     }
   }
@@ -32,7 +28,6 @@ export class SecureMemory {
   destroy() {
     if (this.data) {
       const view = new Uint8Array(this.data);
-      // Sovrascrive il buffer con dati casuali per rendere il recupero più difficile
       crypto.getRandomValues(view);
       this.data = null;
     }
@@ -44,10 +39,6 @@ export class SecureMemory {
   }
 }
 
-// FUNZIONE DI DECIFRATURA CON GESTIONE SICURA
-// Questa funzione gestisce l'intero processo di decifratura della chiave privata
-// utilizzando le API crittografiche del browser e restituisce un'istanza di SecureMemory
-// per una gestione sicura della chiave decifrata.
 export const decryptPrivateKeySecurely = async (phrase: string): Promise<SecureMemory | null> => {
   console.log('[DEBUG] Inizio decifratura con passphrase:', phrase.substring(0, 5) + '...');
   try {

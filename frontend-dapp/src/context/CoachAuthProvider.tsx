@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useCallback, PropsWithChildren, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-// 1. Definisci l'interfaccia per il valore del context
+
 interface CoachAuthContextType {
   isAuthenticated: boolean;
   isModalOpen: boolean;
@@ -16,10 +16,10 @@ interface CoachAuthContextType {
   checkAuthStatus: () => boolean;
 }
 
-// 2. Crea il Context
+
 const CoachAuthContext = createContext<CoachAuthContextType | undefined>(undefined);
 
-// 3. Crea il Provider Component
+
 export const CoachAuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
   const [state, setState] = useState({
     isAuthenticated: false,
@@ -28,7 +28,7 @@ export const CoachAuthProvider: React.FC<PropsWithChildren> = ({ children }) => 
     error: null as string | null
   });
   
-  // Usiamo useRouter qui per gestire il redirect al logout in modo centralizzato
+
   const router = useRouter();
 
   const openModal = useCallback(() => {
@@ -67,12 +67,11 @@ export const CoachAuthProvider: React.FC<PropsWithChildren> = ({ children }) => 
     sessionStorage.removeItem('coachAuth');
     document.cookie = 'coachAuth=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
     
-    // Reindirizza alla home page in modo programmatico
+
     router.push('/');
   }, [router]);
 
   const checkAuthStatus = useCallback(() => {
-    // Questo controllo è fondamentale per la persistenza dello stato tra i refresh della pagina
     const isAuth = sessionStorage.getItem('coachAuth') === 'true';
     if (isAuth !== state.isAuthenticated) {
        setState(prev => ({ ...prev, isAuthenticated: isAuth }));
@@ -80,11 +79,9 @@ export const CoachAuthProvider: React.FC<PropsWithChildren> = ({ children }) => 
     return isAuth;
   }, [state.isAuthenticated]);
 
-  // Controlla lo stato all'avvio dell'applicazione
+
   useEffect(() => {
     checkAuthStatus();
-  // Esegui solo una volta al mount del provider per sincronizzare lo stato iniziale
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
 
@@ -104,7 +101,7 @@ export const CoachAuthProvider: React.FC<PropsWithChildren> = ({ children }) => 
   );
 };
 
-// 4. Crea il custom hook per consumare il context in modo sicuro
+
 export const useCoachAuth = (): CoachAuthContextType => {
   const context = useContext(CoachAuthContext);
   if (context === undefined) {

@@ -5,10 +5,10 @@ import {
   WalletClient,
   parseEther,
   formatEther,
-  Abi // Non è strettamente necessario se usi 'as const' ma è buona pratica
+  Abi 
 } from 'viem';
 
-// Importa tutte le costanti e gli ABI dal tuo file constants.ts
+
 import {
   SCIENTIFIC_CONTENT_NFT_ADDRESS,
   SCIENTIFIC_CONTENT_REGISTRY_ADDRESS,
@@ -19,29 +19,10 @@ import {
   CHAINLINK_SUBSCRIPTION_ID,
 } from './constants';
 
-// Importa il nuovo ABI completo del VRF Coordinator V2 Plus dal file JSON
-// Assicurati che il percorso sia corretto in base a dove hai salvato il tuo VrfCoordinatorV2PlusABI.json
+
 import VrfCoordinatorV2PlusABI from '../lib/abi/VrfCoordinatorV2PlusABI.json'; 
 
-// NON È PIÙ NECESSARIO: Rimuovi questa definizione dell'ABI semplificato
-// const VRF_COORDINATOR_V2_PLUS_ABI = [
-//   {
-//     inputs: [
-//       { internalType: 'uint256', name: 'subId', type: 'uint256' }
-//     ],
-//     name: 'getSubscription',
-//     outputs: [
-//       { internalType: 'uint96', name: 'balance', type: 'uint96' },
-//       { internalType: 'uint64', name: 'reqCount', type: 'uint64' },
-//       { internalType: 'address', name: 'owner', type: 'address' },
-//       { internalType: 'address[]', name: 'consumers', type: 'address[]' }
-//     ],
-//     stateMutability: 'view',
-//     type: 'function',
-//   },
-// ] as const;
 
-// Interfaccia per i dati del Registry basata sulla struct Content
 interface ContentRegistryData {
   title: string;
   description: string;
@@ -55,10 +36,10 @@ interface ContentRegistryData {
   nftMintPrice: bigint;
 }
 
-// Interfaccia corretta per i parametri di debug
+
 interface DebugMintingParams {
   publicClient: PublicClient;
-  walletClient?: WalletClient; // Opzionale se non sempre disponibile
+  walletClient?: WalletClient; 
   userAddress: Address;
   registryContentId: bigint;
   nftMetadataURI: string;
@@ -118,7 +99,7 @@ export async function debugMinting({
 
     console.log(`DEBUG: Dati raw restituiti da getContent:`, registryData);
 
-    // Verifica che tutti i campi critici siano presenti
+
     const {
       title,
       description,
@@ -132,7 +113,7 @@ export async function debugMinting({
       nftMintPrice,
     } = registryData;
 
-    // Controlli di validità
+ 
     if (
       title === undefined ||
       author === undefined ||
@@ -165,7 +146,7 @@ export async function debugMinting({
     console.log(`    - Copie massime: ${Number(maxCopies)}`);
     console.log(`    - Copie mintate finora: ${Number(mintedCopies)}`);
 
-    // Validazioni business logic
+
     if (!isAvailable) {
       console.error(`❌ ERRORE: Contenuto con ID ${registryContentId} non disponibile per il minting.`);
       throw new Error('Content not available');
@@ -207,7 +188,6 @@ export async function debugMinting({
     console.log(`  - Chainlink VRF Key Hash (da constants.ts): ${CHAINLINK_KEYHASH}`);
     console.log(`  - Chainlink VRF Subscription ID (da constants.ts): ${CHAINLINK_SUBSCRIPTION_ID}`);
 
-    // Tentativi di leggere configurazioni VRF dal contratto
     try {
       const coordinatorFromContract = await publicClient.readContract({
         address: nftContractAddress,
@@ -255,26 +235,24 @@ export async function debugMinting({
 
     console.log('\n🔗 === CONTROLLO SALDO LINK SULLA VRF SUBSCRIPTION ===');
     try {
-      // Modifica qui: usa VrfCoordinatorV2PlusABI importato dal file JSON
       const subscriptionDetails = await publicClient.readContract({
         address: VRF_COORDINATOR_ADDRESS,
-        abi: VrfCoordinatorV2PlusABI as Abi, // Cast necessario per Viem con import da JSON
+        abi: VrfCoordinatorV2PlusABI as Abi, 
         functionName: 'getSubscription',
         args: [CHAINLINK_SUBSCRIPTION_ID],
-      }) as [bigint, bigint, bigint, Address, Address[]]; // Modificato l'ordine e i tipi di output in base all'ABI corretto (balance, nativeBalance, reqCount, subOwner, consumers)
+      }) as [bigint, bigint, bigint, Address, Address[]]; 
 
-      // I nomi dei campi nell'ABI sono: balance, nativeBalance, reqCount, subOwner, consumers
+
       const [linkBalance, nativeBalance, reqCount, owner, consumers] = subscriptionDetails;
       const subscriptionLinkBalanceFormatted = parseFloat(formatEther(linkBalance));
-      const subscriptionNativeBalanceFormatted = parseFloat(formatEther(nativeBalance)); // Aggiunto per nativeBalance
+      const subscriptionNativeBalanceFormatted = parseFloat(formatEther(nativeBalance)); 
 
       console.log(`  - Saldo LINK della VRF Subscription ID ${CHAINLINK_SUBSCRIPTION_ID}: ${subscriptionLinkBalanceFormatted} LINK`);
-      console.log(`  - Saldo NATIVE della VRF Subscription: ${subscriptionNativeBalanceFormatted} ETH`); // Aggiunto per nativeBalance
+      console.log(`  - Saldo NATIVE della VRF Subscription: ${subscriptionNativeBalanceFormatted} ETH`); 
       console.log(`  - Request Count: ${reqCount}`);
       console.log(`  - Owner: ${owner}`);
       console.log(`  - Consumers: ${consumers.join(', ')}`);
       
-      // Verifica se il contratto NFT è un consumer della subscription
       const isConsumer = consumers.some(consumer => 
         consumer.toLowerCase() === nftContractAddress.toLowerCase()
       );
@@ -294,7 +272,6 @@ export async function debugMinting({
     } catch (e: any) {
       console.error(`❌ ERRORE nel controllo VRF Subscription:`, e.message);
       console.error(`Verifica che VRF Coordinator (${VRF_COORDINATOR_ADDRESS}) e Subscription ID (${CHAINLINK_SUBSCRIPTION_ID}) siano corretti.`);
-      // Aggiungi un log completo dell'errore per un debug più dettagliato
       console.error(e); 
     }
 

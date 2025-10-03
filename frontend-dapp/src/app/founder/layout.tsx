@@ -4,7 +4,6 @@ import React from 'react';
 
 // ========================================
 // METADATA SPECIFICI PER LA PAGINA FOUNDER
-// Questo sovrascriverà/integrerà il title e la description del layout.tsx per questa specifica rotta
 // ========================================
 export const metadata: Metadata = {
   title: "Antonio Paternò | Ingegnere, Sviluppatore Blockchain e Docente",

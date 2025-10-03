@@ -4,7 +4,7 @@
 import { CoachAuthProvider } from "@/context/CoachAuthProvider";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Providers } from "./providers"; // Il tuo file providers.tsx che abbiamo già corretto
+import { Providers } from "./providers"; 
 
 export default function ClientLayout({
   children,

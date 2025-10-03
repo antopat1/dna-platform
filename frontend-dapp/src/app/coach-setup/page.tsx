@@ -16,14 +16,14 @@ import {
   SCIENTIFIC_CONTENT_MARKETPLACE_ADDRESS
 } from '@/lib/constants';
 
-// Dichiarazione TypeScript per window.ethereum
+
 declare global {
   interface Window {
     ethereum?: any;
   }
 }
 
-// ABI minimale per le funzioni necessarie
+
 const registryAbi = parseAbi([
   'function addAdmin(address account) external',
   'function addAuthorToWhitelist(address _authorAddress) external',
@@ -47,7 +47,7 @@ interface TransactionResult {
   error?: string;
 }
 
-// MIGLIORAMENTI DI SICUREZZA IMPLEMENTATI:
+// Meccanismi SICUREZZA IMPLEMENTATI:
 // 1. Memoria sicura con ArrayBuffer
 // 2. Cancellazione immediata delle chiavi
 // 3. Rate limiting sui tentativi
@@ -74,9 +74,9 @@ export default function SecureCoachSetupPage() {
   
   // MAX 3 tentativi prima di lockout
   const MAX_ATTEMPTS = 3;
-  const LOCKOUT_TIME = 30000; // 30 secondi
+  const LOCKOUT_TIME = 30000; 
 
-  // Controllo autenticazione coach
+
   useEffect(() => {
     const checkAuth = async () => {
       const isAuth = checkAuthStatus();
@@ -90,7 +90,7 @@ export default function SecureCoachSetupPage() {
     checkAuth();
   }, [checkAuthStatus, router]);
 
-  // Handler per logout coach
+
   const handleCoachLogout = () => {
     logout();
   };
@@ -101,9 +101,7 @@ export default function SecureCoachSetupPage() {
     private isValid: boolean = true;
 
     constructor(privateKey: string) {
-      // Converte la stringa in ArrayBuffer per gestione sicura
       const encoder = new TextEncoder();
-      // this.data = encoder.encode(privateKey).buffer.slice();
       const buffer = encoder.encode(privateKey).buffer.slice();
       this.data = buffer instanceof ArrayBuffer ? buffer : buffer as unknown as ArrayBuffer;
     }
@@ -127,8 +125,7 @@ export default function SecureCoachSetupPage() {
 
     // Distrugge in modo sicuro la memoria
     destroy() {
-      if (this.data) {
-        // Sovrascrive con dati casuali
+      if (this.data) {   
         const view = new Uint8Array(this.data);
         crypto.getRandomValues(view);
         this.data = null;
@@ -141,7 +138,7 @@ export default function SecureCoachSetupPage() {
     }
   }
 
-  // DECIFRATURA CON GESTIONE SICURA
+  
   const decryptPrivateKeySecurely = async (phrase: string): Promise<SecureMemory | null> => {
   try {
     const ENCRYPTED_PRIVATE_KEY = process.env.NEXT_PUBLIC_ENCRYPTED_PRIVATE_KEY as string;
@@ -150,11 +147,10 @@ export default function SecureCoachSetupPage() {
       throw new Error('Chiave cifrata non configurata');
     }
 
-    // Decodifica Base64
+    
     const encryptedData = Uint8Array.from(atob(ENCRYPTED_PRIVATE_KEY), c => c.charCodeAt(0));
     
-    // Estrai componenti secondo il formato del tuo script Node.js
-    // Formato: salt(16) + iv(12) + authTag(16) + ciphertext(resto)
+  
     const salt = encryptedData.slice(0, 16);
     const iv = encryptedData.slice(16, 28);
     const authTag = encryptedData.slice(28, 44);
@@ -166,7 +162,7 @@ export default function SecureCoachSetupPage() {
     console.log('AuthTag:', authTag.length, 'bytes');
     console.log('Ciphertext:', ciphertext.length, 'bytes');
 
-    // PBKDF2 con le stesse iterazioni del tuo script (100,000)
+    
     const passwordKey = await crypto.subtle.importKey(
       'raw', 
       new TextEncoder().encode(phrase), 
@@ -179,7 +175,7 @@ export default function SecureCoachSetupPage() {
       { 
         name: 'PBKDF2', 
         salt, 
-        iterations: 100000, // Stesso del tuo script
+        iterations: 100000, 
         hash: 'SHA-256' 
       },
       passwordKey,
@@ -188,12 +184,12 @@ export default function SecureCoachSetupPage() {
       ['decrypt']
     );
 
-    // Per Web Crypto API, dobbiamo combinare ciphertext + authTag
+    
     const dataToDecrypt = new Uint8Array(ciphertext.length + authTag.length);
     dataToDecrypt.set(ciphertext, 0);
     dataToDecrypt.set(authTag, ciphertext.length);
 
-    // Decifratura
+    
     const decrypted = await crypto.subtle.decrypt(
       { 
         name: 'AES-GCM', 
@@ -221,7 +217,7 @@ export default function SecureCoachSetupPage() {
   }
 };
 
-  // RATE LIMITING SICURO
+  
   const checkRateLimit = useCallback((): boolean => {
     if (attempts >= MAX_ATTEMPTS) {
       if (!isLocked) {
@@ -238,7 +234,7 @@ export default function SecureCoachSetupPage() {
     return true;
   }, [attempts, isLocked]);
 
-  // LOGGING DI SICUREZZA (per audit)
+  
   const logSecurityEvent = useCallback((event: string, details: any = {}) => {
     const logEntry = {
       timestamp: new Date().toISOString(),
@@ -248,7 +244,7 @@ export default function SecureCoachSetupPage() {
       ...details
     };
     
-    // In produzione, inviare a sistema di logging sicuro
+    
     console.log('[SECURITY LOG]', logEntry);
     
     // Opzionale: inviare al backend per audit
@@ -259,7 +255,7 @@ export default function SecureCoachSetupPage() {
     // });
   }, [coachAddress]);
 
-  // ESECUZIONE TRANSAZIONI
+ 
   const executeAllTransactions = async (walletClient: any, publicClient: any, coachAddr: string) => {
     const results: TransactionResult[] = [];
     
@@ -337,11 +333,11 @@ export default function SecureCoachSetupPage() {
     return results;
   };
 
-  // HANDLER PRINCIPALE SICURO
+  
   const handleSecureSetup = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validazioni preliminari
+    
     if (!isConnected || !coachAddress) {
       toast.error('Connetti il wallet Metamask');
       return;
@@ -356,14 +352,14 @@ export default function SecureCoachSetupPage() {
       return;
     }
 
-    // Inizio processo sicuro
+    
     setIsProcessing(true);
     setShowResults(false);
     setTransactionResults([]);
     logSecurityEvent('SETUP_ATTEMPT_STARTED');
 
     try {
-      // 1. Decifratura sicura
+      
       const secureKey = await decryptPrivateKeySecurely(secretPhrase);
       
       if (!secureKey) {
@@ -373,15 +369,15 @@ export default function SecureCoachSetupPage() {
         return;
       }
 
-      // 2. Setup timeout di sicurezza (auto-cleanup dopo 5 minuti)
+      
       securityTimeoutRef.current = setTimeout(() => {
         if (!secureKey.isDestroyed()) {
           secureKey.destroy();
           logSecurityEvent('SECURITY_TIMEOUT_CLEANUP');
         }
-      }, 300000); // 5 minuti
+      }, 300000); 
 
-      // 3. Esecuzione transazioni con gestione sicura
+      
       const results = await secureKey.use(async (privateKey) => {
         const account = privateKeyToAccount(`0x${privateKey.replace('0x', '')}`);
         const publicClient = createPublicClient({ 
@@ -394,7 +390,7 @@ export default function SecureCoachSetupPage() {
           transport: http() 
         });
 
-        // Esegui tutte le transazioni
+        
         return await executeAllTransactions(walletClient, publicClient, coachAddress);
       });
 
@@ -403,13 +399,13 @@ export default function SecureCoachSetupPage() {
       logSecurityEvent('SETUP_COMPLETED_SUCCESSFULLY');
       toast.success('Setup completato con successo!');
 
-      // Dopo 3 secondi, mostra un messaggio finale e ricarica la pagina
+      
       setTimeout(() => {
         toast.success('🎉 Tutti i privilegi sono stati assegnati! La pagina verrà aggiornata.', {
           duration: 2000,
         });
         
-        // Ricarica la pagina dopo altri 2 secondi
+        
         setTimeout(() => {
           window.location.reload();
         }, 2000);
@@ -419,9 +415,9 @@ export default function SecureCoachSetupPage() {
       logSecurityEvent('SETUP_ERROR', { error: error.message });
       toast.error(`Errore durante setup: ${error.message}`);
     } finally {
-      // Cleanup sicurezza
+
       setIsProcessing(false);
-      setSecretPhrase(''); // Pulisci input
+      setSecretPhrase(''); 
       
       if (securityTimeoutRef.current) {
         clearTimeout(securityTimeoutRef.current);
@@ -429,7 +425,7 @@ export default function SecureCoachSetupPage() {
     }
   };
 
-  // Loading state durante verifica autorizzazioni
+  
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center">
@@ -441,15 +437,15 @@ export default function SecureCoachSetupPage() {
     );
   }
 
-  // Se non autorizzato, non mostrare nulla (evita flash di contenuto)
+  
   if (!isAuthorized) {
     return null;
   }
 
-  // COMPONENTE UI CON INDICATORI DI SICUREZZA E HEADER PROTETTO
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800">
-      {/* Header protetto */}
+
       <div className="bg-gradient-to-r from-purple-900 to-blue-900 p-4 shadow-lg">
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-3">
@@ -469,13 +465,13 @@ export default function SecureCoachSetupPage() {
         </div>
       </div>
 
-      {/* Contenuto principale */}
+     
       <div className="container mx-auto p-4 max-w-4xl">
         <h2 className="text-3xl font-bold mb-6 text-white">
           Setup Coach Sicuro − Richiedi assegnazione di tutti i privilegi Autore e Admin dei contratti
         </h2>
         
-        {/* Controllo connessione wallet */}
+       
         {!isConnected && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
             <p>Connetti il tuo wallet Metamask per procedere.</p>
@@ -488,7 +484,7 @@ export default function SecureCoachSetupPage() {
           </div>
         )}
 
-        {/* Controllo chiave crittografata */}
+        
         {!process.env.NEXT_PUBLIC_ENCRYPTED_PRIVATE_KEY && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
             <p>ERRORE: Variabile d'ambiente NEXT_PUBLIC_ENCRYPTED_PRIVATE_KEY non trovata!</p>
@@ -496,14 +492,14 @@ export default function SecureCoachSetupPage() {
           </div>
         )}
 
-        {/* Stato lockout */}
+     
         {isLocked && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
             <p>Account temporaneamente bloccato per sicurezza. Riprova tra qualche secondo.</p>
           </div>
         )}
 
-        {/* Form principale */}
+     
         <form onSubmit={handleSecureSetup} className="space-y-4 mb-6">
           <div>
             <label htmlFor="secretPhrase" className="block text-sm font-medium text-gray-300 mb-2">
@@ -537,7 +533,7 @@ export default function SecureCoachSetupPage() {
           </button>
         </form>
 
-        {/* Risultati transazioni */}
+     
         {showResults && transactionResults.length > 0 && (
           <div className="mt-6">
             <h3 className="text-xl font-bold mb-4 text-white">Risultati Setup:</h3>
@@ -584,7 +580,7 @@ export default function SecureCoachSetupPage() {
               ))}
             </div>
 
-            {/* Riassunto finale */}
+     
             <div className="mt-4 p-4 bg-gray-800 text-white rounded border border-gray-600">
               <h4 className="font-semibold mb-2">Riassunto:</h4>
               <p className="text-sm text-gray-300">

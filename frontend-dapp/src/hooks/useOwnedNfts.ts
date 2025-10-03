@@ -16,7 +16,7 @@ import {
 import { resolveIpfsLink } from "@/utils/ipfs";
 import axios from 'axios';
 
-// --- TIPI DI STATO E INTERFACCE AGGIORNATI ---
+
 
 export type NftAuctionStatusInfo = {
   type: "inAuction";
@@ -171,7 +171,7 @@ export const useOwnedNfts = (): UseOwnedNftsResult => {
                     endTime: Number(auction[6]),
                     seller,
                     claimed: auction[8],
-                    bidsCount: 0 // Inizializza a 0, sarà aggiornato dopo
+                    bidsCount: 0 
                 };
               }
             }
@@ -206,17 +206,15 @@ export const useOwnedNfts = (): UseOwnedNftsResult => {
         
         if (baseData.status.type === 'inAuction') {
             try {
-                // PRIMO BLOCCO TRY/CATCH: Recupera il numero di offerenti per l'asta
                 const bidders = await marketplaceContract.read.getAuctionBidders([baseData.tokenId]) as Address[];
                 bidsCount = bidders.length;
             } catch (biddersErr) {
                 console.warn(`Could not get auction bidders for token ${baseData.tokenId}:`, biddersErr);
-                bidsCount = 0; // Solo bidsCount è influenzato da questo errore
+                bidsCount = 0; 
             }
 
             if (address) {
                 try {
-                    // SECONDO BLOCCO TRY/CATCH: Recupera le informazioni sul bid dell'utente corrente
                     const bidInfo = await marketplaceContract.read.getBidderInfo([baseData.tokenId, address]) as BidderInfoContract;
                     currentUserBidInfo = {
                         amount: formatEther(bidInfo[0]),
@@ -224,7 +222,7 @@ export const useOwnedNfts = (): UseOwnedNftsResult => {
                     };
                 } catch (bidInfoErr) {
                     console.warn(`Could not get bidder info for token ${baseData.tokenId} and user ${address}:`, bidInfoErr);
-                    currentUserBidInfo = { amount: "0", refunded: true }; // Solo currentUserBidInfo è influenzato
+                    currentUserBidInfo = { amount: "0", refunded: true }; 
                 }
             }
         }

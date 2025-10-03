@@ -5,7 +5,6 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { arbitrumSepolia } from 'viem/chains';
 import { pbkdf2Sync, createDecipheriv } from 'crypto';
 
-// ABI e Indirizzo del contratto (presi dalla pagina admin)
 const SCIENTIFIC_CONTENT_REGISTRY_ABI = [
     {
         "inputs": [{"internalType": "address", "name": "_authorAddress", "type": "address"}],
@@ -18,10 +17,7 @@ const SCIENTIFIC_CONTENT_REGISTRY_ABI = [
 
 const SCIENTIFIC_CONTENT_REGISTRY_ADDRESS = process.env.NEXT_PUBLIC_SCIENTIFIC_CONTENT_REGISTRY_ADDRESS as `0x${string}`;
 
-/**
- * Decifra una chiave privata cifrata usando AES-GCM con una passphrase.
- * Questa è la versione Node.js della logica presente nel frontend.
- */
+
 const decryptPrivateKey = (encryptedKeyBase64: string, passphrase: string): string => {
     try {
         const encryptedData = Buffer.from(encryptedKeyBase64, 'base64');
@@ -30,14 +26,13 @@ const decryptPrivateKey = (encryptedKeyBase64: string, passphrase: string): stri
         const authTag = encryptedData.slice(28, 44);
         const ciphertext = encryptedData.slice(44);
 
-        // Deriva la chiave dalla passphrase usando PBKDF2
+
         const derivedKey = pbkdf2Sync(passphrase, salt, 100000, 32, 'sha256');
 
-        // Crea il decipher AES-GCM
         const decipher = createDecipheriv('aes-256-gcm', derivedKey, iv);
         decipher.setAuthTag(authTag);
 
-        // Decifra i dati
+
         const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
         
         const privateKey = decrypted.toString('utf8');
@@ -63,7 +58,7 @@ const decryptPrivateKey = (encryptedKeyBase64: string, passphrase: string): stri
 export async function whitelistAuthorOnChain(authorAddress: string): Promise<string> {
     console.log(`🚀 Inizio processo di whitelisting on-chain per ${authorAddress}`);
 
-    // --- Validazione Input ---
+  
     if (!SCIENTIFIC_CONTENT_REGISTRY_ADDRESS || !isAddress(SCIENTIFIC_CONTENT_REGISTRY_ADDRESS)) {
         throw new Error('Indirizzo del contratto non valido o non configurato.');
     }
@@ -80,12 +75,11 @@ export async function whitelistAuthorOnChain(authorAddress: string): Promise<str
 
     let privateKey: string | null = null;
     try {
-        // --- Decifratura Chiave ---
         privateKey = decryptPrivateKey(encryptedKey, passphrase);
         const account = privateKeyToAccount(`0x${privateKey.replace('0x', '')}`);
         console.log(`🔐 Chiave decifrata. Usando l'account sender: ${account.address}`);
 
-        // --- Setup Client Viem ---
+
         const publicClient = createPublicClient({ chain: arbitrumSepolia, transport: http() });
         const walletClient = createWalletClient({
             account,
@@ -95,7 +89,7 @@ export async function whitelistAuthorOnChain(authorAddress: string): Promise<str
         
         console.log(`🔗 Client Viem configurati. Invio transazione a ${SCIENTIFIC_CONTENT_REGISTRY_ADDRESS}...`);
 
-        // --- Scrittura Contratto ---
+
         const txHash = await walletClient.writeContract({
             address: SCIENTIFIC_CONTENT_REGISTRY_ADDRESS,
             abi: SCIENTIFIC_CONTENT_REGISTRY_ABI,
@@ -105,7 +99,7 @@ export async function whitelistAuthorOnChain(authorAddress: string): Promise<str
 
         console.log(`✅ Transazione inviata con successo! Hash: ${txHash}`);
         
-        // --- Attesa Conferma ---
+
         console.log('⏳ In attesa di conferma della transazione...');
         const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
 
@@ -118,10 +112,8 @@ export async function whitelistAuthorOnChain(authorAddress: string): Promise<str
 
     } catch (error: any) {
         console.error('❌ Fallimento nel processo di whitelisting on-chain:', error);
-        // Rilancia l'errore per gestirlo nel chiamante (API route)
         throw error;
     } finally {
-        // Pulizia della chiave privata dalla memoria (best effort)
         privateKey = null; 
     }
 }

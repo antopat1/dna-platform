@@ -18,13 +18,11 @@ export const CoachAuditButton: React.FC = () => {
     checkAuthStatus
   } = useCoachAuth();
 
-  // Check auth status on component mount
   useEffect(() => {
     checkAuthStatus();
   }, [checkAuthStatus]);
 
-  // Redirect to coach-setup when authenticated.
-  // Questo useEffect ora reagirà allo stato globale del context.
+
   useEffect(() => {
     if (isAuthenticated) {
       router.push('/coach-setup');
@@ -38,10 +36,10 @@ export const CoachAuditButton: React.FC = () => {
         className="relative flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white text-xs font-medium rounded-lg transition-all duration-300 shadow-lg hover:shadow-purple-500/25 group overflow-hidden"
         title="Accesso Modalità Audit Coach"
       >
-        {/* Animated background glow */}
+
         <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 opacity-75 blur-sm group-hover:blur-md transition-all duration-300"></div>
         
-        {/* Content */}
+
         <div className="relative flex items-center space-x-2">
           <div className="relative">
             <FaShieldAlt className="text-sm animate-pulse" />
@@ -52,10 +50,10 @@ export const CoachAuditButton: React.FC = () => {
           <FaCog className="text-xs animate-spin-slow" />
         </div>
 
-        {/* Glowing border effect */}
+
         <div className="absolute inset-0 rounded-lg border border-purple-400 opacity-50 group-hover:opacity-75 transition-opacity duration-300"></div>
         
-        {/* Pulse ring */}
+
         <div className="absolute inset-0 rounded-lg border border-purple-300 animate-pulse-ring opacity-30"></div>
       </button>
 

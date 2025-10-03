@@ -2,18 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ethers } from 'ethers';
 import dbConnect from '@/lib/dbConnect';
 import AuditAuthor, { IAuditAuthor } from '../../../../models/AuditAuthor';
-
-// Importa l'ABI del tuo contratto. Assicurati che il percorso sia corretto.
 import ScientificContentRegistryABI from '../../../../lib/abi/ScientificContentRegistry.json';
 
-// --- Funzione di Sicurezza ---
+
 function verifyRequest(req: NextRequest) {
     const secret = req.headers.get('x-webhook-secret');
     return secret === process.env.MAKE_SHARED_SECRET;
 }
 
 export async function POST(req: NextRequest) {
-    // 1. Sicurezza: Controlla il token segreto
+
     if (!verifyRequest(req)) {
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
@@ -28,7 +26,7 @@ export async function POST(req: NextRequest) {
 
         await dbConnect();
         
-        // 2. Recupera la candidatura dal DB
+
         const application = await AuditAuthor.findById(applicationId);
 
         if (!application) {
@@ -40,7 +38,7 @@ export async function POST(req: NextRequest) {
 
         const walletAddress = application.walletAddress;
 
-        // 3. Esegui la transazione On-Chain
+
         const provider = new ethers.JsonRpcProvider(process.env.RPC_URL!);
         const adminWallet = new ethers.Wallet(process.env.ADMIN_PRIVATE_KEY!, provider);
         const registryContract = new ethers.Contract(
@@ -52,11 +50,10 @@ export async function POST(req: NextRequest) {
         console.log(`Aggiungendo ${walletAddress} alla whitelist...`);
         const tx = await registryContract.addAuthorToWhitelist(walletAddress);
         
-        // Attendi la conferma della transazione
+  
         const receipt = await tx.wait();
         console.log(`Transazione confermata. Hash: ${receipt.hash}`);
 
-        // 4. Aggiorna lo stato nel database
         application.status = 'APPROVED';
         application.llmScore = llmScore;
         application.llmComment = llmComment;
@@ -71,7 +68,7 @@ export async function POST(req: NextRequest) {
 
     } catch (error: any) {
         console.error('API Error /api/whitelist/approve:', error);
-        // Potrebbe essere utile aggiornare il DB con uno stato di ERRORE
+        
         return NextResponse.json({ message: 'Errore durante il processo di approvazione.', error: error.message }, { status: 500 });
     }
 }
