@@ -13,7 +13,7 @@ export const config = getDefaultConfig({
   projectId,
   chains: [arbitrumSepolia],
   ssr: true, 
-
+});
 
 
 
