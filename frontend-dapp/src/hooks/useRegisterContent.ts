@@ -280,7 +280,7 @@ export const useRegisterContent = () => {
             image: ipfsPreviewImageCid
               ? `ipfs://${ipfsPreviewImageCid}`
               : undefined,
-            external_url: `https://dna-platform.vercel.app/content/${
+            external_url: `https://dna-platform.vercel.app/nft-details/${
               registryContentId?.toString() || "unknown"
             }`,
             attributes: [
