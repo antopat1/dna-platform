@@ -5,9 +5,10 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
 import "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol"; 
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./ScientificContentRegistry.sol";
 
-contract ScientificContentNFT is ERC721Enumerable, VRFConsumerBaseV2Plus, AccessControl {
+contract ScientificContentNFT is ERC721Enumerable, VRFConsumerBaseV2Plus, AccessControl, ReentrancyGuard {
     using Strings for uint256;
 
     IVRFCoordinatorV2Plus private immutable COORDINATOR;
@@ -83,7 +84,7 @@ contract ScientificContentNFT is ERC721Enumerable, VRFConsumerBaseV2Plus, Access
         subscriptionId = _subscriptionId;
     }
 
-    function mintNFT(uint256 contentId, string memory nftMetadataURI) external payable {
+    function mintNFT(uint256 contentId, string memory nftMetadataURI) external payable nonReentrant {
         require(bytes(nftMetadataURI).length > 0, "Metadata URI cannot be empty");
         
         ScientificContentRegistry.Content memory content = contentRegistry.getContent(contentId);
@@ -120,9 +121,11 @@ contract ScientificContentNFT is ERC721Enumerable, VRFConsumerBaseV2Plus, Access
     function fulfillRandomWords(
         uint256 requestId,
         uint256[] calldata randomWords
-    ) internal override {
+    ) internal override nonReentrant {
         PendingMint memory mintData = _pendingMints[requestId];
         require(mintData.minter != address(0), "Pending mint request not found");
+        
+        delete _pendingMints[requestId];
         
         try this._processMint(
             mintData.minter,
@@ -147,8 +150,6 @@ contract ScientificContentNFT is ERC721Enumerable, VRFConsumerBaseV2Plus, Access
             
             contentRegistry.setContentAvailability(mintData.contentId, true);
         }
-        
-        delete _pendingMints[requestId];
     }
 
     function _processMint(
@@ -190,8 +191,6 @@ contract ScientificContentNFT is ERC721Enumerable, VRFConsumerBaseV2Plus, Access
         );
     }
 
-    // === Funzioni Gestione Admin ===
-    
     function addAdmin(address account) external onlyRole(ADMIN_ROLE) {
         grantRole(ADMIN_ROLE, account);
     }
@@ -200,7 +199,7 @@ contract ScientificContentNFT is ERC721Enumerable, VRFConsumerBaseV2Plus, Access
         revokeRole(ADMIN_ROLE, account);
     }
 
-    function withdrawProtocolFees() external onlyRole(ADMIN_ROLE) {
+    function withdrawProtocolFees() external onlyRole(ADMIN_ROLE) nonReentrant {
         uint256 balance = address(this).balance;
         require(balance > 0, "No fees to withdraw");
 
@@ -222,11 +221,6 @@ contract ScientificContentNFT is ERC721Enumerable, VRFConsumerBaseV2Plus, Access
         emit BaseURIUpdated(newBaseURI);
     }
 
-    // === INIZIO CODICE AGGIUNTO PER RISOLVERE L'ERRORE ===
-    /**
-     * @dev VEDI {IERC165-supportsInterface}.
-     * Risolve il conflitto di override tra ERC721Enumerable e AccessControl.
-     */
     function supportsInterface(bytes4 interfaceId)
         public
         view
@@ -236,10 +230,6 @@ contract ScientificContentNFT is ERC721Enumerable, VRFConsumerBaseV2Plus, Access
     {
         return ERC721Enumerable.supportsInterface(interfaceId) || AccessControl.supportsInterface(interfaceId);
     }
-    // === FINE CODICE AGGIUNTO ===
-
-
-    // === Funzioni di Vista ===
 
     function getContractBalance() external view returns (uint256) {
         return address(this).balance;

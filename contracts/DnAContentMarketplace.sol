@@ -198,10 +198,10 @@ contract DnAContentMarketplace is AccessControl, ReentrancyGuard, IERC721Receive
         require(listing.isActive, "Token not listed for sale");
         require(listing.seller == msg.sender, "Not the seller");
 
-        nftContract.safeTransferFrom(address(this), msg.sender, tokenId);
-
         listing.isActive = false;
         isTokenListedForSale[tokenId] = false;
+
+        nftContract.safeTransferFrom(address(this), msg.sender, tokenId);
 
         emit NFTSaleRemoved(tokenId, msg.sender, block.timestamp);
     }
@@ -381,6 +381,7 @@ contract DnAContentMarketplace is AccessControl, ReentrancyGuard, IERC721Receive
         nonReentrant
     {
         Auction storage auction = auctions[tokenId];
+        require(auction.seller != address(0), "Auction does not exist");
         require(block.timestamp > auction.endTime, "Auction still active");
         require(msg.sender != auction.highestBidder, "Winner cannot claim refund"); 
 
