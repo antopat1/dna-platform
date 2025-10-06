@@ -418,7 +418,7 @@ export default function NftDetailsPage() {
                   </div>
                 )}
 
-              {fullMetadata.external_url && (
+              {/* {fullMetadata.external_url && (
                 <div className="bg-pink-50 p-4 rounded-lg">
                   <p className="text-lg text-gray-800">
                     <strong className="text-pink-700">Link Esterno:</strong>{" "}
@@ -432,7 +432,27 @@ export default function NftDetailsPage() {
                     </a>
                   </p>
                 </div>
-              )}
+              )} */}
+
+              <div className="bg-pink-50 p-4 rounded-lg">
+                <p className="text-lg text-gray-800">
+                  <strong className="text-pink-700">Link Esterno:</strong>{" "}
+                  <a
+                    href={
+                      typeof window !== "undefined"
+                        ? window.location.href
+                        : `https://platform-dna.vercel.app/nft-details/${tokenId}`
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 hover:underline break-all"
+                  >
+                    {typeof window !== "undefined"
+                      ? window.location.href
+                      : `https://platform-dna.vercel.app/nft-details/${tokenId}`}
+                  </a>
+                </p>
+              </div>
 
               {nftData.contentIpfsHash && (
                 <div className="bg-teal-50 p-4 rounded-lg">
