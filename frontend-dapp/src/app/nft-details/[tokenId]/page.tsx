@@ -86,11 +86,7 @@ export default function NftDetailsPage() {
       return;
     }
 
-    if (nftData) {
-      setIsTransitioning(true);
-    } else {
-      setIsInitialLoading(true);
-    }
+    setIsTransitioning(true);
     setIsImageLoading(true);
     setError(null);
 
@@ -192,11 +188,11 @@ export default function NftDetailsPage() {
       setIsInitialLoading(false);
       setIsTransitioning(false);
     }
-  }, [publicClient, tokenId, isConnected, connectedAddress, nftData]);
+  }, [publicClient, tokenId, isConnected, connectedAddress]);
 
   useEffect(() => {
     fetchNftDetails();
-  }, [tokenId, publicClient]);
+  }, [fetchNftDetails]);
 
   const navigateToNextNFT = useCallback(() => {
     router.push(`/nft-details/${parseInt(tokenId) + 1}`);
@@ -274,7 +270,7 @@ export default function NftDetailsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="p-8">
-          {!isOwner && isConnected && (
+          {!isOwner && isConnected && nftOwner && (
             <div className="mb-6 border border-orange-400 bg-orange-50 p-4 rounded-lg">
               <div className="text-orange-800">
                 <strong>⚠️ Attenzione:</strong> L'NFT con ID {tokenId} non
@@ -570,16 +566,14 @@ export default function NftDetailsPage() {
   );
 }
 
-// // frontend-dapp/src/app/nft-details/[tokenId]/page.tsx
-
-// "use client"; 
+// "use client";
 
 // import { useEffect, useState, useCallback } from "react";
-// import { useParams, useRouter } from "next/navigation"; 
-// import { usePublicClient, useAccount } from "wagmi"; 
-// import { toast, Toaster } from "react-hot-toast"; 
-// import Image from "next/image"; 
-// import { Address, getContract } from "viem"; 
+// import { useParams, useRouter } from "next/navigation";
+// import { usePublicClient, useAccount } from "wagmi";
+// import { toast, Toaster } from "react-hot-toast";
+// import Image from "next/image";
+// import { Address, getContract } from "viem";
 
 // import {
 //   Card,
@@ -590,43 +584,40 @@ export default function NftDetailsPage() {
 // } from "@/components/ui/card";
 // import { Button } from "@/components/ui/button";
 
-
 // import {
 //   SCIENTIFIC_CONTENT_NFT_ABI,
 //   SCIENTIFIC_CONTENT_NFT_ADDRESS,
-//   SCIENTIFIC_CONTENT_REGISTRY_ABI, 
-//   SCIENTIFIC_CONTENT_REGISTRY_ADDRESS, 
+//   SCIENTIFIC_CONTENT_REGISTRY_ABI,
+//   SCIENTIFIC_CONTENT_REGISTRY_ADDRESS,
 // } from "@/lib/constants";
-// import { resolveIpfsLink } from "@/utils/ipfs"; 
-// import { NFT as OwnedNFT } from "@/hooks/useOwnedNfts"; 
-
+// import { resolveIpfsLink } from "@/utils/ipfs";
+// import { NFT as OwnedNFT } from "@/hooks/useOwnedNfts";
 
 // interface NFTMetadata {
 //   name: string;
 //   description: string;
-//   image?: string; 
+//   image?: string;
 //   external_url?: string;
 //   attributes?: Array<{ trait_type: string; value: any }>;
-//   originalDocumentFileCID?: string; 
+//   originalDocumentFileCID?: string;
 //   previewImageFileCID?: string;
 //   scientific_type?: string;
 //   publication_date?: string;
 //   contentIpfsHash?: string;
-//   author?: Address; 
+//   author?: Address;
 //   tokenId?: string;
 // }
-
 
 // type ScientificContentRegistry_ContentMetadata = {
 //   title: string;
 //   description: string;
 //   author: Address;
-//   contentHash: Address; 
+//   contentHash: Address;
 //   isAvailable: boolean;
 //   registrationTime: bigint;
 //   maxCopies: bigint;
 //   mintedCopies: bigint;
-//   ipfsHash: string; 
+//   ipfsHash: string;
 //   nftMintPrice: bigint;
 // };
 
@@ -637,15 +628,17 @@ export default function NftDetailsPage() {
 //   const params = useParams();
 //   const router = useRouter();
 //   const publicClient = usePublicClient();
-//   const { address: connectedAddress, isConnected } = useAccount(); 
+//   const { address: connectedAddress, isConnected } = useAccount();
 
 //   const tokenId = params.tokenId as string;
 //   const [nftData, setNftData] = useState<OwnedNFT | null>(null);
 //   const [fullMetadata, setFullMetadata] = useState<NFTMetadata | null>(null);
-//   const [isLoading, setIsLoading] = useState(true);
+//   const [isInitialLoading, setIsInitialLoading] = useState(true);
+//   const [isTransitioning, setIsTransitioning] = useState(false);
+//   const [isImageLoading, setIsImageLoading] = useState(true);
 //   const [error, setError] = useState<string | null>(null);
-//   const [isOwner, setIsOwner] = useState<boolean>(false); 
-//   const [nftOwner, setNftOwner] = useState<Address | null>(null); 
+//   const [isOwner, setIsOwner] = useState<boolean>(false);
+//   const [nftOwner, setNftOwner] = useState<Address | null>(null);
 
 //   const fetchNftDetails = useCallback(async () => {
 //     if (!publicClient || !tokenId) {
@@ -657,27 +650,30 @@ export default function NftDetailsPage() {
 //       !SCIENTIFIC_CONTENT_REGISTRY_ADDRESS
 //     ) {
 //       setError("Indirizzi dei contratti NFT o Registry non configurati.");
-//       setIsLoading(false);
+//       setIsInitialLoading(false);
 //       return;
 //     }
 
-//     setIsLoading(true);
+//     if (nftData) {
+//       setIsTransitioning(true);
+//     } else {
+//       setIsInitialLoading(true);
+//     }
+//     setIsImageLoading(true);
 //     setError(null);
-//     try {
 
+//     try {
 //       const nftContract = getContract({
 //         address: SCIENTIFIC_CONTENT_NFT_ADDRESS,
 //         abi: SCIENTIFIC_CONTENT_NFT_ABI,
 //         client: publicClient,
 //       });
 
-   
 //       const owner = (await nftContract.read.ownerOf([
 //         BigInt(tokenId),
 //       ])) as Address;
 //       setNftOwner(owner);
 
-      
 //       const userIsOwner = !!(
 //         isConnected &&
 //         connectedAddress &&
@@ -685,11 +681,9 @@ export default function NftDetailsPage() {
 //       );
 //       setIsOwner(userIsOwner);
 
-
 //       const tokenURI = (await nftContract.read.tokenURI([
 //         BigInt(tokenId),
 //       ])) as string;
-
 //       if (!tokenURI) {
 //         throw new Error("Impossibile recuperare il tokenURI per questo NFT.");
 //       }
@@ -708,7 +702,6 @@ export default function NftDetailsPage() {
 //       const metadata: NFTMetadata = await response.json();
 //       setFullMetadata({ ...metadata, tokenId });
 
-
 //       const nftContractMetadata = (await nftContract.read.getNFTMetadata([
 //         BigInt(tokenId),
 //       ])) as {
@@ -719,7 +712,6 @@ export default function NftDetailsPage() {
 //         copyNumber: bigint;
 //         metadataURI: string;
 //       };
-
 
 //       let registryContentMetadata: Partial<ScientificContentRegistry_ContentMetadata> =
 //         {};
@@ -735,7 +727,7 @@ export default function NftDetailsPage() {
 //         ])) as ScientificContentRegistry_ContentMetadata;
 //         registryContentMetadata.title = contentData.title;
 //         registryContentMetadata.description = contentData.description;
-//         registryContentMetadata.ipfsHash = contentData.ipfsHash; 
+//         registryContentMetadata.ipfsHash = contentData.ipfsHash;
 //       }
 
 //       setNftData({
@@ -752,7 +744,7 @@ export default function NftDetailsPage() {
 //         contentIpfsHash: registryContentMetadata.ipfsHash,
 //         imageUrlFromMetadata: metadata.image,
 //         status: { type: "inWallet" },
-//         seller: owner, 
+//         seller: owner,
 //       });
 //     } catch (err: any) {
 //       console.error("Errore nel caricamento dei dettagli NFT:", err);
@@ -765,19 +757,18 @@ export default function NftDetailsPage() {
 //         `Errore: ${err.shortMessage || err.message || "Operazione fallita"}`
 //       );
 //     } finally {
-//       setIsLoading(false);
+//       setIsInitialLoading(false);
+//       setIsTransitioning(false);
 //     }
-//   }, [publicClient, tokenId, isConnected, connectedAddress]); 
+//   }, [publicClient, tokenId, isConnected, connectedAddress, nftData]);
 
 //   useEffect(() => {
 //     fetchNftDetails();
-//   }, [fetchNftDetails]); 
-
+//   }, [tokenId, publicClient]);
 
 //   const navigateToNextNFT = useCallback(() => {
 //     router.push(`/nft-details/${parseInt(tokenId) + 1}`);
 //   }, [router, tokenId]);
-
 
 //   const navigateToPreviousNFT = useCallback(() => {
 //     if (parseInt(tokenId) > 1) {
@@ -785,7 +776,7 @@ export default function NftDetailsPage() {
 //     }
 //   }, [router, tokenId]);
 
-//   if (isLoading) {
+//   if (isInitialLoading) {
 //     return (
 //       <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
 //         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-600"></div>
@@ -828,7 +819,6 @@ export default function NftDetailsPage() {
 //     );
 //   }
 
-
 //   const displayImageUrl = fullMetadata.image
 //     ? resolveIpfsLink(fullMetadata.image)
 //     : PLACEHOLDER_IMAGE_URL;
@@ -837,7 +827,12 @@ export default function NftDetailsPage() {
 //     <div className="min-h-screen bg-gradient-to-br from-blue-200 to-black p-6">
 //       <Toaster position="top-right" />
 
-//       <Card className="bg-white border-blue-200 shadow-xl max-w-4xl mx-auto">
+//       <Card className="relative bg-white border-blue-200 shadow-xl max-w-4xl mx-auto overflow-hidden">
+//         {isTransitioning && (
+//           <div className="absolute inset-0 bg-white bg-opacity-75 z-10 flex justify-center items-center backdrop-blur-sm">
+//             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+//           </div>
+//         )}
 //         <CardHeader className="text-center bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-t-lg">
 //           <CardTitle className="text-4xl font-bold mb-2">
 //             Dettagli NFT: {fullMetadata.name || `ID ${tokenId}`}
@@ -847,7 +842,6 @@ export default function NftDetailsPage() {
 //           </CardDescription>
 //         </CardHeader>
 //         <CardContent className="p-8">
-
 //           {!isOwner && isConnected && (
 //             <div className="mb-6 border border-orange-400 bg-orange-50 p-4 rounded-lg">
 //               <div className="text-orange-800">
@@ -861,7 +855,6 @@ export default function NftDetailsPage() {
 //             </div>
 //           )}
 
-
 //           {!isConnected && (
 //             <div className="mb-6 border border-red-400 bg-red-50 p-4 rounded-lg">
 //               <div className="text-red-800">
@@ -872,23 +865,32 @@ export default function NftDetailsPage() {
 //           )}
 
 //           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-
 //             <div className="flex justify-center items-center">
-//               <Image
-//                 src={displayImageUrl}
-//                 alt={`Copertina di ${fullMetadata.name || `NFT ID ${tokenId}`}`}
-//                 width={300}
-//                 height={300}
-//                 className="rounded-lg object-cover shadow-lg border-2 border-blue-200"
-//                 onError={(e) => {
-//                   e.currentTarget.src = PLACEHOLDER_IMAGE_URL;
-//                   console.error(
-//                     `Failed to load image for NFT ${tokenId}: ${displayImageUrl}`
-//                   );
-//                 }}
-//               />
+//               <div className="w-[300px] h-[300px] bg-gray-200 rounded-lg animate-pulse flex justify-center items-center relative">
+//                 {isImageLoading && (
+//                   <div className="w-full h-full bg-gray-200 rounded-lg animate-pulse"></div>
+//                 )}
+//                 <Image
+//                   src={displayImageUrl}
+//                   alt={`Copertina di ${
+//                     fullMetadata.name || `NFT ID ${tokenId}`
+//                   }`}
+//                   width={300}
+//                   height={300}
+//                   className={`rounded-lg object-cover shadow-lg border-2 border-blue-200 transition-opacity duration-300 ${
+//                     isImageLoading ? "opacity-0" : "opacity-100"
+//                   }`}
+//                   onLoad={() => setIsImageLoading(false)}
+//                   onError={(e) => {
+//                     e.currentTarget.src = PLACEHOLDER_IMAGE_URL;
+//                     setIsImageLoading(false);
+//                     console.error(
+//                       `Failed to load image for NFT ${tokenId}: ${displayImageUrl}`
+//                     );
+//                   }}
+//                 />
+//               </div>
 //             </div>
-
 
 //             <div className="space-y-4">
 //               <div className="bg-blue-50 p-4 rounded-lg">
@@ -896,7 +898,6 @@ export default function NftDetailsPage() {
 //                   <strong className="text-blue-700">Token ID:</strong> {tokenId}
 //                 </p>
 //               </div>
-
 
 //               {nftData.hasSpecialContent && (
 //                 <div className="bg-yellow-100 p-4 rounded-lg flex items-center justify-center border border-yellow-400">
@@ -932,7 +933,6 @@ export default function NftDetailsPage() {
 //                   </span>
 //                 </p>
 //               </div>
-
 
 //               {nftOwner && (
 //                 <div className="bg-orange-50 p-4 rounded-lg">
@@ -971,7 +971,6 @@ export default function NftDetailsPage() {
 //                   </p>
 //                 </div>
 //               )}
-
 
 //               {nftData.author &&
 //                 nftData.author !==
@@ -1026,7 +1025,6 @@ export default function NftDetailsPage() {
 //                 </div>
 //               )}
 
-
 //               {fullMetadata.attributes &&
 //                 fullMetadata.attributes.length > 0 && (
 //                   <div className="bg-gray-50 p-4 rounded-lg">
@@ -1052,7 +1050,6 @@ export default function NftDetailsPage() {
 //                     </div>
 //                   </div>
 //                 )}
-
 
 //               {fullMetadata.scientific_type && (
 //                 <div className="bg-yellow-50 p-4 rounded-lg">
@@ -1082,7 +1079,6 @@ export default function NftDetailsPage() {
 //             </div>
 //           </div>
 
-
 //           <div className="mt-8">
 //             <h3 className="text-2xl font-bold text-gray-800 mb-4 text-center">
 //               Schema Metadati (JSON Completo)
@@ -1096,23 +1092,22 @@ export default function NftDetailsPage() {
 //             </div>
 //           </div>
 
-
 //           <div className="flex justify-between mt-8 gap-4">
 //             <Button
 //               onClick={navigateToPreviousNFT}
-//               disabled={parseInt(tokenId) <= 1}
+//               disabled={parseInt(tokenId) <= 1 || isTransitioning}
 //               className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-md text-lg disabled:opacity-50 disabled:cursor-not-allowed flex-1 max-w-xs"
 //             >
 //               &larr; NFT Precedente
 //             </Button>
 //             <Button
 //               onClick={navigateToNextNFT}
-//               className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-md text-lg flex-1 max-w-xs"
+//               disabled={isTransitioning}
+//               className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-md text-lg disabled:opacity-50 disabled:cursor-not-allowed flex-1 max-w-xs"
 //             >
 //               NFT Successivo &rarr;
 //             </Button>
 //           </div>
-
 
 //           <div className="mt-6 text-center">
 //             {!isOwner && isConnected ? (
