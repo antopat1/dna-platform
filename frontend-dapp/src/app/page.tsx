@@ -194,7 +194,7 @@ export default function Home() {
                 className="inline-flex items-center gap-3 bg-transparent border-2 border-purple-500 text-purple-500 font-semibold py-3 px-8 rounded-full transition-all duration-300 hover:bg-purple-500 hover:text-white hover:shadow-lg hover:scale-105"
               >
                 <BiChip className="text-2xl" />
-                <span>Scopri il nostro Stack Tecnologico</span>
+                <span>Scopri lo Stack Tecnologico</span>
               </button>
             </div>
           </div>
@@ -220,111 +220,4 @@ export default function Home() {
     </>
   );
 }
-
-// // frontend-dapp/src/app/page.tsx
-// 'use client';
-
-// import React from 'react';
-// import Link from 'next/link';
-// import { BiLayer, BiDollar, BiNetworkChart } from 'react-icons/bi';
-// import teamFocusAnimation from '../assets/animation/team-focus.json';
-// import { useUserRole } from '@/hooks/useUserRole';
-// import dynamic from 'next/dynamic';
-
-// const Player = dynamic(
-//   () => import('@lottiefiles/react-lottie-player').then((mod) => mod.Player),
-//   { ssr: false }
-// );
-
-// export default function Home() {
-//   const { isAuthor, isConnected } = useUserRole();
-
-//   return (
- 
-//     <div className="flex flex-col items-center justify-center min-h-screen bg-white text-slate-800 dark:bg-slate-900 dark:text-slate-200">
-      
-    
-//       <section className="text-center py-20 px-4 max-w-4xl mx-auto flex flex-col items-center">
-//         <h1 className="text-5xl md:text-6xl font-extrabold leading-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600">
-//           Il Futuro della Scienza è Tokenizzato.
-//         </h1>
-       
-//         <p className="text-xl md:text-2xl text-slate-600 dark:text-slate-300 font-light mb-8">
-//           Benvenuto su DnA, il marketplace che trasforma la ricerca scientifica in asset digitali unici e verificabili.
-//         </p>
-//         <div className="flex flex-col sm:flex-row justify-center gap-4">
-//           <Link href="/marketplace" className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-8 rounded-full transition-colors shadow-lg">
-//             Esplora il Marketplace
-//           </Link>
-          
-//           {isConnected && (
-         
-//             <Link 
-//               href={isAuthor ? "/dashboard/register-content" : "/my-nfts"} 
-//               className="bg-transparent border-2 border-slate-300 text-slate-700 hover:border-blue-500 hover:text-blue-500 dark:border-slate-700 dark:text-slate-300 dark:hover:border-blue-400 dark:hover:text-blue-400 font-semibold py-3 px-8 rounded-full transition-colors"
-//             >
-//               {isAuthor ? 'Crea il tuo NFT' : 'Visualizza i tuoi NFT'}
-//             </Link>
-//           )}
-//         </div>
-
-    
-//         <div className="mt-8 w-full flex justify-center transform transition-transform duration-300 hover:scale-110">
-//           <div className="w-2/3 md:w-1/2 lg:w-1/3 max-w-[280px]">
-//             <Player
-//               autoplay
-//               loop
-//               src={teamFocusAnimation}
-//               className="w-full h-auto"
-//             />
-//           </div>
-//         </div>
-//       </section>
-
-
-//       <section className="w-full py-20 px-4 bg-slate-100 dark:bg-slate-800">
-//         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
-
-//           <div className="flex flex-col items-center p-6 bg-white dark:bg-slate-700 rounded-xl shadow-lg transform transition-transform hover:scale-105">
-//             <BiLayer className="text-5xl text-blue-400 mb-4" />
-//             <h3 className="text-2xl font-bold mb-2">Trasparenza Assoluta</h3>
-//             <p className="text-slate-500 dark:text-slate-400">
-//               Ogni contenuto scientifico è registrato in modo immutabile sulla blockchain, garantendo provenienza e proprietà.
-//             </p>
-//           </div>
-//           <div className="flex flex-col items-center p-6 bg-white dark:bg-slate-700 rounded-xl shadow-lg transform transition-transform hover:scale-105">
-//             <BiDollar className="text-5xl text-blue-400 mb-4" />
-//             <h3 className="text-2xl font-bold mb-2">Nuove Opportunità</h3>
-//             <p className="text-slate-500 dark:text-slate-400">
-//               Monetizza il tuo lavoro di ricerca o supporta i progetti che ami, creando un ecosistema di valore.
-//             </p>
-//           </div>
-//           <div className="flex flex-col items-center p-6 bg-white dark:bg-slate-700 rounded-xl shadow-lg transform transition-transform hover:scale-105">
-//             <BiNetworkChart className="text-5xl text-blue-400 mb-4" />
-//             <h3 className="text-2xl font-bold mb-2">Connessione Globale</h3>
-//             <p className="text-slate-500 dark:text-slate-400">
-//               Una community di scienziati, ricercatori e appassionati connessi da una visione comune di innovazione.
-//             </p>
-//           </div>
-//         </div>
-//       </section>
-
-
-//       <section className="text-center py-20 px-4">
-//         <h2 className="text-3xl font-bold mb-4">
-//           Pronto a Rivoluzionare la Ricerca?
-//         </h2>
-
-//         <p className="text-lg text-slate-500 dark:text-slate-400 mb-6">
-//           Unisciti a noi e contribuisci a costruire un futuro della scienza aperto e accessibile a tutti.<br/>
-//           Richiedi l accredito immediato tramite agente AI o invia form al nostro Team per registrare contenuti scientifici <br/>disponibili per il Minting in NFT unici
-//         </p>
-//         <Link href="/dashboard/register-content" className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-8 rounded-full transition-colors shadow-lg">
-//           Inizia Ora
-//         </Link>
-//       </section>
-      
-//     </div>
-//   );
-// }
 
