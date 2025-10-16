@@ -209,6 +209,23 @@ export default function FounderProfilePage() {
       image: "/img/pdf_extraction.jpg",
       technologies: ["Python", "PDF", "XML", "CSV"],
     },
+    {
+      id: 7,
+      title: "FIS Docenti - Gestione Dichiarazioni Ore",
+      description:
+        "Applicazione Next.js full-stack per la digitalizzazione delle dichiarazioni FIS docenti con autenticazione Google OAuth, generazione PDF e dashboard amministrativa.",
+      githubUrl: "https://fis-docenti-iccapriate.vercel.app/",
+      image: "/img/fis_docenti.jpg",
+      technologies: [
+        "Next.js",
+        "TypeScript",
+        "MongoDB",
+        "NextAuth.js",
+        "Tailwind CSS",
+        "React",
+        "Redux",
+      ],
+    },
   ];
   const hardSkills = [
     { name: "HTML", percentage: 80, color: "bg-yellow-500" },
@@ -332,17 +349,16 @@ export default function FounderProfilePage() {
               nelle settore delle TLC prima come consulente presso operatori ISP
               in qualità di analista tecnico di reportistica e monitoraggio
               traffico dati su diversi Time Frame, poi come Project Manager e
-              Controller contabile nei cantieri di realizzazione rete di
-              accesso FTTH progetto BUL, ho deciso a seguito di una profonda
-              riflessione personale e professionale post COVID, di alimentare
-              le mie passioni nel campo delle tecnologie informatiche, registri
+              Controller contabile nei cantieri di realizzazione rete di accesso
+              FTTH progetto BUL, ho deciso a seguito di una profonda riflessione
+              personale e professionale post COVID, di alimentare le mie
+              passioni nel campo delle tecnologie informatiche, registri
               ditribuiti e sistemi/processi economici decentralizzati basati su
-              Blockchain. L'opportunità di lavorare presso Istituti
-              comprensivi di scuola secondaria di primo grado in qualità di
-              Assistente Tecnico informatico e docente corsi di Coding e
-              Robotica, rappresenta per me oggi una combinazione perfetta per
-              conciliare lavoro e studio personale grazie al percorso proposto
-              da{" "}
+              Blockchain. L'opportunità di lavorare presso Istituti comprensivi
+              di scuola secondaria di primo grado in qualità di Assistente
+              Tecnico informatico e docente corsi di Coding e Robotica,
+              rappresenta per me oggi una combinazione perfetta per conciliare
+              lavoro e studio personale grazie al percorso proposto da{" "}
               <a
                 href="https://www.start2impact.it/"
                 target="_blank"
@@ -750,5 +766,3 @@ export default function FounderProfilePage() {
     </div>
   );
 }
-
-
