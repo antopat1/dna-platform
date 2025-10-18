@@ -214,7 +214,7 @@ export default function FounderProfilePage() {
       title: "FIS Docenti - Gestione Dichiarazioni Ore",
       description:
         "Applicazione Next.js full-stack per la digitalizzazione delle dichiarazioni FIS docenti con autenticazione Google OAuth, generazione PDF e dashboard amministrativa.",
-      githubUrl: "https://fis-docenti-iccapriate.vercel.app/",
+      githubUrl: "https://fis-docenti-sistema-di-g-l78un1f.gamma.site/",
       image: "/img/fis_docenti.jpg",
       technologies: [
         "Next.js",
